@@ -1,0 +1,37 @@
+# Node
+node_modules/
+package-lock.json
+
+# Flutter
+frontend/build/
+frontend/.dart_tool/
+frontend/.packages
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/pubspec.lock
+
+# Java / Maven
+backend/target/
+backend/.mvn/
+backend/*.jar
+backend/!src/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# Logs & temp
+*.log
+*.err
+*.out
+test_results.txt
+
+# Uploads (runtime data, not source)
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db

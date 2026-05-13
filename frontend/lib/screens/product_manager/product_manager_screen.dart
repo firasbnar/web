@@ -1,0 +1,177 @@
+import 'package:flutter/material.dart';
+import '../../core/api_client.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
+import '../../widgets/app_button.dart';
+
+class ProductManagerScreen extends StatefulWidget {
+  final String? productId;
+  const ProductManagerScreen({super.key, this.productId});
+  @override
+  State<ProductManagerScreen> createState() => _ProductManagerScreenState();
+}
+
+class _ProductManagerScreenState extends State<ProductManagerScreen> {
+  final _api = ApiClient();
+  List<Map<String, dynamic>> _variants = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVariants();
+  }
+
+  Future<void> _loadVariants() async {
+    if (widget.productId == null) { setState(() => _loading = false); return; }
+    setState(() => _loading = true);
+    try {
+      final res = await _api.get('/products/${widget.productId}/variants');
+      _variants = (res['data'] as List).cast<Map<String, dynamic>>();
+    } catch (_) {}
+    setState(() => _loading = false);
+  }
+
+  Future<void> _showVariantDialog({Map<String, dynamic>? existing}) async {
+    final nameCtrl = TextEditingController(text: existing?['name'] ?? '');
+    final priceCtrl = TextEditingController(text: existing?['price']?.toString() ?? '');
+    final stockCtrl = TextEditingController(text: existing?['stock']?.toString() ?? '');
+    final skuCtrl = TextEditingController(text: existing?['sku'] ?? '');
+    final orderCtrl = TextEditingController(text: existing?['sortOrder']?.toString() ?? '');
+
+    final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(existing != null ? 'Modifier la variante' : 'Ajouter une variante'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nom *', hintText: 'Taille M, Couleur Rouge...', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Prix (optionnel)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            const SizedBox(height: 12),
+            TextField(controller: stockCtrl, decoration: const InputDecoration(labelText: 'Stock (optionnel)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            const SizedBox(height: 12),
+            TextField(controller: skuCtrl, decoration: const InputDecoration(labelText: 'SKU (optionnel)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: orderCtrl, decoration: const InputDecoration(labelText: 'Ordre', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        AppButton(label: 'Enregistrer', onPressed: () async {
+          if (nameCtrl.text.trim().isEmpty) return;
+          final data = <String, dynamic>{
+            'name': nameCtrl.text.trim(),
+            'price': double.tryParse(priceCtrl.text),
+            'stock': int.tryParse(stockCtrl.text),
+            'sku': skuCtrl.text.trim().isNotEmpty ? skuCtrl.text.trim() : null,
+            'sortOrder': int.tryParse(orderCtrl.text) ?? 0,
+          };
+          try {
+            if (existing != null) {
+              await _api.put('/products/${widget.productId}/variants/${existing['id']}', data: data);
+            } else {
+              await _api.post('/products/${widget.productId}/variants', data: data);
+            }
+            Navigator.pop(ctx, true);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          }
+        }),
+      ],
+    ));
+    if (saved == true) _loadVariants();
+  }
+
+  Future<void> _deleteVariant(String id) async {
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Confirmer'),
+      content: const Text('Supprimer cette variante ?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer', style: TextStyle(color: AppColors.danger))),
+      ],
+    ));
+    if (ok == true) {
+      try { await _api.delete('/products/${widget.productId}/variants/$id'); _loadVariants(); }
+      catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger)); }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Gestion des variantes'),
+        actions: [
+          if (widget.productId != null)
+            IconButton(icon: const Icon(Icons.add), onPressed: () => _showVariantDialog()),
+        ],
+      ),
+      body: widget.productId == null
+          ? const Center(child: Text('Sélectionnez un produit depuis la liste des produits'))
+          : _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _variants.isEmpty
+                  ? const Center(child: Text('Aucune variante'))
+                  : ReorderableListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _variants.length,
+                      onReorder: (oldI, newI) async {
+                        setState(() {
+                          final item = _variants.removeAt(oldI);
+                          _variants.insert(newI, item);
+                        });
+                        for (var i = 0; i < _variants.length; i++) {
+                          try {
+                            await _api.put('/products/${widget.productId}/variants/${_variants[i]['id']}', data: {'sortOrder': i, 'name': _variants[i]['name']});
+                          } catch (_) {}
+                        }
+                      },
+                      itemBuilder: (_, i) {
+                        final v = _variants[i];
+                        return Container(
+                          key: ValueKey(v['id']),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.drag_handle, color: AppColors.textHint),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(v['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                                    Row(
+                                      children: [
+                                        if (v['price'] != null) Text('${v['price'].toString()} TND', style: AppTypography.caption),
+                                        if (v['stock'] != null) ...[
+                                          if (v['price'] != null) Text(' · ', style: AppTypography.caption),
+                                          Text('Stock: ${v['stock']}', style: AppTypography.caption.copyWith(color: (v['stock'] as num) <= 5 ? AppColors.danger : AppColors.textSecondary)),
+                                        ],
+                                        if (v['sku'] != null) ...[
+                                          Text(' · ', style: AppTypography.caption),
+                                          Text('SKU: ${v['sku']}', style: AppTypography.caption),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _showVariantDialog(existing: v), visualDensity: VisualDensity.compact),
+                              IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger), onPressed: () => _deleteVariant(v['id']), visualDensity: VisualDensity.compact),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+    );
+  }
+}
