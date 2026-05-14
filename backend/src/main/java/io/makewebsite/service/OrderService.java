@@ -24,12 +24,14 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final CustomerRepository customerRepository;
+    private final CustomerService customerService;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final WebSocketService webSocketService;
     private final TelegramService telegramService;
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getOrders(UUID boutiqueId, String status, String search, Pageable pageable) {
         Page<Order> orders;
         if (search != null && !search.isEmpty() && status != null && !status.isEmpty() && !"ALL".equals(status)) {
@@ -44,11 +46,13 @@ public class OrderService {
         return orders.map(this::mapToResponse);
     }
 
+    @Transactional(readOnly = true)
     public OrderResponse getOrder(UUID id) {
         Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Commande non trouvée"));
         return mapToResponse(order);
     }
 
+    @Transactional(readOnly = true)
     public Page<OrderResponse> getMyOrders(UUID userId, Pageable pageable) {
         return orderRepository.findByUserId(userId, pageable).map(this::mapToResponse);
     }
@@ -59,9 +63,22 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
 
         User user = userId != null ? userRepository.findById(userId).orElse(null) : null;
+
         Customer customer = null;
         if (request.getCustomerId() != null) {
             customer = customerRepository.findById(request.getCustomerId()).orElse(null);
+        } else if (request.getCustomerName() != null && !request.getCustomerName().isEmpty()) {
+            customer = customerService.findOrCreateCustomer(
+                    request.getBoutiqueId(),
+                    request.getCustomerName(),
+                    request.getCustomerEmail(),
+                    request.getCustomerPhone(),
+                    request.getShippingAddress(),
+                    request.getCity(),
+                    request.getGovernorate(),
+                    request.getPostalCode(),
+                    request.getCountry()
+            );
         }
 
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -115,6 +132,10 @@ public class OrderService {
         }
         orderItemRepository.saveAll(items);
 
+        if (customer != null) {
+            customerService.updateCustomerAggregation(customer, total);
+        }
+
         User owner = boutique.getUser();
         String message = "Nouvelle commande " + orderNumber + " - " + total + " TND";
         notificationService.createNotification(owner.getId(), "Nouvelle commande", message, "NEW_ORDER");
@@ -167,6 +188,7 @@ public class OrderService {
         orderRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public String exportCsv(UUID boutiqueId) {
         List<Order> orders = orderRepository.findByBoutiqueId(boutiqueId, Pageable.unpaged()).getContent();
         StringBuilder sb = new StringBuilder("Numéro,Client,Total,Statut,Paiement,Date\n");

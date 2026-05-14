@@ -23,4 +23,6 @@ public interface StoreViewRepository extends JpaRepository<StoreView, UUID> {
 
     @Query("SELECT s.city, s.country, COUNT(s) FROM StoreView s WHERE s.boutiqueId = :boutiqueId AND s.city IS NOT NULL GROUP BY s.city, s.country ORDER BY COUNT(s) DESC")
     List<Object[]> countByBoutiqueIdGroupByCity(@Param("boutiqueId") UUID boutiqueId);
+
+    List<StoreView> findAllByBoutiqueIdOrderByViewedAtDesc(UUID boutiqueId);
 }

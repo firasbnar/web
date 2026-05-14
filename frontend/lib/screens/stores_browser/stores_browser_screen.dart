@@ -97,7 +97,7 @@ class _StoresBrowserScreenState extends State<StoresBrowserScreen> {
                     itemBuilder: (_, i) {
                       final s = _filtered[i];
                       return InkWell(
-                        onTap: () => context.go('/store/${s.id}', extra: s.name),
+                        onTap: () => context.go('/store/${s.id}', extra: {'name': s.name, 'slug': s.slug}),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(

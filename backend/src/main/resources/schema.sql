@@ -123,6 +123,15 @@ ALTER TABLE boutiques ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
 ALTER TABLE boutiques ADD COLUMN IF NOT EXISTS facebook_pixel_id VARCHAR(50);
 ALTER TABLE boutiques ADD COLUMN IF NOT EXISTS google_analytics_id VARCHAR(50);
 
+-- Customer aggregation fields
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS country VARCHAR(100);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS total_orders INT DEFAULT 0;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS total_spent DECIMAL(12,2) DEFAULT 0.00;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS last_order_date TIMESTAMP;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_customers_boutique_email ON customers(boutique_id, email);
+
 -- Store sliders for hero carousel
 CREATE TABLE IF NOT EXISTS store_sliders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -184,3 +193,24 @@ CREATE TABLE IF NOT EXISTS boutique_countries (
   UNIQUE(boutique_id, country_name)
 );
 CREATE INDEX IF NOT EXISTS idx_boutique_countries_boutique ON boutique_countries(boutique_id);
+
+-- Conversations for customer-to-store messaging
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  boutique_id UUID NOT NULL REFERENCES boutiques(id) ON DELETE CASCADE,
+  customer_name VARCHAR(150) NOT NULL,
+  customer_email VARCHAR(150) NOT NULL,
+  customer_phone VARCHAR(20),
+  last_message_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_message_preview TEXT,
+  unread_count INTEGER DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_conversations_boutique ON conversations(boutique_id);
+
+-- Extend messages table with conversation support
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS customer_email VARCHAR(150);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);

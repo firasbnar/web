@@ -35,7 +35,7 @@ class CustomersProvider extends ChangeNotifier {
       _currentPage++;
       _loading = false; notifyListeners();
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
     }
   }
 
@@ -46,7 +46,7 @@ class CustomersProvider extends ChangeNotifier {
       _selectedCustomer = Customer.fromJson(res['data']);
       _loading = false; notifyListeners();
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
     }
   }
 
@@ -58,7 +58,7 @@ class CustomersProvider extends ChangeNotifier {
       notifyListeners();
       return customer;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return null;
     }
   }
@@ -70,7 +70,7 @@ class CustomersProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return false;
     }
   }

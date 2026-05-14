@@ -136,7 +136,7 @@ class _TrafficAnalyticsScreenState extends State<TrafficAnalyticsScreen>
       body: tp.loading && tp.stats == null
           ? const Center(child: CircularProgressIndicator())
           : tp.error != null && tp.stats == null
-              ? _buildError(tp.error!, _refresh)
+              ? _buildError(tp.error ?? 'Erreur inconnue', _refresh)
               : TabBarView(
                   controller: _tabController,
                   children: [
@@ -163,7 +163,7 @@ return RefreshIndicator(
            Container(
              padding: const EdgeInsets.all(16),
              decoration: BoxDecoration(
-               gradient: LinearGradient(
+               gradient: const LinearGradient(
                  colors: [AppColors.primary, AppColors.primaryLight],
                  begin: Alignment.centerLeft,
                  end: Alignment.centerRight,
@@ -190,7 +190,7 @@ return RefreshIndicator(
                        Text(
                          'Mise à jour en temps réel',
                          style: TextStyle(
-                           color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                            fontSize: 12,
                          ),
                        ),
@@ -308,8 +308,10 @@ return RefreshIndicator(
       return const Center(child: CircularProgressIndicator());
     }
     return RefreshIndicator(
-      onRefresh: () => tp.loadVisitors(_boutiqueId!,
-          page: 0, size: _pageSize),
+      onRefresh: () async {
+        final id = _boutiqueId;
+        if (id != null) await tp.loadVisitors(id, page: 0, size: _pageSize);
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -323,7 +325,7 @@ return RefreshIndicator(
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _period,
+                          initialValue: _period,
                           items: const [
                             DropdownMenuItem(
                                 value: 'daily', child: Text('Quotidien')),
@@ -432,43 +434,64 @@ return RefreshIndicator(
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if ((tp.visitorsPage!['currentPage'] ?? 0) > 0)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text('Précédent'),
-                    onPressed: () {
-                      _currentPage =
-                          (tp.visitorsPage!['currentPage'] ?? 0) - 1;
-                      tp.loadVisitors(_boutiqueId!,
-                          page: _currentPage, size: _pageSize);
-                    },
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary),
-                  ),
-                const Spacer(),
-                if ((tp.visitorsPage!['currentPage'] ?? 0) <
-                    (tp.visitorsPage!['totalPages'] ?? 1) - 1)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.arrow_forward, size: 16),
-                    label: const Text('Suivant'),
-                    onPressed: () {
-                      _currentPage =
-                          (tp.visitorsPage!['currentPage'] ?? 0) + 1;
-                      tp.loadVisitors(_boutiqueId!,
-                          page: _currentPage, size: _pageSize);
-                    },
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary),
-                  ),
-              ],
-            ),
+            ..._buildVisitorsPagination(tp),
           ],
         ],
       ),
     );
+  }
+
+  List<Widget> _buildVisitorsPagination(TrafficProvider tp) {
+    final page = tp.visitorsPage;
+    if (page == null) return [];
+    final cur = (page['currentPage'] as num?)?.toInt() ?? 0;
+    final tot = (page['totalPages'] as num?)?.toInt() ?? 1;
+    final hasPrev = cur > 0;
+    final hasNext = cur < tot - 1;
+    if (!hasPrev && !hasNext) return [];
+
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            if (hasPrev)
+              SizedBox(
+                height: 36,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: const Text('Précédent'),
+                  onPressed: () {
+                    final id = _boutiqueId;
+                    if (id == null) return;
+                    _currentPage = cur - 1;
+                    tp.loadVisitors(id, page: _currentPage, size: _pageSize);
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary),
+                ),
+              ),
+            if (hasPrev && hasNext) const Spacer(),
+            if (hasNext)
+              SizedBox(
+                height: 36,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: const Text('Suivant'),
+                  onPressed: () {
+                    final id = _boutiqueId;
+                    if (id == null) return;
+                    _currentPage = cur + 1;
+                    tp.loadVisitors(id, page: _currentPage, size: _pageSize);
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ];
   }
 
   // ─── CHARTS TAB ──────────────────────────────────────────────────
@@ -546,7 +569,7 @@ onRefresh: _refresh,
                                 },
                               ),
                             ),
-                            leftTitles: AxisTitles(
+                            leftTitles: const AxisTitles(
                               sideTitles: SideTitles(
                                   showTitles: true,
                                   reservedSize: 40),
@@ -692,8 +715,10 @@ onRefresh: _refresh,
       return const Center(child: CircularProgressIndicator());
     }
     return RefreshIndicator(
-      onRefresh: () => tp.loadVisitors(_boutiqueId!,
-          page: 0, size: _pageSize),
+      onRefresh: () async {
+        final id = _boutiqueId;
+        if (id != null) await tp.loadVisitors(id, page: 0, size: _pageSize);
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -773,7 +798,7 @@ onRefresh: _refresh,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.danger.withOpacity(0.1),
+                            color: AppColors.danger.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
 child: Text(
@@ -813,7 +838,7 @@ child: Text(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+            colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.05)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -824,7 +849,7 @@ child: Text(
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 22),

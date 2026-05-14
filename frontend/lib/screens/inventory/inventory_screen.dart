@@ -40,7 +40,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _products = (content as List).map((e) => Product.fromJson(e)).toList();
       _products.sort((a, b) => a.stock.compareTo(b.stock));
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     }
     setState(() => _loading = false);
   }

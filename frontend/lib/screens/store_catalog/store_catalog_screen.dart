@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../models/product.dart';
+import '../../services/traffic_tracker.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
@@ -10,7 +11,8 @@ import '../../widgets/product_card.dart';
 class StoreCatalogScreen extends StatefulWidget {
   final String boutiqueId;
   final String? boutiqueName;
-  const StoreCatalogScreen({super.key, required this.boutiqueId, this.boutiqueName});
+  final String? boutiqueSlug;
+  const StoreCatalogScreen({super.key, required this.boutiqueId, this.boutiqueName, this.boutiqueSlug});
 
   @override
   State<StoreCatalogScreen> createState() => _StoreCatalogScreenState();
@@ -25,9 +27,98 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   String? _error;
   final _searchCtrl = TextEditingController();
 
+  void _showContactDialog() {
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final msgCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    var sending = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Contacter le vendeur'),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Nom *', border: OutlineInputBorder()),
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: emailCtrl,
+                    decoration: const InputDecoration(labelText: 'Email *', border: OutlineInputBorder()),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: phoneCtrl,
+                    decoration: const InputDecoration(labelText: 'Téléphone', border: OutlineInputBorder()),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: msgCtrl,
+                    decoration: const InputDecoration(labelText: 'Message *', border: OutlineInputBorder()),
+                    maxLines: 4,
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => sending = true);
+                      try {
+                        await _api.post('/messages/public', queryParameters: {'boutiqueId': widget.boutiqueId}, data: {
+                          'customerName': nameCtrl.text.trim(),
+                          'customerEmail': emailCtrl.text.trim(),
+                          'customerPhone': phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                          'content': msgCtrl.text.trim(),
+                        });
+                        Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Message envoyé !')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => sending = false);
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(content: Text(ApiClient.extractErrorMessage(e))),
+                        );
+                      }
+                    },
+              child: sending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Envoyer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    TrafficTracker.trackStoreVisit(
+      boutiqueId: widget.boutiqueId,
+      slug: widget.boutiqueSlug ?? widget.boutiqueId,
+      route: '/store/${widget.boutiqueId}',
+    );
     _loadData();
   }
 
@@ -38,7 +129,7 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
       _categories = catRes['data'] as List? ?? [];
       await _loadProducts();
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     }
     setState(() => _loading = false);
   }
@@ -53,7 +144,7 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
 
   Future<void> _search() async {
     setState(() => _loading = true);
-    try { await _loadProducts(); } catch (e) { _error = e.toString(); }
+    try { await _loadProducts(); } catch (e) { _error = ApiClient.extractErrorMessage(e); }
     setState(() => _loading = false);
   }
 
@@ -66,7 +157,16 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.boutiqueName ?? 'Boutique')),
+      appBar: AppBar(
+        title: Text(widget.boutiqueName ?? 'Boutique'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.mail_outline),
+            tooltip: 'Contacter le vendeur',
+            onPressed: _showContactDialog,
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

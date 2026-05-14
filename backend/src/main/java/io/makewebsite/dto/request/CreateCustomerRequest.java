@@ -32,5 +32,9 @@ public class CreateCustomerRequest {
 
     private String governorate;
 
+    private String postalCode;
+
+    private String country;
+
     private String notes;
 }

@@ -65,7 +65,7 @@ class ReviewsProvider extends ChangeNotifier {
       _currentPage++;
       _hasMore = newReviews.length >= _pageSize;
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     }
     _loading = false;
     notifyListeners();
@@ -77,7 +77,7 @@ class ReviewsProvider extends ChangeNotifier {
       _updateReviewStatus(reviewId, 'APPROVED');
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
       return false;
     }
@@ -89,7 +89,7 @@ class ReviewsProvider extends ChangeNotifier {
       _updateReviewStatus(reviewId, 'REJECTED');
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
       return false;
     }
@@ -117,7 +117,7 @@ class ReviewsProvider extends ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
       return false;
     }
@@ -130,7 +130,7 @@ class ReviewsProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
       return false;
     }

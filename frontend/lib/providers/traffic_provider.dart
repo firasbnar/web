@@ -9,7 +9,10 @@ class TrafficProvider extends ChangeNotifier {
   TrafficOverviewModel? _overview;
   List<VisitorEntry> _visitors = [];
   List<TimelinePoint> _timeline = [];
+  List<MapPoint> _mapPoints = [];
+  List<RecentVisit> _recentVisits = [];
   Map<String, dynamic>? _visitorsPage;
+  Map<String, dynamic>? _recentPage;
   bool _loading = false;
   String? _error;
 
@@ -17,7 +20,10 @@ class TrafficProvider extends ChangeNotifier {
   TrafficOverviewModel? get overview => _overview;
   List<VisitorEntry> get visitors => _visitors;
   List<TimelinePoint> get timeline => _timeline;
+  List<MapPoint> get mapPoints => _mapPoints;
+  List<RecentVisit> get recentVisits => _recentVisits;
   Map<String, dynamic>? get visitorsPage => _visitorsPage;
+  Map<String, dynamic>? get recentPage => _recentPage;
   bool get loading => _loading;
   String? get error => _error;
 
@@ -27,7 +33,7 @@ class TrafficProvider extends ChangeNotifier {
       _stats = TrafficStatsModel.fromJson(res['data'] ?? {});
       notifyListeners();
     } catch (e) {
-      _error = 'Erreur de chargement des statistiques';
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
     }
   }
@@ -38,7 +44,7 @@ class TrafficProvider extends ChangeNotifier {
       _overview = TrafficOverviewModel.fromJson(res['data'] ?? {});
       notifyListeners();
     } catch (e) {
-      _error = 'Erreur de chargement de la vue d\'ensemble';
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
     }
   }
@@ -52,7 +58,7 @@ class TrafficProvider extends ChangeNotifier {
       _visitors = content.map((e) => VisitorEntry.fromJson(e)).toList();
       notifyListeners();
     } catch (e) {
-      _error = 'Erreur de chargement des visiteurs';
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
     }
   }
@@ -66,7 +72,33 @@ class TrafficProvider extends ChangeNotifier {
       _timeline = data.map((e) => TimelinePoint.fromJson(e)).toList();
       notifyListeners();
     } catch (e) {
-      _error = 'Erreur de chargement de la timeline';
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMapData(String boutiqueId) async {
+    try {
+      final res = await _api.get('/traffic/$boutiqueId/map');
+      final data = res['data'] as List? ?? [];
+      _mapPoints = data.map((e) => MapPoint.fromJson(e as Map<String, dynamic>)).toList();
+      notifyListeners();
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadRecentVisits(String boutiqueId, {int page = 0, int size = 10}) async {
+    try {
+      final res = await _api.get('/traffic/$boutiqueId/recent',
+          queryParameters: {'page': page, 'size': size});
+      _recentPage = res['data'];
+      final content = res['data']?['content'] as List? ?? [];
+      _recentVisits = content.map((e) => RecentVisit.fromJson(e as Map<String, dynamic>)).toList();
+      notifyListeners();
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
       notifyListeners();
     }
   }
@@ -79,9 +111,14 @@ class TrafficProvider extends ChangeNotifier {
       loadStats(boutiqueId),
       loadOverview(boutiqueId),
       loadVisitors(boutiqueId),
+      loadMapData(boutiqueId),
     ]);
     _loading = false;
     notifyListeners();
+  }
+
+  String? exportCsvUrl(String boutiqueId) {
+    return '${ApiClient.baseUrl}/traffic/$boutiqueId/export';
   }
 
   void clear() {
@@ -89,7 +126,10 @@ class TrafficProvider extends ChangeNotifier {
     _overview = null;
     _visitors = [];
     _timeline = [];
+    _mapPoints = [];
+    _recentVisits = [];
     _visitorsPage = null;
+    _recentPage = null;
     _error = null;
     notifyListeners();
   }

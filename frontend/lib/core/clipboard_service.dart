@@ -26,7 +26,6 @@ class ClipboardService {
   static Future<void> setData(String text) async {
     try {
       await Clipboard.setData(ClipboardData(text: text));
-    } on PlatformException {
     } catch (_) {
     }
   }

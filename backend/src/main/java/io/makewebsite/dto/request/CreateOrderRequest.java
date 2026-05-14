@@ -21,10 +21,24 @@ public class CreateOrderRequest {
 
     private UUID customerId;
 
+    private String customerName;
+
+    private String customerEmail;
+
+    private String customerPhone;
+
     @NotEmpty
     private List<OrderItemRequest> items;
 
     private String shippingAddress;
+
+    private String city;
+
+    private String governorate;
+
+    private String postalCode;
+
+    private String country;
 
     private String paymentMethod;
 

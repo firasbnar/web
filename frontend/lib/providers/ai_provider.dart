@@ -21,7 +21,7 @@ class AiProvider extends ChangeNotifier {
       _loading = false; notifyListeners();
     } catch (e) {
       _messages.add({'role': 'assistant', 'content': 'Désolé, une erreur est survenue.'});
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
       _loading = false; notifyListeners();
     }
   }

@@ -10,6 +10,7 @@ import '../../providers/reviews_provider.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/status_chip.dart';
 
+
 class StoreDashboardScreen extends StatefulWidget {
   const StoreDashboardScreen({super.key});
   @override
@@ -220,7 +221,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         children: [
           _actionChip(Icons.open_in_new, 'Voir la boutique', true, () {
             final b = bp.activeBoutique;
-            if (b != null) context.push('/store/${b.id}', extra: b.name);
+            if (b != null) context.push('/store/${b.id}', extra: {'name': b.name, 'slug': b.slug});
           }),
           const SizedBox(width: 8),
           _actionChip(Icons.settings, 'Paramètres', false, () => context.go('/boutique-settings')),

@@ -7,9 +7,11 @@ class WebSocketService {
   StompClient? _client;
   final _storage = AppStorage();
   final StreamController<Map<String, dynamic>> _orderController = StreamController.broadcast();
+  final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
   bool _connected = false;
 
   Stream<Map<String, dynamic>> get onNewOrder => _orderController.stream;
+  Stream<Map<String, dynamic>> get onNewMessage => _messageController.stream;
 
   Future<void> connect(String boutiqueId) async {
     final token = await _storage.getAccessToken();
@@ -27,6 +29,17 @@ class WebSocketService {
                 try {
                   final data = jsonDecode(frame.body!) as Map<String, dynamic>;
                   _orderController.add(data);
+                } catch (_) {}
+              }
+            },
+          );
+          _client!.subscribe(
+            destination: '/topic/messages/$boutiqueId',
+            callback: (frame) {
+              if (frame.body != null) {
+                try {
+                  final data = jsonDecode(frame.body!) as Map<String, dynamic>;
+                  _messageController.add(data);
                 } catch (_) {}
               }
             },
@@ -51,5 +64,6 @@ class WebSocketService {
   void dispose() {
     disconnect();
     _orderController.close();
+    _messageController.close();
   }
 }

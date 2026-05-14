@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'core/router.dart';
@@ -16,14 +17,36 @@ import 'providers/cart_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/traffic_provider.dart';
-
+import 'providers/messages_provider.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Text(
+              details.exceptionAsString(),
+              style: const TextStyle(color: Colors.red, fontSize: 14),
+            ),
+          ),
+        ),
+      ),
+    );
+  };
   runApp(const MakeWebsiteApp());
 }
 
-class MakeWebsiteApp extends StatelessWidget {
+class MakeWebsiteApp extends StatefulWidget {
   const MakeWebsiteApp({super.key});
+
+  @override
+  State<MakeWebsiteApp> createState() => _MakeWebsiteAppState();
+}
+
+class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
+  GoRouter? _router;
 
   @override
   Widget build(BuildContext context) {
@@ -41,16 +64,18 @@ class MakeWebsiteApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AiProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
-ChangeNotifierProvider(create: (_) => ReviewsProvider()),
-         ChangeNotifierProvider(create: (_) => TrafficProvider()),
-       ],
+        ChangeNotifierProvider(create: (_) => ReviewsProvider()),
+        ChangeNotifierProvider(create: (_) => TrafficProvider()),
+        ChangeNotifierProvider(create: (_) => MessagesProvider()),
+      ],
       builder: (context, _) {
-        final auth = context.watch<AuthProvider>();
+        _router ??= createRouter(context.read<AuthProvider>());
+
         return MaterialApp.router(
           title: 'MakeWebsite',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          routerConfig: createRouter(auth),
+          routerConfig: _router!,
         );
       },
     );

@@ -38,7 +38,7 @@ class _SubscriptionDashboardScreenState extends State<SubscriptionDashboardScree
       _plans = (planRes['data'] as List).map((e) => Plan.fromJson(e)).toList();
       if (mounted) context.read<BoutiqueProvider>().loadStats();
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     }
     setState(() => _loading = false);
   }

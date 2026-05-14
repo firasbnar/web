@@ -39,7 +39,7 @@ class PosProvider extends ChangeNotifier {
       _loading = false; notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
       return false;
     }
   }
@@ -52,7 +52,7 @@ class PosProvider extends ChangeNotifier {
       _loading = false; notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
       return false;
     }
   }
@@ -74,7 +74,7 @@ class PosProvider extends ChangeNotifier {
       _loading = false; notifyListeners();
       return res['data'];
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
       return null;
     }
   }

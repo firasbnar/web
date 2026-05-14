@@ -2,6 +2,8 @@ package io.makewebsite.config;
 
 import io.makewebsite.dto.response.TrafficStatsResponse;
 import io.makewebsite.entity.Visitor;
+import io.makewebsite.service.GeoLocationService;
+import io.makewebsite.service.GeoLocationService.GeoData;
 import io.makewebsite.service.TrafficService;
 import io.makewebsite.service.WebSocketService;
 import jakarta.servlet.FilterChain;
@@ -18,6 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -27,6 +30,7 @@ public class VisitorTrackingFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(VisitorTrackingFilter.class);
     private final TrafficService trafficService;
     private final WebSocketService webSocketService;
+    private final GeoLocationService geoLocationService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -107,13 +111,24 @@ public class VisitorTrackingFilter extends OncePerRequestFilter {
                 else referralSource = "External";
             }
 
-// Geo-enrichment would go here (ip-api.com or MaxMind)
-             // For now, we'll store what we can derive
+// Geo-enrichment via ip-api.com
              String country = null;
              String city = null;
              String region = null;
              Double latitude = null;
              Double longitude = null;
+             try {
+                 Optional<GeoData> geo = geoLocationService.locate(request.getRemoteAddr());
+                 if (geo.isPresent()) {
+                     country = geo.get().country();
+                     city = geo.get().city();
+                     region = geo.get().region();
+                     latitude = geo.get().latitude();
+                     longitude = geo.get().longitude();
+                 }
+             } catch (Exception ex) {
+                 logger.debug("GeoIP lookup failed: {}", ex.getMessage());
+             }
 
              Visitor visitor = trafficService.findOrCreateVisitor(
                      boutiqueId, ipHash, userAgent, country, city, region,

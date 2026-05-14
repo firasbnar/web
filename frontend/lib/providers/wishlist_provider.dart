@@ -22,7 +22,7 @@ class WishlistProvider extends ChangeNotifier {
       _count = _items.length;
       _loading = false; notifyListeners();
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
     }
   }
 
@@ -38,7 +38,7 @@ class WishlistProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return false;
     }
   }

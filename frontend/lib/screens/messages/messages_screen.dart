@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
-import '../../providers/orders_provider.dart';
+import '../../providers/messages_provider.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -22,7 +22,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   void _load() {
     final bp = context.read<BoutiqueProvider>();
     if (bp.activeBoutique != null) {
-      context.read<OrdersProvider>().loadOrders(bp.activeBoutique!.id, refresh: true);
+      context.read<MessagesProvider>().loadConversations(bp.activeBoutique!.id);
     }
   }
 
@@ -31,13 +31,26 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Messages'), centerTitle: true),
-      body: Consumer<OrdersProvider>(
-        builder: (_, op, __) {
-          final orders = op.orders.where((o) => o.notes != null && o.notes!.isNotEmpty).toList();
-          if (op.loading) {
+      body: Consumer<MessagesProvider>(
+        builder: (_, mp, __) {
+          if (mp.loadingConversations) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (orders.isEmpty) {
+          if (mp.error != null) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(mp.error!, style: AppTypography.body2, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, child: const Text('Réessayer')),
+                ],
+              ),
+            );
+          }
+          if (mp.conversations.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -53,10 +66,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
+            itemCount: mp.conversations.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (_, i) {
-              final o = orders[i];
+              final c = mp.conversations[i];
               return Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -67,21 +80,36 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   contentPadding: const EdgeInsets.all(12),
                   leading: CircleAvatar(
                     backgroundColor: AppColors.primarySurface,
-                    child: Text((o.customerName ?? '?')[0].toUpperCase(),
+                    child: Text(c.customerName[0].toUpperCase(),
                         style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                   ),
-                  title: Text(o.customerName ?? 'Client', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                  title: Row(
+                    children: [
+                      Expanded(child: Text(c.customerName, style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600))),
+                      if (c.unreadCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text('${c.unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        ),
+                    ],
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 4),
-                      Text(o.notes ?? '', style: AppTypography.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Text('#${o.orderNumber}', style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                      Text(c.lastMessagePreview ?? '', style: AppTypography.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      if (c.lastMessageAt != null) ...[
+                        const SizedBox(height: 4),
+                        Text(_formatTime(c.lastMessageAt!), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                      ],
                     ],
                   ),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
-                  onTap: () => context.go('/orders/${o.id}'),
+                  onTap: () => context.push('/messages/${c.id}', extra: c),
                 ),
               );
             },
@@ -89,5 +117,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
         },
       ),
     );
+  }
+
+  String _formatTime(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      final now = DateTime.now();
+      if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+        return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      }
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return '';
+    }
   }
 }

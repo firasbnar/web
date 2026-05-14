@@ -15,7 +15,10 @@ public class UploadController {
     private final UploadService uploadService;
 
     @PostMapping("/image")
-    public ResponseEntity<ApiResponse<UploadResponse>> uploadImage(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse<UploadResponse>> uploadImage(@RequestParam(value = "file", required = false) MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Fichier vide ou manquant"));
+        }
         String url = uploadService.uploadImage(file);
         return ResponseEntity.ok(ApiResponse.ok(UploadResponse.builder().url(url).build()));
     }

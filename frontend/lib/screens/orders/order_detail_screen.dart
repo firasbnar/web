@@ -18,6 +18,8 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final _trackingCtrl = TextEditingController();
   String _selectedStatus = '';
+  static const List<String> _statusOptions = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+  static const List<String> _deliveryOptions = ['Adeex', 'Jax', 'Intigo'];
 
   @override
   void initState() {
@@ -130,22 +132,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          StatusChip(status: _selectedStatus),
+                          StatusChip(status: _selectedStatus.isNotEmpty ? _selectedStatus : order.status),
                           const Spacer(),
                           SizedBox(
                             width: 140,
                             child: DropdownButtonFormField<String>(
-                              initialValue: _selectedStatus,
-                              items: ['PENDING','CONFIRMED','SHIPPED','DELIVERED','CANCELLED']
+                              initialValue: _statusOptions.contains(_selectedStatus) ? _selectedStatus : null,
+                              items: _statusOptions
                                   .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13))))
                                   .toList(),
-                              onChanged: (v) => setState(() => _selectedStatus = v ?? order.status),
+                              onChanged: (v) {
+                                if (v != null) setState(() => _selectedStatus = v);
+                              },
                               decoration: const InputDecoration(border: InputBorder.none, isDense: true),
                             ),
                           ),
                         ],
                       ),
-                      if (_selectedStatus != order.status) ...[
+                      if (_selectedStatus.isNotEmpty && _selectedStatus != order.status) ...[
                         const SizedBox(height: 8),
                         AppButton(label: 'Confirmer', onPressed: () {
                           op.updateStatus(widget.orderId, _selectedStatus);
@@ -193,9 +197,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       Text('Livraison', style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        initialValue: order.deliveryCompany,
+                        value: _deliveryOptions.contains(order.deliveryCompany) ? order.deliveryCompany : null,
                         decoration: const InputDecoration(labelText: 'Transporteur'),
-                        items: ['Adeex','Jax','Intigo'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                        items: _deliveryOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                         onChanged: (v) {},
                       ),
                       const SizedBox(height: 8),

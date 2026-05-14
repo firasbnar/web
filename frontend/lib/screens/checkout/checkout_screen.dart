@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../providers/cart_provider.dart';
@@ -17,6 +18,11 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _api = ApiClient();
   int _currentStep = 0;
+
+  // Step 0: Customer info
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
 
   // Step 1: Address
   final _addressCtrl = TextEditingController();
@@ -47,6 +53,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     _addressCtrl.dispose();
     _cityCtrl.dispose();
     _govCtrl.dispose();
@@ -55,9 +64,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
+  bool _isValidUuid(String value) {
+    return RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(value);
+  }
+
   Future<void> _applyCoupon() async {
     final code = _couponCtrl.text.trim();
     if (code.isEmpty) return;
+    if (!_isValidUuid(widget.boutiqueId)) {
+      setState(() { _couponMsg = 'Identifiant boutique invalide'; _couponLoading = false; });
+      return;
+    }
     setState(() { _couponLoading = true; _couponMsg = null; _discount = 0; });
     try {
       final res = await _api.post('/coupons/validate', data: {
@@ -73,7 +90,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _couponMsg = data['message'] ?? 'Code promo invalide';
       }
     } catch (e) {
-      _couponMsg = 'Erreur lors de la validation du code';
+      _couponMsg = ApiClient.extractErrorMessage(e);
     }
     setState(() => _couponLoading = false);
   }
@@ -81,6 +98,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _placeOrder() async {
     final cart = context.read<CartProvider>();
     if (cart.items.isEmpty) return;
+    if (!_isValidUuid(widget.boutiqueId)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Configuration boutique invalide. Veuillez réessayer.'),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+      return;
+    }
+    if (cart.items.any((i) => i.productId == null || i.productName == null || i.productName!.isEmpty)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Certains articles du panier sont incomplets.'),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+      return;
+    }
     setState(() => _placing = true);
     try {
       final items = cart.items.map((i) => {
@@ -90,39 +125,65 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'quantity': i.quantity,
       }).toList();
 
-      final fullAddress = [
-        _addressCtrl.text.trim(),
-        _cityCtrl.text.trim(),
-        _govCtrl.text.trim(),
-      ].where((s) => s.isNotEmpty).join(', ');
+      final street = _addressCtrl.text.trim();
+      final city = _cityCtrl.text.trim();
+      final gov = _govCtrl.text.trim();
+      final fullAddress = [street, city, gov].where((s) => s.isNotEmpty).join(', ');
 
       final res = await _api.post('/orders', data: {
         'boutiqueId': widget.boutiqueId,
+        'customerName': _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : null,
+        'customerEmail': _emailCtrl.text.trim().isNotEmpty ? _emailCtrl.text.trim() : null,
+        'customerPhone': _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
         'items': items,
         'shippingAddress': fullAddress.isNotEmpty ? fullAddress : null,
+        'city': city.isNotEmpty ? city : null,
+        'governorate': gov.isNotEmpty ? gov : null,
         'paymentMethod': _paymentMethod == 'cod' ? 'CASH_ON_DELIVERY' : _paymentMethod.toUpperCase(),
         'shippingFee': _shippingFee,
         'discount': _discount,
         'notes': _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
         'couponCode': _couponCtrl.text.trim().isNotEmpty ? _couponCtrl.text.trim() : null,
       });
-      _orderNumber = res['data']['orderNumber'];
+      _orderNumber = (res['data'] is Map ? res['data']['orderNumber']?.toString() : null);
       await cart.clearCart(widget.boutiqueId);
       setState(() { _success = true; _placing = false; });
     } catch (e) {
-      setState(() => _placing = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+        final msg = ApiClient.extractErrorMessage(e);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg),
+          backgroundColor: AppColors.danger,
+        ));
       }
+    } finally {
+      if (mounted) setState(() => _placing = false);
     }
   }
 
   List<Step> _buildSteps() {
     return [
       Step(
-        title: const Text('Adresse'),
+        title: const Text('Identité'),
         isActive: _currentStep >= 0,
         state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Vos informations', style: AppTypography.body2),
+            const SizedBox(height: 12),
+            TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nom complet *', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()), keyboardType: TextInputType.emailAddress),
+            const SizedBox(height: 12),
+            TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Téléphone', border: OutlineInputBorder()), keyboardType: TextInputType.phone),
+          ],
+        ),
+      ),
+      Step(
+        title: const Text('Adresse'),
+        isActive: _currentStep >= 1,
+        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,8 +199,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       Step(
         title: const Text('Livraison'),
-        isActive: _currentStep >= 1,
-        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= 2,
+        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
         content: Column(
           children: [
             _deliveryOption('standard', 'Standard', 'Livraison sous 3-5 jours', 0),
@@ -152,8 +213,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       Step(
         title: const Text('Paiement'),
-        isActive: _currentStep >= 2,
-        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= 3,
+        state: _currentStep > 3 ? StepState.complete : StepState.indexed,
         content: Column(
           children: [
             _paymentOption('cod', 'Paiement à la livraison', Icons.money),
@@ -166,8 +227,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       Step(
         title: const Text('Récapitulatif'),
-        isActive: _currentStep >= 3,
-        state: _currentStep > 3 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= 4,
+        state: _currentStep > 4 ? StepState.complete : StepState.indexed,
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -208,8 +269,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       Step(
         title: const Text('Confirmation'),
-        isActive: _currentStep >= 4,
-        state: _currentStep > 4 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= 5,
+        state: _currentStep > 5 ? StepState.complete : StepState.indexed,
         content: _success
             ? Column(
                 children: [
@@ -219,7 +280,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const SizedBox(height: 8),
                   Text('Numéro de commande: $_orderNumber', style: AppTypography.body2),
                   const SizedBox(height: 24),
-                  AppButton(label: 'Retour à l\'accueil', onPressed: () => Navigator.pop(context)),
+                  AppButton(label: 'Retour à la boutique', onPressed: () {
+                    if (mounted) context.go('/store/${widget.boutiqueId}');
+                  }),
                 ],
               )
             : Column(
@@ -256,7 +319,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 8),
             Text('Numéro de commande: $_orderNumber', style: AppTypography.body2),
             const SizedBox(height: 24),
-            AppButton(label: 'Retour à l\'accueil', onPressed: () => Navigator.pop(context)),
+            AppButton(label: 'Retour à la boutique', onPressed: () {
+              if (mounted) context.go('/store/${widget.boutiqueId}');
+            }),
           ],
         ),
       ),
@@ -353,8 +418,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Stepper(
                   currentStep: safeStep,
               onStepContinue: () {
-                if (_currentStep < 4) setState(() => _currentStep++);
-                if (_currentStep == 4) _placeOrder();
+                if (_currentStep < 5) setState(() => _currentStep++);
+                if (_currentStep == 5) _placeOrder();
               },
               onStepCancel: () {
                 if (_currentStep > 0) setState(() => _currentStep--);
@@ -365,7 +430,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   padding: const EdgeInsets.only(top: 16),
                   child: Row(
                     children: [
-                      if (_currentStep < 4)
+                      if (_currentStep < 5)
                         AppButton(label: 'Continuer', onPressed: details.onStepContinue, fullWidth: false)
                       else
                         AppButton(label: 'Confirmer', onPressed: details.onStepContinue, loading: _placing, fullWidth: false),

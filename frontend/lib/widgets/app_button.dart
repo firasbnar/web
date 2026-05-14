@@ -61,8 +61,8 @@ class AppButton extends StatelessWidget {
       builder: (context, constraints) {
         final double width = constraints.hasBoundedWidth
             ? constraints.maxWidth
-            : MediaQuery.of(context).size.width;
-        return SizedBox(width: width, height: 50, child: button);
+            : (MediaQuery.maybeOf(context)?.size.width ?? 400);
+        return SizedBox(width: width < 50 ? 400 : width, height: 50, child: button);
       },
     );
   }

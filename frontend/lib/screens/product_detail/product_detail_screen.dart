@@ -51,7 +51,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         if (mounted) setState(() {});
       }
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() { _error = ApiClient.extractErrorMessage(e); _loading = false; });
     }
   }
 
@@ -110,7 +110,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ));
             }
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
           }
         }),
       ],
@@ -145,7 +145,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             pinned: true,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () { if (context.canPop()) context.pop(); },
             ),
             actions: [
               IconButton(

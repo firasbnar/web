@@ -19,7 +19,7 @@ class CouponsProvider extends ChangeNotifier {
       _coupons = (res['data'] as List).map((e) => Coupon.fromJson(e)).toList();
       _loading = false; notifyListeners();
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
     }
   }
 
@@ -31,7 +31,7 @@ class CouponsProvider extends ChangeNotifier {
       notifyListeners();
       return coupon;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return null;
     }
   }
@@ -43,7 +43,7 @@ class CouponsProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return false;
     }
   }

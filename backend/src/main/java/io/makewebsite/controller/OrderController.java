@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class OrderController {
             @RequestParam UUID boutiqueId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String search,
-            Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable) {
         Page<OrderResponse> page = orderService.getOrders(boutiqueId, status, search, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PagedResponse.from(page)));
     }
@@ -33,7 +34,7 @@ public class OrderController {
     @GetMapping("/my-orders")
     public ResponseEntity<ApiResponse<PagedResponse<OrderResponse>>> getMyOrders(
             @AuthenticationPrincipal UserPrincipal principal,
-            Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable) {
         Page<OrderResponse> page = orderService.getMyOrders(principal.getUserId(), pageable);
         return ResponseEntity.ok(ApiResponse.ok(PagedResponse.from(page)));
     }

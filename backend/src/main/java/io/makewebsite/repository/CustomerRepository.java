@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -16,6 +17,8 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     Page<Customer> findByBoutiqueId(UUID boutiqueId, Pageable pageable);
 
     Page<Customer> findByBoutiqueIdAndFullNameContainingIgnoreCase(UUID boutiqueId, String search, Pageable pageable);
+
+    Optional<Customer> findByBoutiqueIdAndEmail(UUID boutiqueId, String email);
 
     long countByBoutiqueId(UUID boutiqueId);
 

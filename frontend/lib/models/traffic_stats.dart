@@ -217,6 +217,91 @@ class TimelinePoint {
   }
 }
 
+class MapPoint {
+  final String id;
+  final String? ipHash;
+  final String? country;
+  final String? city;
+  final double? latitude;
+  final double? longitude;
+  final String? browser;
+  final String? deviceType;
+  final String? operatingSystem;
+  final int totalVisits;
+  final String? lastActivityAt;
+  final bool isActive;
+
+  MapPoint({
+    required this.id,
+    this.ipHash,
+    this.country,
+    this.city,
+    this.latitude,
+    this.longitude,
+    this.browser,
+    this.deviceType,
+    this.operatingSystem,
+    required this.totalVisits,
+    this.lastActivityAt,
+    this.isActive = true,
+  });
+
+  factory MapPoint.fromJson(Map<String, dynamic> json) {
+    return MapPoint(
+      id: json['id']?.toString() ?? '',
+      ipHash: json['ipHash']?.toString(),
+      country: json['country']?.toString(),
+      city: json['city']?.toString(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      browser: json['browser']?.toString(),
+      deviceType: json['deviceType']?.toString(),
+      operatingSystem: json['operatingSystem']?.toString(),
+      totalVisits: (json['totalVisits'] as num?)?.toInt() ?? 0,
+      lastActivityAt: json['lastActivityAt']?.toString(),
+      isActive: json['isActive'] ?? true,
+    );
+  }
+}
+
+class RecentVisit {
+  final String id;
+  final String? ipHash;
+  final String? page;
+  final String? referrer;
+  final String? browser;
+  final String? country;
+  final String? city;
+  final String? userAgent;
+  final String? viewedAt;
+
+  RecentVisit({
+    required this.id,
+    this.ipHash,
+    this.page,
+    this.referrer,
+    this.browser,
+    this.country,
+    this.city,
+    this.userAgent,
+    this.viewedAt,
+  });
+
+  factory RecentVisit.fromJson(Map<String, dynamic> json) {
+    return RecentVisit(
+      id: json['id']?.toString() ?? '',
+      ipHash: json['ipHash']?.toString(),
+      page: json['page']?.toString(),
+      referrer: json['referrer']?.toString(),
+      browser: json['browser']?.toString(),
+      country: json['country']?.toString(),
+      city: json['city']?.toString(),
+      userAgent: json['userAgent']?.toString(),
+      viewedAt: json['viewedAt']?.toString(),
+    );
+  }
+}
+
 class TrafficOverviewModel {
   final TrafficStatsModel stats;
   final List<GeoData> topCountries;

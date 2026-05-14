@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,9 +22,12 @@ public class CustomerResponse {
     private String address;
     private String city;
     private String governorate;
+    private String postalCode;
+    private String country;
     private String notes;
-    private LocalDateTime createdAt;
-    private long totalOrders;
-    private double totalSpent;
+    private int totalOrders;
+    private BigDecimal totalSpent;
     private LocalDateTime lastOrderDate;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

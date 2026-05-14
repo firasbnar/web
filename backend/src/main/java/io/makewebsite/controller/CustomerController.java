@@ -7,7 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,7 +23,7 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<PagedResponse<CustomerResponse>>> getCustomers(
             @RequestParam UUID boutiqueId,
             @RequestParam(required = false) String search,
-            Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable) {
         Page<CustomerResponse> page = customerService.getCustomers(boutiqueId, search, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PagedResponse.from(page)));
     }
@@ -46,5 +47,14 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable UUID id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.ok(ApiResponse.ok("Client supprimé", null));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<String> exportCsv(@RequestParam UUID boutiqueId) {
+        String csv = customerService.exportCsv(boutiqueId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename("clients.csv").build());
+        return new ResponseEntity<>(csv, headers, HttpStatus.OK);
     }
 }

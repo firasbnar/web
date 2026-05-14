@@ -42,6 +42,8 @@ import '../screens/product_manager/product_manager_screen.dart';
 import '../screens/products/bulk_add_products_screen.dart';
 import '../screens/team/team_screen.dart';
 import '../screens/messages/messages_screen.dart';
+import '../screens/messages/conversation_screen.dart';
+import '../models/conversation.dart';
 import '../widgets/main_scaffold.dart';
 
 GoRouter createRouter(AuthProvider auth) {
@@ -76,6 +78,7 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/home', builder: (_, __) => const StoreDashboardScreen()),
           GoRoute(path: '/store-selector', builder: (_, __) => const StoreSelectorScreen()),
           GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
+          GoRoute(path: '/messages/:id', builder: (_, state) => ConversationScreen(conversation: state.extra as Conversation)),
           GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
           GoRoute(path: '/reviews', builder: (_, __) => const ReviewsScreen()),
           GoRoute(path: '/boutique/theme', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Theme')))),
@@ -109,7 +112,18 @@ GoRouter createRouter(AuthProvider auth) {
         ],
       ),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),
-      GoRoute(path: '/store/:boutiqueId', builder: (_, state) => StoreCatalogScreen(boutiqueId: state.pathParameters['boutiqueId']!, boutiqueName: state.extra as String?)),
+      GoRoute(path: '/store/:boutiqueId', builder: (_, state) {
+        final extra = state.extra;
+        String? name;
+        String? slug;
+        if (extra is Map) {
+          name = extra['name'] as String?;
+          slug = extra['slug'] as String?;
+        } else {
+          name = extra as String?;
+        }
+        return StoreCatalogScreen(boutiqueId: state.pathParameters['boutiqueId']!, boutiqueName: name, boutiqueSlug: slug);
+      }),
       GoRoute(path: '/product/:id', builder: (_, state) => ProductDetailScreen(productId: state.pathParameters['id']!, boutiqueId: state.extra as String?)),
       GoRoute(path: '/cart/:boutiqueId', builder: (_, state) => CartScreen(boutiqueId: state.pathParameters['boutiqueId']!)),
       GoRoute(path: '/checkout/:boutiqueId', builder: (_, state) => CheckoutScreen(boutiqueId: state.pathParameters['boutiqueId']!)),

@@ -37,7 +37,7 @@ class OrdersProvider extends ChangeNotifier {
       _currentPage++;
       _loading = false; notifyListeners();
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
     }
   }
 
@@ -48,7 +48,7 @@ class OrdersProvider extends ChangeNotifier {
       _selectedOrder = Order.fromJson(res['data']);
       _loading = false; notifyListeners();
     } catch (e) {
-      _error = e.toString(); _loading = false; notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); _loading = false; notifyListeners();
     }
   }
 
@@ -61,7 +61,7 @@ class OrdersProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return false;
     }
   }
@@ -71,7 +71,7 @@ class OrdersProvider extends ChangeNotifier {
       await _api.put('/orders/$id/payment', data: {'paymentStatus': paymentStatus, 'paymentRef': paymentRef});
       return true;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return false;
     }
   }
@@ -81,7 +81,7 @@ class OrdersProvider extends ChangeNotifier {
       await _api.put('/orders/$id/tracking', data: {'deliveryCompany': company, 'trackingNumber': tracking});
       return true;
     } catch (e) {
-      _error = e.toString(); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
       return false;
     }
   }

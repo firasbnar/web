@@ -16,6 +16,10 @@ public class WebSocketService {
         messagingTemplate.convertAndSend("/topic/orders/" + boutiqueId, order);
     }
 
+    public void sendNewMessageNotification(UUID boutiqueId, ConversationResponse conversation) {
+        messagingTemplate.convertAndSend("/topic/messages/" + boutiqueId, conversation);
+    }
+
     public void sendVisitorUpdate(UUID boutiqueId, TrafficStatsResponse stats) {
         messagingTemplate.convertAndSend("/topic/traffic/" + boutiqueId + "/stats", stats);
     }

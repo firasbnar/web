@@ -1,9 +1,13 @@
 package io.makewebsite.controller;
 
+import io.makewebsite.dto.request.TrackVisitRequest;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.service.TrafficService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -67,5 +71,51 @@ public class TrafficController {
             @PathVariable UUID boutiqueId) {
         TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
         return ResponseEntity.ok(ApiResponse.ok(stats.getAnonymousVisitors()));
+    }
+
+    @PostMapping("/track")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> trackVisit(
+            @Valid @RequestBody TrackVisitRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Visite enregistrée", trafficService.trackVisit(request)));
+    }
+
+    @GetMapping("/{boutiqueId}/recent")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getRecentVisits(
+            @PathVariable UUID boutiqueId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                trafficService.getRecentVisits(boutiqueId, page, size)));
+    }
+
+    @GetMapping("/{boutiqueId}/map")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getMapData(
+            @PathVariable UUID boutiqueId) {
+        return ResponseEntity.ok(ApiResponse.ok(trafficService.getMapData(boutiqueId)));
+    }
+
+    @GetMapping("/{boutiqueId}/export")
+    public ResponseEntity<byte[]> exportCsv(@PathVariable UUID boutiqueId) {
+        String csv = trafficService.exportCsv(boutiqueId);
+        byte[] bytes = csv.getBytes();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", "traffic_export.csv");
+        return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    @GetMapping("/{boutiqueId}/live")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getLiveStats(
+            @PathVariable UUID boutiqueId) {
+        return ResponseEntity.ok(ApiResponse.ok(trafficService.getLiveStats(boutiqueId)));
+    }
+
+    @GetMapping("/{boutiqueId}/sessions")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSessions(
+            @PathVariable UUID boutiqueId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.ok(trafficService.getSessions(boutiqueId, page, size)));
     }
 }
