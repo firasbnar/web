@@ -23,6 +23,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Page<Order> findByBoutiqueIdAndStatus(UUID boutiqueId, String status, Pageable pageable);
 
+    Page<Order> findByBoutiqueIdAndUserId(UUID boutiqueId, UUID userId, Pageable pageable);
+
+    Page<Order> findByBoutiqueIdAndUserIdAndStatus(UUID boutiqueId, UUID userId, String status, Pageable pageable);
+
     Page<Order> findByBoutiqueIdAndOrderNumberContainingIgnoreCase(UUID boutiqueId, String search, Pageable pageable);
 
     Page<Order> findByBoutiqueIdAndStatusAndOrderNumberContainingIgnoreCase(UUID boutiqueId, String status, String search, Pageable pageable);
@@ -43,6 +47,20 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.boutique.id = :boutiqueId")
     BigDecimal sumRevenueByBoutiqueId(@Param("boutiqueId") UUID boutiqueId);
 
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.boutique.id = :boutiqueId AND o.user.id = :userId")
+    BigDecimal sumRevenueByBoutiqueIdAndUserId(@Param("boutiqueId") UUID boutiqueId, @Param("userId") UUID userId);
+
+    long countByBoutiqueIdAndUserId(UUID boutiqueId, UUID userId);
+
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o")
     BigDecimal sumAllRevenue();
+
+    // Date-filtered variants
+    Page<Order> findByBoutiqueIdAndCreatedAtBetween(UUID boutiqueId, LocalDateTime from, LocalDateTime to, Pageable pageable);
+
+    Page<Order> findByBoutiqueIdAndStatusAndCreatedAtBetween(UUID boutiqueId, String status, LocalDateTime from, LocalDateTime to, Pageable pageable);
+
+    Page<Order> findByBoutiqueIdAndOrderNumberContainingIgnoreCaseAndCreatedAtBetween(UUID boutiqueId, String search, LocalDateTime from, LocalDateTime to, Pageable pageable);
+
+    Page<Order> findByBoutiqueIdAndStatusAndOrderNumberContainingIgnoreCaseAndCreatedAtBetween(UUID boutiqueId, String status, String search, LocalDateTime from, LocalDateTime to, Pageable pageable);
 }

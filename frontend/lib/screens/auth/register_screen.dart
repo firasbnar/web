@@ -41,7 +41,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
     if (mounted) {
       if (success) {
-        context.go('/home');
+        if (provider.emailVerificationRequired) {
+          context.go('/verify-email', extra: _emailCtrl.text.trim());
+        } else {
+          context.go('/home');
+        }
       } else if (provider.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.error!)));
       }

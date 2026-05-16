@@ -6,6 +6,7 @@ import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import io.makewebsite.security.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,79 +15,171 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final BoutiqueRepository boutiqueRepository;
+    private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
+    private final CaisseService caisseService;
+    private final UserSessionRepository userSessionRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email déjà utilisé");
+        log.info("Register attempt for email: {}", request.getEmail());
+        try {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                log.warn("Registration failed: email already used: {}", request.getEmail());
+                throw new RuntimeException("Email déjà utilisé");
+            }
+            String verificationToken = UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
+            Tenant tenant = tenantRepository.save(Tenant.builder()
+                    .name(request.getFullName() + "'s Tenant")
+                    .build());
+            User user = User.builder()
+                    .fullName(request.getFullName())
+                    .email(request.getEmail())
+                    .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .phone(request.getPhone())
+                    .tenant(tenant)
+                    .language(request.getLanguage() != null ? request.getLanguage() : "fr")
+                    .role("OWNER")
+                    .emailVerified(false)
+                    .enabled(false)
+                    .verificationToken(verificationToken)
+                    .verificationTokenExpiry(LocalDateTime.now().plusHours(24))
+                    .build();
+            user = userRepository.save(user);
+            log.debug("User created: id={}, email={}, enabled=false, verificationToken={}",
+                    user.getId(), user.getEmail(), verificationToken);
+
+            Boutique boutique = Boutique.builder()
+                    .user(user)
+                    .tenant(tenant)
+                    .name(request.getFullName() + "'s Store")
+                    .slug(request.getFullName().toLowerCase().replaceAll("\\s+", "-").replaceAll("[^a-z0-9-]", "") + "-" + UUID.randomUUID().toString().substring(0, 6))
+                    .currency("TND")
+                    .language(request.getLanguage() != null ? request.getLanguage() : "fr")
+                    .isActive(true)
+                    .enableCod(true)
+                    .build();
+            boutique = boutiqueRepository.save(boutique);
+            log.debug("Boutique created: id={}, name={} for user={}", boutique.getId(), boutique.getName(), user.getId());
+
+            emailService.sendVerificationEmail(user.getEmail(), verificationToken);
+            log.info("Registration successful for email: {}, verification email sent", request.getEmail());
+
+            return AuthResponse.builder()
+                    .user(buildUserResponse(user))
+                    .emailVerificationRequired(true)
+                    .build();
+        } catch (EmailService.EmailDeliveryException e) {
+            log.error("Registration email delivery failed for email: {}", request.getEmail(), e);
+            throw e;
+        } catch (RuntimeException e) {
+            log.error("Registration failed for email: {} — exceptionType={}, message={}", 
+                    request.getEmail(), e.getClass().getName(), e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de l'inscription: " + e.getMessage());
         }
-        User user = User.builder()
-                .fullName(request.getFullName())
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .phone(request.getPhone())
-                .language(request.getLanguage() != null ? request.getLanguage() : "fr")
-                .role("OWNER")
-                .build();
-        user = userRepository.save(user);
-
-        Boutique boutique = Boutique.builder()
-                .user(user)
-                .name(request.getFullName() + "'s Store")
-                .slug(request.getFullName().toLowerCase().replaceAll("\\s+", "-").replaceAll("[^a-z0-9-]", "") + "-" + UUID.randomUUID().toString().substring(0, 6))
-                .currency("TND")
-                .language(request.getLanguage() != null ? request.getLanguage() : "fr")
-                .isActive(true)
-                .enableCod(true)
-                .build();
-        boutiqueRepository.save(boutique);
-
-        UserPrincipal userPrincipal = new UserPrincipal(user);
-        String accessToken = jwtUtil.generateAccessToken(userPrincipal);
-        String refreshToken = jwtUtil.generateRefreshToken(userPrincipal);
-
-        RefreshToken rt = RefreshToken.builder()
-                .user(user)
-                .token(refreshToken)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .build();
-        refreshTokenRepository.save(rt);
-
-        return buildAuthResponse(user, accessToken, refreshToken);
     }
 
+    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        User user = userRepository.findById(userPrincipal.getUserId())
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-
-        String accessToken = jwtUtil.generateAccessToken(userPrincipal);
-        String refreshToken = jwtUtil.generateRefreshToken(userPrincipal);
-
-        RefreshToken rt = RefreshToken.builder()
-                .user(user)
-                .token(refreshToken)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .build();
-        refreshTokenRepository.save(rt);
-
-        return buildAuthResponse(user, accessToken, refreshToken);
+        return login(request, null, null);
     }
 
+    @Transactional(readOnly = true)
+    public AuthResponse login(LoginRequest request, String ipAddress, String deviceInfo) {
+        log.info("Login attempt for email: {}", request.getEmail());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            User user = userRepository.findByIdWithTenant(userPrincipal.getUserId())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+            if (!Boolean.TRUE.equals(user.getEnabled())) {
+                log.warn("Login blocked: email not verified for user {}", user.getId());
+                throw new EmailNotVerifiedException("Veuillez vérifier votre email avant de vous connecter");
+            }
+            if (Boolean.TRUE.equals(user.getIsSuspended())) {
+                log.warn("Login blocked: account suspended for user {}", user.getId());
+                throw new RuntimeException("Compte suspendu. Contactez le support.");
+            }
+
+            String accessToken = jwtUtil.generateAccessToken(userPrincipal);
+            String refreshToken = jwtUtil.generateRefreshToken(userPrincipal);
+
+            RefreshToken rt = RefreshToken.builder()
+                    .user(user)
+                    .token(refreshToken)
+                    .expiresAt(LocalDateTime.now().plusDays(7))
+                    .build();
+            refreshTokenRepository.save(rt);
+
+            user.setLastLoginAt(LocalDateTime.now());
+            userRepository.save(user);
+
+            // Record login activity for all boutiques
+            recordUserActivity(user, "CONNEXION_CAISSE_REUSSIE", "Connexion réussie", ipAddress, deviceInfo);
+
+            log.info("Login successful for user {}", user.getId());
+            return buildAuthResponse(user, accessToken, refreshToken);
+        } catch (BadCredentialsException e) {
+            User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+            if (user != null) {
+                recordUserActivity(user, "CONNEXION_CAISSE_ECHOUEE", "Tentative de connexion échouée", ipAddress, deviceInfo);
+            }
+            throw e;
+        }
+    }
+
+    @Transactional
+    public void verifyEmail(String token) {
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Token de vérification manquant");
+        }
+        User user = userRepository.findByVerificationToken(token)
+                .orElseThrow(() -> new RuntimeException("Token de vérification invalide ou déjà utilisé"));
+        if (user.getVerificationTokenExpiry() == null || user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Token de vérification expiré. Demandez un nouveau lien.");
+        }
+        user.setEmailVerified(true);
+        user.setEnabled(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void resendVerification(String email) {
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email requis");
+        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Aucun compte trouvé avec cet email"));
+        if (Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new RuntimeException("Email déjà vérifié. Vous pouvez vous connecter.");
+        }
+        String newToken = UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
+        user.setVerificationToken(newToken);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+        emailService.sendVerificationEmail(user.getEmail(), newToken);
+        log.info("Verification email resent successfully to user {}", user.getId());
+    }
+
+    @Transactional(readOnly = true)
     public AuthResponse refresh(RefreshTokenRequest request) {
         RefreshToken rt = refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new RuntimeException("Refresh token invalide"));
@@ -94,8 +187,11 @@ public class AuthService {
             refreshTokenRepository.delete(rt);
             throw new RuntimeException("Refresh token expiré");
         }
-        User user = rt.getUser();
-        UserPrincipal userPrincipal = new UserPrincipal(user);
+        User user = userRepository.findByIdWithTenant(rt.getUser().getId())
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        UserPrincipal userPrincipal = new UserPrincipal(
+                user.getId(), user.getEmail(), user.getPasswordHash(),
+                user.getRole(), user.getTenant().getId());
 
         String newAccessToken = jwtUtil.generateAccessToken(userPrincipal);
         String newRefreshToken = jwtUtil.generateRefreshToken(userPrincipal);
@@ -107,14 +203,11 @@ public class AuthService {
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
 
+    @Transactional(readOnly = true)
     public UserResponse getProfile(UUID userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithTenant(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        return UserResponse.builder()
-                .id(user.getId()).fullName(user.getFullName()).email(user.getEmail())
-                .phone(user.getPhone()).role(user.getRole()).language(user.getLanguage())
-                .avatarUrl(user.getAvatarUrl())
-                .build();
+        return buildUserResponse(user);
     }
 
     @Transactional
@@ -125,11 +218,7 @@ public class AuthService {
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getLanguage() != null) user.setLanguage(request.getLanguage());
         user = userRepository.save(user);
-        return UserResponse.builder()
-                .id(user.getId()).fullName(user.getFullName()).email(user.getEmail())
-                .phone(user.getPhone()).role(user.getRole()).language(user.getLanguage())
-                .avatarUrl(user.getAvatarUrl())
-                .build();
+        return buildUserResponse(user);
     }
 
     @Transactional
@@ -145,8 +234,19 @@ public class AuthService {
 
     @Transactional
     public void logout(RefreshTokenRequest request) {
+        logout(request, null, null);
+    }
+
+    @Transactional
+    public void logout(RefreshTokenRequest request, String ipAddress, String deviceInfo) {
         refreshTokenRepository.findByToken(request.getRefreshToken())
-                .ifPresent(refreshTokenRepository::delete);
+                .ifPresent(rt -> {
+                    User user = rt.getUser();
+                    refreshTokenRepository.delete(rt);
+                    if (user != null) {
+                        recordUserActivity(user, "DECONNEXION_CAISSE", "Déconnexion", ipAddress, deviceInfo);
+                    }
+                });
     }
 
     @Transactional
@@ -166,18 +266,25 @@ public class AuthService {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             String randomSlug = "-" + UUID.randomUUID().toString().substring(0, 6);
+            Tenant tenant = tenantRepository.save(Tenant.builder()
+                    .name((name != null ? name : email.split("@")[0]) + "'s Tenant")
+                    .build());
             user = User.builder()
                     .fullName(name != null ? name : email.split("@")[0])
                     .email(email)
                     .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .tenant(tenant)
                     .role("OWNER")
                     .language("fr")
                     .avatarUrl(avatar)
+                    .emailVerified(true)
+                    .enabled(true)
                     .build();
             user = userRepository.save(user);
 
             Boutique boutique = Boutique.builder()
                     .user(user)
+                    .tenant(tenant)
                     .name(name != null ? name + "'s Store" : email.split("@")[0] + "'s Store")
                     .slug(email.split("@")[0].toLowerCase().replaceAll("[^a-z0-9-]", "") + randomSlug)
                     .currency("TND")
@@ -186,8 +293,19 @@ public class AuthService {
                     .enableCod(true)
                     .build();
             boutiqueRepository.save(boutique);
+        } else {
+            ensureTenant(user);
+            if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+                user.setEmailVerified(true);
+                user.setEnabled(true);
+                user.setVerificationToken(null);
+                user.setVerificationTokenExpiry(null);
+                userRepository.save(user);
+            }
         }
-        UserPrincipal userPrincipal = new UserPrincipal(user);
+        UserPrincipal userPrincipal = new UserPrincipal(
+                user.getId(), user.getEmail(), user.getPasswordHash(),
+                user.getRole(), user.getTenant().getId());
         String accessToken = jwtUtil.generateAccessToken(userPrincipal);
         String refreshToken = jwtUtil.generateRefreshToken(userPrincipal);
 
@@ -201,20 +319,72 @@ public class AuthService {
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
+    private void recordUserActivity(User user, String action, String details,
+                                     String ipAddress, String deviceInfo) {
+        try {
+            List<Boutique> boutiques = boutiqueRepository.findByUserId(user.getId());
+            for (Boutique b : boutiques) {
+                caisseService.recordActivity(b.getId(), user.getId(), user.getFullName(),
+                        action, "SUCCESS", details, ipAddress, deviceInfo);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to record activity for user {}: {}", user.getId(), e.getMessage());
+        }
+    }
+
+    private void recordUserActivity(User user, String action, String details) {
+        recordUserActivity(user, action, details, null, null);
+    }
+
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
-        UserResponse userResponse = UserResponse.builder()
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(buildUserResponse(user))
+                .role(user.getRole())
+                .tenant(buildTenantResponse(user.getTenant()))
+                .emailVerificationRequired(false)
+                .build();
+    }
+
+    private UserResponse buildUserResponse(User user) {
+        return UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .role(user.getRole())
+                .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
                 .language(user.getLanguage())
                 .avatarUrl(user.getAvatarUrl())
+                .emailVerified(Boolean.TRUE.equals(user.getEmailVerified()))
                 .build();
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .user(userResponse)
+    }
+
+    private Tenant ensureTenant(User user) {
+        if (user.getTenant() != null) {
+            return user.getTenant();
+        }
+        Tenant tenant = tenantRepository.save(Tenant.builder()
+                .name((user.getFullName() != null ? user.getFullName() : "User") + "'s Tenant")
+                .build());
+        user.setTenant(tenant);
+        return tenant;
+    }
+
+    private TenantResponse buildTenantResponse(Tenant tenant) {
+        if (tenant == null) {
+            return null;
+        }
+        return TenantResponse.builder()
+                .id(tenant.getId())
+                .name(tenant.getName())
                 .build();
+    }
+
+    public static class EmailNotVerifiedException extends RuntimeException {
+        public EmailNotVerifiedException(String message) {
+            super(message);
+        }
     }
 }

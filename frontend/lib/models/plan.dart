@@ -20,6 +20,30 @@ class Plan {
   );
 }
 
+class Invoice {
+  final String id;
+  final String? subscriptionId;
+  final double amount;
+  final String currency;
+  final String status;
+  final String? paidAt;
+  final String? planName;
+  final String? paymentRef;
+
+  Invoice({required this.id, this.subscriptionId, required this.amount, this.currency = 'TND', required this.status, this.paidAt, this.planName, this.paymentRef});
+
+  factory Invoice.fromJson(Map<String, dynamic> json) => Invoice(
+    id: json['id'].toString(),
+    subscriptionId: json['subscriptionId']?.toString(),
+    amount: (json['amount'] ?? 0).toDouble(),
+    currency: json['currency'] ?? 'TND',
+    status: json['status'] ?? 'PENDING',
+    paidAt: json['paidAt'],
+    planName: json['planName'],
+    paymentRef: json['paymentRef'],
+  );
+}
+
 class Subscription {
   final String id;
   final int? planId;

@@ -12,7 +12,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @Table(name = "boutique_countries", uniqueConstraints =
-    @UniqueConstraint(columnNames = {"boutique_id", "country_name"}))
+    @UniqueConstraint(columnNames = {"boutique_id", "country_code"}))
 public class BoutiqueCountry {
     @Id
     @GeneratedValue(generator = "UUID")
@@ -24,6 +24,9 @@ public class BoutiqueCountry {
     @JoinColumn(name = "boutique_id", nullable = false)
     private Boutique boutique;
 
-    @Column(name = "country_name", nullable = false, length = 100)
+    @Column(name = "country_code", nullable = false, length = 2)
+    private String countryCode;
+
+    @Column(name = "country_name", length = 100)
     private String countryName;
 }

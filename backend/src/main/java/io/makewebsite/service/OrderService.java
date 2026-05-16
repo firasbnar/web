@@ -5,6 +5,7 @@ import io.makewebsite.dto.response.*;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -13,12 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -30,9 +33,39 @@ public class OrderService {
     private final NotificationService notificationService;
     private final WebSocketService webSocketService;
     private final TelegramService telegramService;
+    private final InvoiceService invoiceService;
+    private final CaisseService caisseService;
 
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getOrders(UUID boutiqueId, String status, String search, Pageable pageable) {
+    public Page<OrderResponse> getOrders(UUID boutiqueId, String status, String search,
+                                          String startDate, String endDate, Pageable pageable) {
+        boolean hasDate = startDate != null && !startDate.isEmpty();
+
+        if (hasDate) {
+            LocalDateTime from = LocalDate.parse(startDate).atStartOfDay();
+            LocalDateTime to = endDate != null && !endDate.isEmpty()
+                    ? LocalDate.parse(endDate).atTime(LocalTime.MAX)
+                    : LocalDateTime.now();
+            Page<Order> orders;
+            if (search != null && !search.isEmpty() && status != null && !status.isEmpty() && !"ALL".equals(status)) {
+                orders = orderRepository
+                        .findByBoutiqueIdAndStatusAndOrderNumberContainingIgnoreCaseAndCreatedAtBetween(
+                                boutiqueId, status, search, from, to, pageable);
+            } else if (search != null && !search.isEmpty()) {
+                orders = orderRepository
+                        .findByBoutiqueIdAndOrderNumberContainingIgnoreCaseAndCreatedAtBetween(
+                                boutiqueId, search, from, to, pageable);
+            } else if (status != null && !status.isEmpty() && !"ALL".equals(status)) {
+                orders = orderRepository
+                        .findByBoutiqueIdAndStatusAndCreatedAtBetween(
+                                boutiqueId, status, from, to, pageable);
+            } else {
+                orders = orderRepository
+                        .findByBoutiqueIdAndCreatedAtBetween(boutiqueId, from, to, pageable);
+            }
+            return orders.map(this::mapToResponse);
+        }
+
         Page<Order> orders;
         if (search != null && !search.isEmpty() && status != null && !status.isEmpty() && !"ALL".equals(status)) {
             orders = orderRepository.findByBoutiqueIdAndStatusAndOrderNumberContainingIgnoreCase(boutiqueId, status, search, pageable);
@@ -131,6 +164,7 @@ public class OrderService {
             item.setOrder(order);
         }
         orderItemRepository.saveAll(items);
+        invoiceService.generateInvoice(order.getId());
 
         if (customer != null) {
             customerService.updateCustomerAggregation(customer, total);
@@ -139,18 +173,51 @@ public class OrderService {
         User owner = boutique.getUser();
         String message = "Nouvelle commande " + orderNumber + " - " + total + " TND";
         notificationService.createNotification(owner.getId(), "Nouvelle commande", message, "NEW_ORDER");
-        webSocketService.sendNewOrderNotification(boutique.getId(), mapToResponse(order));
-        telegramService.sendMessage(owner.getTelegramChatId(), message);
+        OrderResponse response = mapToResponse(order);
+        webSocketService.sendNewOrderNotification(boutique.getId(), response);
+        webSocketService.sendCaisseOrderUpdate(boutique.getId(), response);
+        if (Boolean.TRUE.equals(owner.getTelegramEnabled()) && owner.getTelegramChatId() != null) {
+            telegramService.sendMessage(owner.getTelegramChatId(), message);
+        }
 
-        return mapToResponse(order);
+        try {
+            caisseService.recordActivity(boutique.getId(), user != null ? user.getId() : null,
+                    user != null ? user.getFullName() : "Client", "CREATION_COMMANDE",
+                    "SUCCESS", "Commande " + orderNumber + " créée - " + total + " TND", null, null);
+        } catch (Exception e) {
+            log.warn("Failed to record order activity: {}", e.getMessage());
+        }
+
+        return response;
     }
 
     @Transactional
     public OrderResponse updateStatus(UUID id, UpdateOrderStatusRequest request) {
         Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+        String oldStatus = order.getStatus();
         order.setStatus(request.getStatus());
         order = orderRepository.save(order);
-        return mapToResponse(order);
+        OrderResponse response = mapToResponse(order);
+
+        webSocketService.sendCaisseOrderUpdate(order.getBoutique().getId(), response);
+
+        if (!oldStatus.equals(request.getStatus())) {
+            try {
+                Boutique boutique = order.getBoutique();
+                String action = "CANCELLED".equals(request.getStatus()) ? "ANNULATION_COMMANDE" : "ORDER_STATUS_CHANGED";
+                String status = "CANCELLED".equals(request.getStatus()) ? "FAILED" : "SUCCESS";
+                caisseService.recordActivity(boutique.getId(),
+                        order.getUser() != null ? order.getUser().getId() : null,
+                        order.getUser() != null ? order.getUser().getFullName() : "Système",
+                        action, status,
+                        "Commande " + order.getOrderNumber() + " : " + oldStatus + " → " + request.getStatus(),
+                        null, null);
+            } catch (Exception e) {
+                log.warn("Failed to record status change activity: {}", e.getMessage());
+            }
+        }
+
+        return response;
     }
 
     @Transactional
@@ -216,7 +283,8 @@ public class OrderService {
                 .paymentMethod(o.getPaymentMethod()).paymentStatus(o.getPaymentStatus())
                 .paymentRef(o.getPaymentRef()).shippingAddress(o.getShippingAddress())
                 .deliveryCompany(o.getDeliveryCompany()).trackingNumber(o.getTrackingNumber())
-                .notes(o.getNotes()).createdAt(o.getCreatedAt())
+                .notes(o.getNotes()).invoiceNumber(o.getInvoiceNumber())
+                .invoiceCreatedAt(o.getInvoiceCreatedAt()).createdAt(o.getCreatedAt())
                 .items(items.stream().map(i -> OrderItemResponse.builder()
                         .id(i.getId()).productId(i.getProduct() != null ? i.getProduct().getId() : null)
                         .productName(i.getProductName()).unitPrice(i.getUnitPrice())

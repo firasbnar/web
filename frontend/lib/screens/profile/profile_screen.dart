@@ -19,6 +19,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _newPassCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
   String _language = 'fr';
+  bool _savingProfile = false;
+  bool _savingPassword = false;
+  bool _deletingAccount = false;
 
   @override
   void initState() {
@@ -41,6 +44,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _newPassCtrl.dispose();
     _confirmPassCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() => _savingProfile = true);
+    final ap = context.read<AuthProvider>();
+    final ok = await ap.updateProfile({
+      'fullName': _nameCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
+      'language': _language,
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? 'Profil mis à jour' : ap.error ?? 'Erreur'),
+        backgroundColor: ok ? AppColors.success : AppColors.danger,
+      ));
+      setState(() => _savingProfile = false);
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final newPass = _newPassCtrl.text;
+    final confirm = _confirmPassCtrl.text;
+    if (newPass != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Les mots de passe ne correspondent pas'), backgroundColor: AppColors.danger));
+      return;
+    }
+    if (newPass.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Le mot de passe doit contenir au moins 6 caractères'), backgroundColor: AppColors.danger));
+      return;
+    }
+    setState(() => _savingPassword = true);
+    final ap = context.read<AuthProvider>();
+    final ok = await ap.changePassword(_oldPassCtrl.text, newPass);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? 'Mot de passe modifié' : ap.error ?? 'Erreur'),
+        backgroundColor: ok ? AppColors.success : AppColors.danger,
+      ));
+      if (ok) {
+        _oldPassCtrl.clear();
+        _newPassCtrl.clear();
+        _confirmPassCtrl.clear();
+      }
+      setState(() => _savingPassword = false);
+    }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le compte'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer votre compte? Cette action est irréversible.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Confirmer la suppression'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _deletingAccount = true);
+    final ap = context.read<AuthProvider>();
+    await ap.deleteAccount();
+    if (mounted) {
+      context.go('/login');
+    }
   }
 
   @override
@@ -96,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 16),
                   TextFormField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nom complet')),
                   const SizedBox(height: 12),
-                  TextFormField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Téléphone')),
+                  TextFormField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Téléphone'), keyboardType: TextInputType.phone),
                   const SizedBox(height: 16),
                   Text('Langue', style: AppTypography.body2),
                   const SizedBox(height: 8),
@@ -108,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _langOption('AR', 'ar'),
                   ]),
                   const SizedBox(height: 16),
-                  AppButton(label: 'Enregistrer', onPressed: () {}),
+                  AppButton(label: 'Enregistrer', loading: _savingProfile, onPressed: _saveProfile),
                 ],
               ),
             ),
@@ -132,7 +207,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 12),
                   TextFormField(controller: _confirmPassCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Confirmer')),
                   const SizedBox(height: 16),
-                  AppButton(label: 'Changer le mot de passe', onPressed: () {}),
+                  AppButton(label: 'Changer le mot de passe', loading: _savingPassword, onPressed: _changePassword),
                 ],
               ),
             ),
@@ -155,24 +230,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Supprimer le compte'),
-                    content: const Text('Êtes-vous sûr de vouloir supprimer votre compte? Cette action est irréversible.'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-                      TextButton(
-                        onPressed: () { Navigator.pop(ctx); context.read<AuthProvider>().logout(); context.go('/login'); },
-                        style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-                        child: const Text('Supprimer'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Text('Supprimer mon compte', style: AppTypography.body2.copyWith(color: AppColors.danger)),
+              onPressed: _deletingAccount ? null : _confirmDeleteAccount,
+              child: _deletingAccount
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text('Supprimer mon compte', style: AppTypography.body2.copyWith(color: AppColors.danger)),
             ),
             const SizedBox(height: 40),
           ],

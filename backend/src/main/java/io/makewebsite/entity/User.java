@@ -43,9 +43,13 @@ public class User {
     @Size(max = 20)
     private String phone;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
     @Builder.Default
     @Column(length = 20)
-    private String role = "OWNER";
+    private String role = "USER";
 
     @Builder.Default
     @Column(length = 10)
@@ -58,6 +62,10 @@ public class User {
     @Column(name = "telegram_chat_id")
     private String telegramChatId;
 
+    @Builder.Default
+    @Column(name = "telegram_enabled", nullable = false)
+    private Boolean telegramEnabled = false;
+
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
@@ -67,6 +75,20 @@ public class User {
 
     @Column(name = "suspended_reason", columnDefinition = "TEXT")
     private String suspendedReason;
+
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false)
+    private Boolean emailVerified = false;
+
+    @Builder.Default
+    @Column(name = "enabled", nullable = false)
+    private Boolean enabled = false;
+
+    @Column(name = "verification_token", length = 255)
+    private String verificationToken;
+
+    @Column(name = "verification_token_expiry")
+    private LocalDateTime verificationTokenExpiry;
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;

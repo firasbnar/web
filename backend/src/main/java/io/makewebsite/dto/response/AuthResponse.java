@@ -13,4 +13,9 @@ public class AuthResponse {
     private String accessToken;
     private String refreshToken;
     private UserResponse user;
+    private String role;
+    private TenantResponse tenant;
+
+    @Builder.Default
+    private boolean emailVerificationRequired = false;
 }

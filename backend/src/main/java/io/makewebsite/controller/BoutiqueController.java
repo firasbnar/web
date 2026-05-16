@@ -73,4 +73,13 @@ public class BoutiqueController {
     public ResponseEntity<ApiResponse<BoutiqueStatsResponse>> getStats(@PathVariable UUID id, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.ok(boutiqueService.getStats(id, principal.getUserId())));
     }
+
+    @PutMapping("/{id}/telegram-settings")
+    public ResponseEntity<ApiResponse<BoutiqueResponse>> updateTelegramSettings(
+            @PathVariable UUID id,
+            @Valid @RequestBody TelegramSettingsRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        BoutiqueResponse response = boutiqueService.updateTelegramSettings(id, request, principal.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok("Paramètres Telegram mis à jour", response));
+    }
 }

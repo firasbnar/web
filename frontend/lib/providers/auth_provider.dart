@@ -11,15 +11,19 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   bool _isAuthenticated = false;
   String? _role;
+  bool _emailVerificationRequired = false;
+  String? _pendingEmail;
 
   User? get user => _user;
   String? get role => _role;
   bool get loading => _loading;
   String? get error => _error;
   bool get isAuthenticated => _isAuthenticated;
+  bool get emailVerificationRequired => _emailVerificationRequired;
+  String? get pendingEmail => _pendingEmail;
 
   Future<bool> login(String email, String password) async {
-    _loading = true; _error = null; notifyListeners();
+    _loading = true; _error = null; _emailVerificationRequired = false; notifyListeners();
     try {
       final res = await _api.post('/auth/login', data: {'email': email, 'password': password});
       final data = res['data'];
@@ -41,8 +45,9 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> loginWithGoogle() async {
     _loading = true; _error = null; notifyListeners();
     try {
-      final googleSignIn = GoogleSignIn();
-      final account = await googleSignIn.signIn();
+      final googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize();
+      final account = await googleSignIn.authenticate();
       if (account == null) { _loading = false; notifyListeners(); return false; }
       final auth = await account.authentication;
       if (auth.idToken == null) throw Exception('Token Google manquant');
@@ -64,13 +69,20 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> register(String fullName, String email, String password, String? phone, String? language) async {
-    _loading = true; _error = null; notifyListeners();
+    _loading = true; _error = null; _emailVerificationRequired = false; _pendingEmail = null; notifyListeners();
     try {
       final res = await _api.post('/auth/register', data: {
         'fullName': fullName, 'email': email, 'password': password,
         'phone': phone, 'language': language ?? 'fr',
       });
       final data = res['data'];
+      final requiresVerification = data['emailVerificationRequired'] == true;
+      if (requiresVerification) {
+        _pendingEmail = email;
+        _emailVerificationRequired = true;
+        _loading = false; notifyListeners();
+        return true;
+      }
       _user = User.fromJson(data['user']);
       _role = data['user']['role'] ?? 'OWNER';
       await _api.storage.saveUserRole(_role!);
@@ -86,11 +98,63 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> resendVerification(String email) async {
+    try {
+      await _api.post('/auth/resend-verification', data: {'email': email});
+      return true;
+    } catch (e) {
+      _error = _extractError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    try {
+      final res = await _api.put('/auth/profile', data: data);
+      _user = User.fromJson(res['data']);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = _extractError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> changePassword(String oldPassword, String newPassword) async {
+    try {
+      await _api.put('/auth/change-password', data: {
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+      });
+      return true;
+    } catch (e) {
+      _error = _extractError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      await _api.delete('/security/account');
+      await logout();
+      return true;
+    } catch (e) {
+      _error = _extractError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await _api.storage.clearTokens();
     await _api.storage.saveUserRole('');
     _user = null;
     _isAuthenticated = false;
+    _emailVerificationRequired = false;
+    _pendingEmail = null;
     notifyListeners();
   }
 
@@ -114,6 +178,7 @@ class AuthProvider extends ChangeNotifier {
         return data['message'] as String;
       }
       if (e.response?.statusCode == 401) return 'Email ou mot de passe incorrect';
+      if (e.response?.statusCode == 403) return 'Compte non vérifié';
     }
     return 'Une erreur est survenue';
   }

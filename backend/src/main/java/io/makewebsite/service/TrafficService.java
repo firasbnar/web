@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -39,6 +40,31 @@ public class TrafficService {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    // Anti-spam: track last track time per boutique+session to prevent refresh spam within 60s
+    private final ConcurrentHashMap<String, Long> _lastTrackTimestamps = new ConcurrentHashMap<>();
+
+    private String hashIp(String ip) {
+        if (ip == null) return "unknown";
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(ip.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString().substring(0, 32);
+        } catch (Exception e) {
+            return ip;
+        }
+    }
+
+    private boolean isDuplicate(String boutiqueId, String sessionId) {
+        String key = boutiqueId + ":" + (sessionId != null ? sessionId : "");
+        long now = System.currentTimeMillis();
+        Long last = _lastTrackTimestamps.get(key);
+        if (last != null && (now - last) < 60_000) return true;
+        _lastTrackTimestamps.put(key, now);
+        return false;
+    }
 
     public TrafficStatsResponse getStats(UUID boutiqueId) {
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
@@ -227,7 +253,13 @@ public class TrafficService {
             return Map.of("tracked", false, "error", "boutiqueId required");
         }
 
-        String ipHash = req.getIpAddress() != null ? req.getIpAddress().hashCode() + "" : "unknown";
+        String ipHash = hashIp(req.getIpAddress());
+
+        // Short-term dedup: reject duplicate track for same boutique+session within 60s
+        if (req.getSessionId() != null && isDuplicate(req.getBoutiqueId().toString(), req.getSessionId())) {
+            log.debug("Duplicate track request for boutique {} session {}, skipping", req.getBoutiqueId(), req.getSessionId());
+            return Map.of("tracked", false, "reason", "duplicate");
+        }
         GeoData geo = req.getIpAddress() != null
                 ? geoLocationService.locate(req.getIpAddress()).orElse(null)
                 : null;

@@ -52,6 +52,7 @@ class MainScaffold extends StatelessWidget {
       _MenuItem(Icons.admin_panel_settings_outlined, 'POS Admin', '/pos/admin', visible: isAdmin),
       _MenuItem(Icons.card_membership_outlined, 'Abonnement', '/plans', visible: isAdmin || isOwner),
       const _MenuItem(Icons.notifications_outlined, 'Notifications', '/notifications'),
+      _MenuItem(Icons.history_outlined, 'Journal d\'activité', '/admin/activities', visible: isAdmin),
       _MenuItem(Icons.admin_panel_settings_outlined, 'Administration', '/admin', visible: isAdmin),
       _MenuItem(Icons.travel_explore_outlined, 'Trafic', '/traffic', visible: isAdmin || isOwner),
       const _MenuItem(Icons.receipt_long_outlined, 'Mes commandes', '/order-history'),

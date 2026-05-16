@@ -11,6 +11,6 @@ import java.util.UUID;
 @Repository
 public interface BoutiqueCountryRepository extends JpaRepository<BoutiqueCountry, UUID> {
     List<BoutiqueCountry> findByBoutiqueId(UUID boutiqueId);
-    Optional<BoutiqueCountry> findByBoutiqueIdAndCountryName(UUID boutiqueId, String countryName);
+    Optional<BoutiqueCountry> findByBoutiqueIdAndCountryCode(UUID boutiqueId, String countryCode);
     void deleteByBoutiqueId(UUID boutiqueId);
 }

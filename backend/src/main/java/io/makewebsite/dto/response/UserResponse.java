@@ -17,6 +17,8 @@ public class UserResponse {
     private String email;
     private String phone;
     private String role;
+    private UUID tenantId;
     private String language;
     private String avatarUrl;
+    private boolean emailVerified;
 }

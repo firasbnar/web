@@ -4,8 +4,12 @@ class Boutique {
   final String slug;
   final String? logoUrl;
   final String? description;
+  final String? email;
+  final String? phone;
+  final String? address;
   final String? currency;
   final String? language;
+  final String? timezone;
   final bool isActive;
   final String? customDomain;
   final String? primaryColor;
@@ -13,6 +17,7 @@ class Boutique {
   final String? seoTitle;
   final String? seoDescription;
   final String? seoKeywords;
+  final String? ogImageUrl;
   final String? facebookUrl;
   final String? instagramUrl;
   final String? tiktokUrl;
@@ -51,14 +56,36 @@ class Boutique {
   final String? facebookPixelId;
   final String? googleAnalyticsId;
 
+  // New store settings
+  final String? bannerUrl;
+  final String? faviconUrl;
+  final String? fontFamily;
+  final bool darkMode;
+  final String? stripePublishableKey;
+  final String? paypalClientId;
+  final double? freeShippingThreshold;
+  final int? estimatedDeliveryDays;
+  final bool enableLocalPickup;
+  final bool enableEmailNotifications;
+  final bool enableSmsNotifications;
+  final bool enablePushNotifications;
+  final bool enableMarketingEmails;
+  final bool enableOrderAlerts;
+  final String? telegramChatId;
+  final bool telegramEnabled;
+
   Boutique({
     required this.id,
     required this.name,
     required this.slug,
     this.logoUrl,
     this.description,
+    this.email,
+    this.phone,
+    this.address,
     this.currency,
     this.language,
+    this.timezone,
     required this.isActive,
     this.customDomain,
     this.primaryColor,
@@ -66,6 +93,7 @@ class Boutique {
     this.seoTitle,
     this.seoDescription,
     this.seoKeywords,
+    this.ogImageUrl,
     this.facebookUrl,
     this.instagramUrl,
     this.tiktokUrl,
@@ -101,6 +129,22 @@ class Boutique {
     this.d17Status,
     this.facebookPixelId,
     this.googleAnalyticsId,
+    this.bannerUrl,
+    this.faviconUrl,
+    this.fontFamily,
+    this.darkMode = false,
+    this.stripePublishableKey,
+    this.paypalClientId,
+    this.freeShippingThreshold,
+    this.estimatedDeliveryDays,
+    this.enableLocalPickup = false,
+    this.enableEmailNotifications = true,
+    this.enableSmsNotifications = false,
+    this.enablePushNotifications = true,
+    this.enableMarketingEmails = false,
+    this.enableOrderAlerts = true,
+    this.telegramChatId,
+    this.telegramEnabled = false,
   });
 
   factory Boutique.fromJson(Map<String, dynamic> json) => Boutique(
@@ -109,8 +153,12 @@ class Boutique {
     slug: json['slug'] ?? '',
     logoUrl: json['logoUrl'],
     description: json['description'],
+    email: json['email'],
+    phone: json['phone'],
+    address: json['address'],
     currency: json['currency'],
     language: json['language'],
+    timezone: json['timezone'],
     isActive: json['isActive'] ?? true,
     customDomain: json['customDomain'],
     primaryColor: json['primaryColor'],
@@ -118,6 +166,7 @@ class Boutique {
     seoTitle: json['seoTitle'],
     seoDescription: json['seoDescription'],
     seoKeywords: json['seoKeywords'],
+    ogImageUrl: json['ogImageUrl'],
     facebookUrl: json['facebookUrl'],
     instagramUrl: json['instagramUrl'],
     tiktokUrl: json['tiktokUrl'],
@@ -153,6 +202,22 @@ class Boutique {
     d17Status: json['d17Status'] ?? json['d17_status'],
     facebookPixelId: json['facebookPixelId'] ?? json['facebook_pixel_id'],
     googleAnalyticsId: json['googleAnalyticsId'] ?? json['google_analytics_id'],
+    bannerUrl: json['bannerUrl'],
+    faviconUrl: json['faviconUrl'],
+    fontFamily: json['fontFamily'],
+    darkMode: json['darkMode'] ?? false,
+    stripePublishableKey: json['stripePublishableKey'],
+    paypalClientId: json['paypalClientId'],
+    freeShippingThreshold: (json['freeShippingThreshold'] as num?)?.toDouble(),
+    estimatedDeliveryDays: json['estimatedDeliveryDays'],
+    enableLocalPickup: json['enableLocalPickup'] ?? false,
+    enableEmailNotifications: json['enableEmailNotifications'] ?? true,
+    enableSmsNotifications: json['enableSmsNotifications'] ?? false,
+    enablePushNotifications: json['enablePushNotifications'] ?? true,
+    enableMarketingEmails: json['enableMarketingEmails'] ?? false,
+    enableOrderAlerts: json['enableOrderAlerts'] ?? true,
+    telegramChatId: json['telegramChatId'],
+    telegramEnabled: json['telegramEnabled'] ?? false,
   );
 
   Map<String, dynamic> toJson() => {
@@ -161,8 +226,12 @@ class Boutique {
     'slug': slug,
     'logoUrl': logoUrl,
     'description': description,
+    'email': email,
+    'phone': phone,
+    'address': address,
     'currency': currency,
     'language': language,
+    'timezone': timezone,
     'isActive': isActive,
     'customDomain': customDomain,
     'primaryColor': primaryColor,
@@ -170,6 +239,7 @@ class Boutique {
     'seoTitle': seoTitle,
     'seoDescription': seoDescription,
     'seoKeywords': seoKeywords,
+    'ogImageUrl': ogImageUrl,
     'facebookUrl': facebookUrl,
     'instagramUrl': instagramUrl,
     'tiktokUrl': tiktokUrl,
@@ -204,6 +274,22 @@ class Boutique {
     'd17Status': d17Status,
     'facebookPixelId': facebookPixelId,
     'googleAnalyticsId': googleAnalyticsId,
+    'bannerUrl': bannerUrl,
+    'faviconUrl': faviconUrl,
+    'fontFamily': fontFamily,
+    'darkMode': darkMode,
+    'stripePublishableKey': stripePublishableKey,
+    'paypalClientId': paypalClientId,
+    'freeShippingThreshold': freeShippingThreshold,
+    'estimatedDeliveryDays': estimatedDeliveryDays,
+    'enableLocalPickup': enableLocalPickup,
+    'enableEmailNotifications': enableEmailNotifications,
+    'enableSmsNotifications': enableSmsNotifications,
+    'enablePushNotifications': enablePushNotifications,
+    'enableMarketingEmails': enableMarketingEmails,
+    'enableOrderAlerts': enableOrderAlerts,
+    'telegramChatId': telegramChatId,
+    'telegramEnabled': telegramEnabled,
   };
 }
 

@@ -24,6 +24,13 @@ CREATE TABLE IF NOT EXISTS team_members (
   invited_at TIMESTAMP DEFAULT NOW(),
   joined_at TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_team_members_boutique ON team_members(boutique_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_boutique_email_lower
+  ON team_members (boutique_id, lower(invited_email))
+  WHERE invited_email IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_boutique_user
+  ON team_members (boutique_id, user_id)
+  WHERE user_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -189,10 +196,22 @@ ALTER TABLE reviews ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'PENDING
 CREATE TABLE IF NOT EXISTS boutique_countries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   boutique_id UUID REFERENCES boutiques(id) ON DELETE CASCADE,
-  country_name VARCHAR(100) NOT NULL,
-  UNIQUE(boutique_id, country_name)
+  country_code VARCHAR(2) NOT NULL,
+  UNIQUE(boutique_id, country_code)
 );
+ALTER TABLE boutique_countries ADD COLUMN IF NOT EXISTS country_code VARCHAR(2);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'boutique_countries' AND column_name = 'country_name'
+  ) THEN
+    EXECUTE 'UPDATE boutique_countries SET country_code = UPPER(SUBSTRING(country_name FROM 1 FOR 2)) WHERE country_code IS NULL AND country_name IS NOT NULL';
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_boutique_countries_boutique ON boutique_countries(boutique_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_boutique_countries_boutique_code
+  ON boutique_countries(boutique_id, country_code);
 
 -- Conversations for customer-to-store messaging
 CREATE TABLE IF NOT EXISTS conversations (

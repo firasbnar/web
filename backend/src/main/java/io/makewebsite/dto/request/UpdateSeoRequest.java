@@ -13,4 +13,7 @@ public class UpdateSeoRequest {
     private String seoTitle;
     private String seoDescription;
     private String seoKeywords;
+    private String ogImageUrl;
+    private String facebookPixelId;
+    private String googleAnalyticsId;
 }

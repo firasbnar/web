@@ -1,45 +1,56 @@
 package io.makewebsite.controller;
 
+import io.makewebsite.dto.request.InviteTeamMemberRequest;
+import io.makewebsite.dto.request.UpdateRoleRequest;
 import io.makewebsite.dto.response.ApiResponse;
+import io.makewebsite.dto.response.TeamMemberResponse;
+import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.TeamService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/team")
 @RequiredArgsConstructor
 public class TeamController {
+    private final TeamService teamService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getTeamMembers(@RequestParam UUID boutiqueId) {
-        // Placeholder - in production, query team_members table
-        return ResponseEntity.ok(ApiResponse.ok(List.of()));
+    public ResponseEntity<ApiResponse<List<TeamMemberResponse>>> getTeamMembers(
+            @RequestParam UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(teamService.getTeamMembers(boutiqueId, principal.getUserId())));
     }
 
     @PostMapping("/invite")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> inviteMember(@RequestBody Map<String, Object> body) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", UUID.randomUUID());
-        result.put("email", body.get("email"));
-        result.put("role", body.get("role"));
-        result.put("status", "PENDING");
-        result.put("invitedAt", LocalDateTime.now());
-        return ResponseEntity.ok(ApiResponse.ok("Invitation envoyée", result));
+    public ResponseEntity<ApiResponse<TeamMemberResponse>> inviteMember(
+            @Valid @RequestBody InviteTeamMemberRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok("Invitation envoyée", teamService.inviteMember(request, principal.getUserId())));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> removeMember(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> removeMember(
+            @PathVariable UUID id,
+            @RequestParam UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        teamService.removeMember(id, boutiqueId, principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok("Membre retiré", null));
     }
 
     @PutMapping("/{id}/role")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateMemberRole(@PathVariable UUID id, @RequestBody Map<String, String> body) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", id);
-        result.put("role", body.get("role"));
-        return ResponseEntity.ok(ApiResponse.ok("Rôle mis à jour", result));
+    public ResponseEntity<ApiResponse<TeamMemberResponse>> updateMemberRole(
+            @PathVariable UUID id,
+            @RequestParam UUID boutiqueId,
+            @Valid @RequestBody UpdateRoleRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok("Rôle mis à jour",
+                teamService.updateMemberRole(id, request, boutiqueId, principal.getUserId())));
     }
 }

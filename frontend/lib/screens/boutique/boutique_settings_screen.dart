@@ -10,6 +10,7 @@ import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/products_provider.dart';
 import '../../models/boutique.dart';
+import '../../models/delivery_zone.dart';
 import '../../models/product.dart';
 
 class BoutiqueSettingsScreen extends StatefulWidget {
@@ -39,6 +40,36 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
   final _customCssCtrl = TextEditingController();
   final _fbPageTokenCtrl = TextEditingController();
   final _fbPageIdCtrl = TextEditingController();
+
+  // --- SEO Controllers ---
+  final _seoTitleCtrl = TextEditingController();
+  final _seoDescCtrl = TextEditingController();
+  final _seoKeywordsCtrl = TextEditingController();
+
+  // --- Notification Preferences ---
+  bool _enableEmailNotif = true;
+  bool _enableSmsNotif = false;
+  bool _enablePushNotif = true;
+  bool _enableMarketingEmails = false;
+  bool _enableOrderAlerts = true;
+  bool _savingNotif = false;
+
+  // --- Payment Provider Keys ---
+  final _stripePublishableCtrl = TextEditingController();
+  final _stripeSecretCtrl = TextEditingController();
+  final _paypalClientCtrl = TextEditingController();
+  final _paypalSecretCtrl = TextEditingController();
+  bool _savingPayments = false;
+
+  // ========== DELIVERY ZONES ==========
+  final _api = ApiClient();
+  List<DeliveryZone> _deliveryZones = [];
+  bool _loadingZones = false;
+  bool _savingZone = false;
+
+  // --- Branding extras ---
+  String _fontFamily = 'Inter';
+  bool _darkMode = false;
 
   // --- State ---
   String _currency = 'TND';
@@ -99,6 +130,27 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     'KWD'
   ];
 
+  static const Map<String, String> _acceptedCountryOptions = {
+    'TN': 'Tunisie',
+    'FR': 'France',
+    'IT': 'Italie',
+    'DE': 'Allemagne',
+    'ES': 'Espagne',
+    'GB': 'Royaume-Uni',
+    'US': 'Etats-Unis',
+    'CA': 'Canada',
+    'MA': 'Maroc',
+    'DZ': 'Algerie',
+    'LY': 'Libye',
+    'EG': 'Egypte',
+    'SA': 'Arabie saoudite',
+    'AE': 'Emirats arabes unis',
+    'QA': 'Qatar',
+    'OM': 'Oman',
+    'BH': 'Bahrein',
+    'KW': 'Koweit',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -115,10 +167,10 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
     _originalName = b.name;
     _nameCtrl.text = b.name;
-    _emailCtrl.text = b.seoTitle ?? '';
-    _addressCtrl.text = b.description ?? '';
+    _emailCtrl.text = b.email ?? '';
+    _addressCtrl.text = b.address ?? '';
     _topBarTextCtrl.text = b.announcementText ?? '';
-    _phoneCtrl.text = b.whatsappNumber ?? '';
+    _phoneCtrl.text = b.phone ?? '';
     _tvaCtrl.text = b.tva?.toStringAsFixed(2) ?? '0.00';
     _deliveryFeesCtrl.text = b.deliveryFees?.toStringAsFixed(2) ?? '7.00';
     _cashDelivery = b.cashOnDelivery;
@@ -133,8 +185,26 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     _logoUrl = b.logoUrl;
     _customJsCtrl.text = b.customJs ?? '';
     _customCssCtrl.text = b.customCss ?? '';
-    _fbPageTokenCtrl.text = '';
+    _fbPageTokenCtrl.text = b.storeConfig ?? '';
     _fbPageIdCtrl.text = b.facebookPixelId ?? '';
+
+    _seoTitleCtrl.text = b.seoTitle ?? '';
+    _seoDescCtrl.text = b.seoDescription ?? '';
+    _seoKeywordsCtrl.text = b.seoKeywords ?? '';
+
+    _enableEmailNotif = b.enableEmailNotifications;
+    _enableSmsNotif = b.enableSmsNotifications;
+    _enablePushNotif = b.enablePushNotifications;
+    _enableMarketingEmails = b.enableMarketingEmails;
+    _enableOrderAlerts = b.enableOrderAlerts;
+
+    _stripePublishableCtrl.text = b.stripePublishableKey ?? '';
+    _stripeSecretCtrl.text = ''; // never pre-fill secret keys
+    _paypalClientCtrl.text = b.paypalClientId ?? '';
+    _paypalSecretCtrl.text = ''; // never pre-fill secret keys
+
+    _fontFamily = b.fontFamily ?? 'Inter';
+    _darkMode = b.darkMode;
 
     if (b.headerColor != null) _headerColor = _parseColor(b.headerColor!);
     if (b.footerColor != null) _footerColor = _parseColor(b.footerColor!);
@@ -148,6 +218,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
     bp.loadCountries();
     context.read<ProductsProvider>().loadCategories(b.id);
+    _loadDeliveryZones();
     setState(() => _loading = false);
   }
 
@@ -157,6 +228,119 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     } catch (_) {
       return const Color(0xFFededed);
     }
+  }
+
+  // ========== DELIVERY ZONES ==========
+
+  Future<void> _loadDeliveryZones() async {
+    setState(() => _loadingZones = true);
+    try {
+      final bid = context.read<BoutiqueProvider>().currentBoutique!.id.toString();
+      final res = await _api.get('/boutiques/$bid/delivery-zones');
+      _deliveryZones = (res['data'] as List?)?.map((e) => DeliveryZone.fromJson(e)).toList() ?? [];
+    } catch (_) {}
+    setState(() => _loadingZones = false);
+  }
+
+  Future<void> _saveDeliveryZone(DeliveryZone? existing, Map<String, dynamic> data) async {
+    setState(() => _savingZone = true);
+    try {
+      final bid = context.read<BoutiqueProvider>().currentBoutique!.id.toString();
+      if (existing != null) {
+        await _api.put('/boutiques/$bid/delivery-zones/${existing.id}', data: data);
+      } else {
+        await _api.post('/boutiques/$bid/delivery-zones', data: data);
+      }
+      await _loadDeliveryZones();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone de livraison sauvegardée'), backgroundColor: AppColors.success));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
+    }
+    setState(() => _savingZone = false);
+  }
+
+  Future<void> _deleteDeliveryZone(DeliveryZone dz) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer'),
+        content: Text('Supprimer "${dz.name}" ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      final bid = context.read<BoutiqueProvider>().currentBoutique!.id.toString();
+      await _api.delete('/boutiques/$bid/delivery-zones/${dz.id}');
+      await _loadDeliveryZones();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone supprimée'), backgroundColor: AppColors.success));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
+    }
+  }
+
+  void _showDeliveryZoneDialog({DeliveryZone? existing}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final feeCtrl = TextEditingController(text: existing != null ? existing.fee.toStringAsFixed(2) : '');
+    final minCtrl = TextEditingController(text: existing?.minOrderAmount?.toStringAsFixed(2) ?? '');
+    final daysCtrl = TextEditingController(text: existing?.estimatedDays?.toString() ?? '');
+    final countriesCtrl = TextEditingController(text: existing?.countries ?? '');
+    bool active = existing?.isActive ?? true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(existing != null ? 'Modifier la zone' : 'Nouvelle zone'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nom', hintText: 'Tunis, Sfax, ...')),
+                const SizedBox(height: 8),
+                TextField(controller: feeCtrl, decoration: const InputDecoration(labelText: 'Frais de livraison (DT)'), keyboardType: TextInputType.number),
+                const SizedBox(height: 8),
+                TextField(controller: minCtrl, decoration: const InputDecoration(labelText: 'Montant minimum (DT, optionnel)'), keyboardType: TextInputType.number),
+                const SizedBox(height: 8),
+                TextField(controller: daysCtrl, decoration: const InputDecoration(labelText: 'Jours estimés (optionnel)'), keyboardType: TextInputType.number),
+                const SizedBox(height: 8),
+                TextField(controller: countriesCtrl, decoration: const InputDecoration(labelText: 'Pays (optionnel)')),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: const Text('Active'),
+                  value: active,
+                  onChanged: (v) => setDialogState(() => active = v),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            ElevatedButton(
+              onPressed: _savingZone ? null : () async {
+                final data = {
+                  'name': nameCtrl.text,
+                  'fee': double.tryParse(feeCtrl.text) ?? 0,
+                  if (minCtrl.text.isNotEmpty) 'minOrderAmount': double.tryParse(minCtrl.text),
+                  if (daysCtrl.text.isNotEmpty) 'estimatedDays': int.tryParse(daysCtrl.text),
+                  if (countriesCtrl.text.isNotEmpty) 'countries': countriesCtrl.text,
+                  'isActive': active,
+                };
+                Navigator.pop(ctx);
+                await _saveDeliveryZone(existing, data);
+              },
+              child: _savingZone
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(existing != null ? 'Modifier' : 'Créer'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _colorToHex(Color c) =>
@@ -258,6 +442,13 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     _customCssCtrl.dispose();
     _fbPageTokenCtrl.dispose();
     _fbPageIdCtrl.dispose();
+    _seoTitleCtrl.dispose();
+    _seoDescCtrl.dispose();
+    _seoKeywordsCtrl.dispose();
+    _stripePublishableCtrl.dispose();
+    _stripeSecretCtrl.dispose();
+    _paypalClientCtrl.dispose();
+    _paypalSecretCtrl.dispose();
     super.dispose();
   }
 
@@ -352,7 +543,40 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 2. PAIEMENT À LA LIVRAISON ==========
+          // ========== 2. SEO ==========
+          _SettingsCard(
+            title: 'SEO - Référencement',
+            icon: Icons.search_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FormField(label: 'Meta titre', controller: _seoTitleCtrl, hint: 'Titre affiché dans Google'),
+                const SizedBox(height: 12),
+                _FormField(label: 'Meta description', controller: _seoDescCtrl, maxLines: 3, hint: 'Description courte pour les moteurs de recherche'),
+                const SizedBox(height: 12),
+                _FormField(label: 'Mots-clés (SEO)', controller: _seoKeywordsCtrl, hint: 'ex: boutique, mode, tunisie'),
+                const SizedBox(height: 16),
+                _SaveButton(
+                  label: 'Sauvegarder SEO',
+                  onPressed: () async {
+                    final ok = await bp.updateSeo({
+                      'seoTitle': _seoTitleCtrl.text,
+                      'seoDescription': _seoDescCtrl.text,
+                      'seoKeywords': _seoKeywordsCtrl.text,
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(ok ? 'SEO mis à jour' : 'Erreur'),
+                        backgroundColor: ok ? AppColors.success : AppColors.danger));
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ========== 3. PAIEMENT À LA LIVRAISON ==========
           _SettingsCard(
             title: 'Paiement à la livraison',
             icon: Icons.money_outlined,
@@ -480,7 +704,59 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 5. FORMULAIRE SIMPLIFIÉ ==========
+          // ========== 5. STRIPE & PAYPAL ==========
+          _SettingsCard(
+            title: 'Stripe & PayPal',
+            icon: Icons.payment_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Configuration des passerelles de paiement en ligne',
+                    style: AppTypography.caption),
+                const SizedBox(height: 16),
+                Text('Stripe', style: AppTypography.heading4.copyWith(fontSize: 14)),
+                const SizedBox(height: 8),
+                _FormField(label: 'Clé publiable Stripe', controller: _stripePublishableCtrl, hint: 'pk_test_...'),
+                const SizedBox(height: 12),
+                _FormField(label: 'Clé secrète Stripe', controller: _stripeSecretCtrl, hint: 'sk_test_...', maxLines: 2),
+                const SizedBox(height: 16),
+                Text('PayPal', style: AppTypography.heading4.copyWith(fontSize: 14)),
+                const SizedBox(height: 8),
+                _FormField(label: 'PayPal Client ID', controller: _paypalClientCtrl, hint: 'Ae...'),
+                const SizedBox(height: 12),
+                _FormField(label: 'PayPal Secret', controller: _paypalSecretCtrl, maxLines: 2),
+                const SizedBox(height: 12),
+                _ToggleRow(
+                  label: 'Activer PayPal',
+                  value: b.enablePaypal,
+                  onChanged: (v) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+                _SaveButton(
+                  label: 'Sauvegarder les clés',
+                  loading: _savingPayments,
+                  onPressed: () async {
+                    setState(() => _savingPayments = true);
+                    final ok = await bp.updatePayments({
+                      'stripePublishableKey': _stripePublishableCtrl.text,
+                      'stripeSecretKey': _stripeSecretCtrl.text,
+                      'paypalClientId': _paypalClientCtrl.text,
+                      'paypalSecret': _paypalSecretCtrl.text,
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(ok ? 'Clés de paiement sauvegardées' : 'Erreur'),
+                        backgroundColor: ok ? AppColors.success : AppColors.danger));
+                    }
+                    setState(() => _savingPayments = false);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ========== 6. FORMULAIRE SIMPLIFIÉ ==========
           _SettingsCard(
             title: 'Formulaire de commande simplifié',
             icon: Icons.receipt_long_outlined,
@@ -580,6 +856,45 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Police', style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          DropdownButtonFormField<String>(
+                            initialValue: _fontFamily,
+                            items: ['Inter', 'Poppins', 'Roboto', 'Playfair Display', 'Montserrat']
+                                .map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 13))))
+                                .toList(),
+                            onChanged: (v) => setState(() => _fontFamily = v ?? 'Inter'),
+                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Mode sombre', style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          SwitchListTile(
+                            value: _darkMode,
+                            onChanged: (v) => setState(() => _darkMode = v),
+                            title: Text(_darkMode ? 'Activé' : 'Désactivé', style: const TextStyle(fontSize: 13)),
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
                     IntrinsicWidth(
                       child: _SaveButton(
                         label: 'Sauvegarder le thème',
@@ -609,80 +924,130 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 8. PAYS ACCEPTÉS ==========
+          // ========== 8. NOTIFICATIONS ==========
           _SettingsCard(
-            title: 'Pays acceptés',
-            icon: Icons.public_outlined,
+            title: 'Préférences de notifications',
+            icon: Icons.notifications_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (bp.countries.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child:
-                        Text('Aucun pays ajouté', style: AppTypography.body2),
-                  )
-                else
-                  ...bp.countries.map((country) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle,
-                                size: 18, color: AppColors.success),
-                            const SizedBox(width: 8),
-                            Text(country, style: AppTypography.body2),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: AppColors.danger, size: 20),
-                              onPressed: () => bp.deleteCountry(country),
-                            ),
-                          ],
-                        ),
-                      )),
+                _ToggleRow(label: 'Notifications par email', value: _enableEmailNotif, onChanged: (v) => setState(() => _enableEmailNotif = v)),
+                _ToggleRow(label: 'Notifications par SMS', value: _enableSmsNotif, onChanged: (v) => setState(() => _enableSmsNotif = v)),
+                _ToggleRow(label: 'Notifications push', value: _enablePushNotif, onChanged: (v) => setState(() => _enablePushNotif = v)),
+                _ToggleRow(label: 'Alertes nouvelles commandes', value: _enableOrderAlerts, onChanged: (v) => setState(() => _enableOrderAlerts = v)),
+                _ToggleRow(label: 'Emails marketing', value: _enableMarketingEmails, onChanged: (v) => setState(() => _enableMarketingEmails = v)),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _countryCtrl,
-                        decoration: const InputDecoration(
-                          hintText: 'ex: Tunisie, France',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IntrinsicWidth(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (_countryCtrl.text.isNotEmpty) {
-                            bp.addCountry(_countryCtrl.text);
-                            _countryCtrl.clear();
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                        ),
-                        child: const Text('Ajouter'),
-                      ),
-                    ),
-                  ],
+                _SaveButton(
+                  label: 'Sauvegarder préférences',
+                  loading: _savingNotif,
+                  onPressed: () async {
+                    setState(() => _savingNotif = true);
+                    final ok = await bp.saveNotificationSettings({
+                      'enableEmailNotifications': _enableEmailNotif ? 'yes' : 'no',
+                      'enableSmsNotifications': _enableSmsNotif ? 'yes' : 'no',
+                      'enablePushNotifications': _enablePushNotif ? 'yes' : 'no',
+                      'enableOrderAlerts': _enableOrderAlerts ? 'yes' : 'no',
+                      'enableMarketingEmails': _enableMarketingEmails ? 'yes' : 'no',
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(ok ? 'Préférences sauvegardées' : 'Erreur'),
+                        backgroundColor: ok ? AppColors.success : AppColors.danger));
+                    }
+                    setState(() => _savingNotif = false);
+                  },
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          // ========== 9. CATEGORIES ==========
+          // ========== 9. ZONES DE LIVRAISON ==========
+          _SettingsCard(
+            title: 'Zones de livraison',
+            icon: Icons.local_shipping_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => _showDeliveryZoneDialog(),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Ajouter'),
+                    ),
+                  ],
+                ),
+                if (_loadingZones)
+                  const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+                else if (_deliveryZones.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text('Aucune zone', style: TextStyle(color: AppColors.textHint)),
+                  )
+                else
+                  ..._deliveryZones.map((dz) => Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(dz.name, style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                                        if (!dz.isActive) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.textHint.withAlpha(30),
+                                              borderRadius: BorderRadius.circular(100),
+                                            ),
+                                            child: const Text('Inactif', style: TextStyle(fontSize: 10, color: AppColors.textHint)),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text('${dz.fee.toStringAsFixed(2)} DT${dz.estimatedDays != null ? ' · ${dz.estimatedDays} jours' : ''}${dz.minOrderAmount != null ? ' · min ${dz.minOrderAmount!.toStringAsFixed(2)} DT' : ''}', style: AppTypography.caption),
+                                    if (dz.countries != null && dz.countries!.isNotEmpty)
+                                      Text(dz.countries!, style: AppTypography.caption),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                onPressed: () => _showDeliveryZoneDialog(existing: dz),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
+                                onPressed: () => _deleteDeliveryZone(dz),
+                              ),
+                            ],
+                          ),
+                        )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ========== 10. PAYS ACCEPTES ==========
+          _SettingsCard(
+            title: 'Pays acceptes',
+            icon: Icons.public_outlined,
+            child: _buildAcceptedCountries(bp),
+          ),
+          const SizedBox(height: 16),
+          // ========== 11. CATEGORIES ==========
           _SettingsCard(
             title: 'Catégories',
             icon: Icons.category_outlined,
@@ -715,7 +1080,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 10. LOGO BOUTIQUE ==========
+          // ========== 12. LOGO BOUTIQUE ==========
           _SettingsCard(
             title: 'Logo de la boutique',
             icon: Icons.image_outlined,
@@ -747,7 +1112,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 10. DEVISE ==========
+          // ========== 13. DEVISE ==========
           _SettingsCard(
             title: 'Devise',
             icon: Icons.attach_money_outlined,
@@ -774,7 +1139,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 11. CODE PERSONNALISÉ ==========
+          // ========== 14. CODE PERSONNALISÉ ==========
           _SettingsCard(
             title: 'Code personnalisé',
             icon: Icons.code_outlined,
@@ -891,6 +1256,62 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     );
   }
 
+  Widget _buildAcceptedCountries(BoutiqueProvider bp) {
+    final selected = bp.countries.toSet();
+
+    if (bp.countriesLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          selected.isEmpty
+              ? 'Aucun pays selectionne'
+              : '${selected.length} pays selectionne(s)',
+          style: AppTypography.body2,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _acceptedCountryOptions.entries.map((entry) {
+            final checked = selected.contains(entry.key);
+            return FilterChip(
+              label: Text('${entry.value} (${entry.key})'),
+              selected: checked,
+              onSelected: bp.savingCountries
+                  ? null
+                  : (value) async {
+                      final next = Set<String>.from(selected);
+                      value ? next.add(entry.key) : next.remove(entry.key);
+                      final ok = await bp.saveCountries(next.toList());
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(ok
+                            ? 'Pays acceptes mis a jour'
+                            : bp.error ?? 'Erreur pays acceptes'),
+                        backgroundColor:
+                            ok ? AppColors.success : AppColors.danger,
+                      ));
+                    },
+            );
+          }).toList(),
+        ),
+        if (bp.savingCountries) ...[
+          const SizedBox(height: 12),
+          const LinearProgressIndicator(minHeight: 2),
+        ],
+      ],
+    );
+  }
+
   // ========== SAVE METHODS ==========
 
   Future<void> _saveConfig(BoutiqueProvider bp) async {
@@ -930,6 +1351,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       'buttonColor': _colorToHex(_buttonColor),
       'topBarColor': _colorToHex(_topBarColor),
       'textColor': _colorToHex(_textColor),
+      'fontFamily': _fontFamily,
+      'darkMode': _darkMode,
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

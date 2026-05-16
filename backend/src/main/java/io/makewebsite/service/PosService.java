@@ -22,6 +22,7 @@ public class PosService {
     private final BoutiqueRepository boutiqueRepository;
     private final OrderService orderService;
     private final UserRepository userRepository;
+    private final CaisseService caisseService;
 
     @Transactional
     public PosSessionResponse openSession(OpenPosSessionRequest request, UUID userId) {
@@ -41,6 +42,15 @@ public class PosService {
                 .totalSales(BigDecimal.ZERO)
                 .build();
         session = posSessionRepository.save(session);
+
+        try {
+            caisseService.recordActivity(request.getBoutiqueId(), userId, user.getFullName(),
+                    "OUVERTURE_CAISSE", "SUCCESS",
+                    "Caisse ouverte avec " + request.getOpeningCash() + " TND", null, null);
+        } catch (Exception e) {
+            // non-blocking
+        }
+
         return mapToResponse(session);
     }
 
@@ -51,6 +61,15 @@ public class PosService {
         session.setClosedAt(LocalDateTime.now());
         session.setClosingCash(request.getClosingCash());
         session = posSessionRepository.save(session);
+
+        try {
+            caisseService.recordActivity(session.getBoutique().getId(), session.getUser().getId(),
+                    session.getUser().getFullName(), "FERMETURE_CAISSE", "SUCCESS",
+                    "Caisse fermée avec " + request.getClosingCash() + " TND", null, null);
+        } catch (Exception e) {
+            // non-blocking
+        }
+
         return mapToResponse(session);
     }
 

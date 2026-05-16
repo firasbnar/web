@@ -5,6 +5,7 @@ import io.makewebsite.repository.*;
 import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.StoreGeneratorService;
+import io.makewebsite.service.StoreSettingsService;
 import io.makewebsite.service.UploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ public class BoutiqueSettingsController {
     private final BoutiqueCountryRepository countryRepository;
     private final ProductRepository productRepository;
     private final StoreGeneratorService storeGeneratorService;
+    private final StoreSettingsService storeSettingsService;
     private final UploadService uploadService;
 
     private Boutique getBoutique(UUID id, UUID userId) {
@@ -51,15 +53,17 @@ public class BoutiqueSettingsController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
         Boutique b = getBoutique(id, principal.getUserId());
-        if (body.containsKey("email")) b.setSeoTitle((String) body.get("email"));
-        if (body.containsKey("address")) b.setDescription((String) body.get("address"));
+
+        // Map FIXED: email -> email, address -> address, phone -> phone (not seoTitle/description/whatsappNumber)
+        if (body.containsKey("email")) b.setEmail((String) body.get("email"));
+        if (body.containsKey("address")) b.setAddress((String) body.get("address"));
+        if (body.containsKey("phone")) b.setPhone((String) body.get("phone"));
         if (body.containsKey("companyName")) {
             String name = (String) body.get("companyName");
             b.setName(name);
             if (name != null && !name.isBlank()) b.setSlug(slugify(name));
         }
         if (body.containsKey("topBarText")) b.setAnnouncementText((String) body.get("topBarText"));
-        if (body.containsKey("phone")) b.setWhatsappNumber((String) body.get("phone"));
         if (body.containsKey("tva")) b.setTva(Double.parseDouble(body.get("tva").toString()));
         if (body.containsKey("deliveryFees")) b.setDeliveryFees(Double.parseDouble(body.get("deliveryFees").toString()));
         if (body.containsKey("cashDelivery")) b.setCashOnDelivery("yes".equals(body.get("cashDelivery")));
@@ -70,6 +74,15 @@ public class BoutiqueSettingsController {
         if (body.containsKey("d17QrCodeUrl")) b.setD17QrCodeUrl((String) body.get("d17QrCodeUrl"));
         if (body.containsKey("d17Status")) b.setD17Status((String) body.get("d17Status"));
         if (body.containsKey("simpleCheckout")) b.setSimpleCheckout("yes".equals(body.get("simpleCheckout")));
+        if (body.containsKey("timezone")) b.setTimezone((String) body.get("timezone"));
+        if (body.containsKey("freeShippingThreshold")) b.setFreeShippingThreshold(Double.parseDouble(body.get("freeShippingThreshold").toString()));
+        if (body.containsKey("estimatedDeliveryDays")) b.setEstimatedDeliveryDays(Integer.parseInt(body.get("estimatedDeliveryDays").toString()));
+        if (body.containsKey("enableLocalPickup")) b.setEnableLocalPickup("yes".equals(body.get("enableLocalPickup")));
+        if (body.containsKey("enableEmailNotifications")) b.setEnableEmailNotifications("yes".equals(body.get("enableEmailNotifications")));
+        if (body.containsKey("enableSmsNotifications")) b.setEnableSmsNotifications("yes".equals(body.get("enableSmsNotifications")));
+        if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications("yes".equals(body.get("enablePushNotifications")));
+        if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails("yes".equals(body.get("enableMarketingEmails")));
+        if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts("yes".equals(body.get("enableOrderAlerts")));
         boutiqueRepository.save(b);
         storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Configuration sauvegardée", Map.of("id", b.getId())));
@@ -90,6 +103,8 @@ public class BoutiqueSettingsController {
         if (body.containsKey("buttonColor")) b.setButtonColor(body.get("buttonColor"));
         if (body.containsKey("topBarColor")) b.setTopBarColor(body.get("topBarColor"));
         if (body.containsKey("textColor")) b.setTextColor(body.get("textColor"));
+        if (body.containsKey("fontFamily")) b.setFontFamily(body.get("fontFamily"));
+        if (body.containsKey("darkMode")) b.setDarkMode("yes".equals(body.get("darkMode")));
         boutiqueRepository.save(b);
         storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Thème mis à jour", Map.of("id", b.getId())));
@@ -108,6 +123,34 @@ public class BoutiqueSettingsController {
         boutiqueRepository.save(b);
         storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Logo mis à jour", Map.of("logoUrl", url)));
+    }
+
+    // ========== BANNER ==========
+    @PostMapping("/banner")
+    @Transactional
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadBanner(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Boutique b = getBoutique(id, principal.getUserId());
+        String url = uploadService.uploadImage(file);
+        b.setBannerUrl(url);
+        boutiqueRepository.save(b);
+        return ResponseEntity.ok(ApiResponse.ok("Bannière mise à jour", Map.of("bannerUrl", url)));
+    }
+
+    // ========== FAVICON ==========
+    @PostMapping("/favicon")
+    @Transactional
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadFavicon(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Boutique b = getBoutique(id, principal.getUserId());
+        String url = uploadService.uploadImage(file);
+        b.setFaviconUrl(url);
+        boutiqueRepository.save(b);
+        return ResponseEntity.ok(ApiResponse.ok("Favicon mis à jour", Map.of("faviconUrl", url)));
     }
 
     // ========== CURRENCY ==========
@@ -137,6 +180,39 @@ public class BoutiqueSettingsController {
         boutiqueRepository.save(b);
         storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Code personnalisé mis à jour", Map.of("id", b.getId())));
+    }
+
+    // ========== DELIVERY SETTINGS ==========
+    @PutMapping("/delivery-settings")
+    @Transactional
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateDeliverySettings(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Boutique b = getBoutique(id, principal.getUserId());
+        if (body.containsKey("deliveryFees")) b.setDeliveryFees(Double.parseDouble(body.get("deliveryFees").toString()));
+        if (body.containsKey("freeShippingThreshold")) b.setFreeShippingThreshold(Double.parseDouble(body.get("freeShippingThreshold").toString()));
+        if (body.containsKey("estimatedDeliveryDays")) b.setEstimatedDeliveryDays(Integer.parseInt(body.get("estimatedDeliveryDays").toString()));
+        if (body.containsKey("enableLocalPickup")) b.setEnableLocalPickup("yes".equals(body.get("enableLocalPickup")));
+        boutiqueRepository.save(b);
+        return ResponseEntity.ok(ApiResponse.ok("Paramètres de livraison sauvegardés", Map.of("id", b.getId())));
+    }
+
+    // ========== NOTIFICATION SETTINGS ==========
+    @PutMapping("/notification-settings")
+    @Transactional
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateNotificationSettings(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Boutique b = getBoutique(id, principal.getUserId());
+        if (body.containsKey("enableEmailNotifications")) b.setEnableEmailNotifications("yes".equals(body.get("enableEmailNotifications")));
+        if (body.containsKey("enableSmsNotifications")) b.setEnableSmsNotifications("yes".equals(body.get("enableSmsNotifications")));
+        if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications("yes".equals(body.get("enablePushNotifications")));
+        if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails("yes".equals(body.get("enableMarketingEmails")));
+        if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts("yes".equals(body.get("enableOrderAlerts")));
+        boutiqueRepository.save(b);
+        return ResponseEntity.ok(ApiResponse.ok("Paramètres de notification sauvegardés", Map.of("id", b.getId())));
     }
 
     // ========== SLIDERS ==========
@@ -214,6 +290,7 @@ public class BoutiqueSettingsController {
             @AuthenticationPrincipal UserPrincipal principal) {
         getBoutique(id, principal.getUserId());
         videoRepository.deleteById(videoId);
+        storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Vidéo supprimée", null));
     }
 
@@ -242,7 +319,7 @@ public class BoutiqueSettingsController {
             @AuthenticationPrincipal UserPrincipal principal) {
         getBoutique(id, principal.getUserId());
         List<String> list = countryRepository.findByBoutiqueId(id).stream()
-                .map(BoutiqueCountry::getCountryName).collect(Collectors.toList());
+                .map(BoutiqueCountry::getCountryCode).collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
@@ -256,10 +333,16 @@ public class BoutiqueSettingsController {
         String name = body.get("countryName");
         if (name == null || name.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("countryName is required"));
-        BoutiqueCountry bc = BoutiqueCountry.builder().boutique(b).countryName(name).build();
+        String code = name.trim().toUpperCase(Locale.ROOT);
+        String displayName = getCountryDisplayName(code);
+        BoutiqueCountry bc = BoutiqueCountry.builder()
+                .boutique(b)
+                .countryCode(code)
+                .countryName(displayName)
+                .build();
         countryRepository.save(bc);
         storeGeneratorService.regenerate(id);
-        return ResponseEntity.ok(ApiResponse.ok("Pays ajouté", Map.of("countryName", name)));
+        return ResponseEntity.ok(ApiResponse.ok("Pays ajouté", Map.of("countryName", displayName, "countryCode", code)));
     }
 
     @DeleteMapping("/countries/{countryName}")
@@ -268,7 +351,7 @@ public class BoutiqueSettingsController {
             @PathVariable UUID id, @PathVariable String countryName,
             @AuthenticationPrincipal UserPrincipal principal) {
         getBoutique(id, principal.getUserId());
-        countryRepository.findByBoutiqueIdAndCountryName(id, countryName)
+        countryRepository.findByBoutiqueIdAndCountryCode(id, countryName.toUpperCase(Locale.ROOT))
                 .ifPresent(c -> countryRepository.delete(c));
         storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Pays supprimé", null));
@@ -361,5 +444,15 @@ public class BoutiqueSettingsController {
         Optional<Boutique> existing = boutiqueRepository.findBySlug(name);
         boolean available = existing.isEmpty() || (currentId != null && existing.get().getId().toString().equals(currentId));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("available", available)));
+    }
+
+    private static String getCountryDisplayName(String code) {
+        if (code == null || code.length() != 2) return code;
+        Locale locale = new Locale("", code);
+        String name = locale.getDisplayName(Locale.FRENCH);
+        if (name == null || name.isBlank() || name.equals(code)) {
+            name = locale.getDisplayName(Locale.ENGLISH);
+        }
+        return name;
     }
 }

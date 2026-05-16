@@ -20,7 +20,9 @@ class _SubscriptionDashboardScreenState extends State<SubscriptionDashboardScree
   final _api = ApiClient();
   Subscription? _subscription;
   List<Plan> _plans = [];
+  List<Invoice> _invoices = [];
   bool _loading = true;
+  bool _cancelling = false;
   String? _error;
 
   @override
@@ -36,11 +38,41 @@ class _SubscriptionDashboardScreenState extends State<SubscriptionDashboardScree
       _subscription = Subscription.fromJson(subRes['data']);
       final planRes = await _api.get('/plans');
       _plans = (planRes['data'] as List).map((e) => Plan.fromJson(e)).toList();
+      final invRes = await _api.get('/subscriptions/invoices');
+      _invoices = (invRes['data'] as List?)?.map((e) => Invoice.fromJson(e)).toList() ?? [];
       if (mounted) context.read<BoutiqueProvider>().loadStats();
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
     }
     setState(() => _loading = false);
+  }
+
+  Future<void> _cancelSubscription() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Résilier l\'abonnement'),
+        content: const Text('Voulez-vous vraiment résilier votre abonnement actif ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Non')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Oui, résilier')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() => _cancelling = true);
+    try {
+      await _api.post('/subscriptions/cancel', data: {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abonnement résilié'), backgroundColor: AppColors.success));
+      }
+      _loadData();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
+      }
+    }
+    setState(() => _cancelling = false);
   }
 
   int get _remainingDays {
@@ -90,6 +122,15 @@ class _SubscriptionDashboardScreenState extends State<SubscriptionDashboardScree
                               const SizedBox(height: 4),
                               Text('Expire le ${_subscription!.expiresAt!.substring(0, 10)}', style: AppTypography.caption.copyWith(color: Colors.white70)),
                             ],
+                            if (_subscription?.status == 'ACTIVE') ...[
+                              const SizedBox(height: 16),
+                              AppButton(
+                                label: 'Résilier l\'abonnement',
+                                onPressed: _cancelling ? null : _cancelSubscription,
+                                loading: _cancelling,
+                                color: AppColors.danger,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -124,10 +165,64 @@ class _SubscriptionDashboardScreenState extends State<SubscriptionDashboardScree
                         onPressed: () => context.push('/plans'),
                         outlined: true,
                       ),
+                      const SizedBox(height: 24),
+                      Text('Historique des factures', style: AppTypography.heading3),
+                      const SizedBox(height: 12),
+                      if (_invoices.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text('Aucune facture', style: TextStyle(color: AppColors.textHint)),
+                        )
+                      else
+                        ...(_invoices.map((inv) => _invoiceCard(inv))),
                       const SizedBox(height: 40),
                     ],
                   ),
                 ),
+    );
+  }
+
+  Widget _invoiceCard(Invoice inv) {
+    final statusColor = inv.status == 'PAID' ? AppColors.success
+        : inv.status == 'CANCELLED' ? AppColors.textHint
+        : AppColors.warning;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(inv.planName ?? 'Facture', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                if (inv.paidAt != null) Text(inv.paidAt!.substring(0, 10), style: AppTypography.caption),
+                if (inv.paymentRef != null) Text('Réf: ${inv.paymentRef}', style: AppTypography.caption),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('${inv.amount.toStringAsFixed(2)} ${inv.currency}', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(30),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Text(inv.status, style: TextStyle(fontSize: 10, color: statusColor)),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

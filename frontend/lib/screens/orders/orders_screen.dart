@@ -20,6 +20,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   final List<String> _tabs = ['Tous', 'En attente', 'Confirmé', 'Expédié', 'Livré', 'Annulé'];
   final List<String> _tabValues = ['ALL', 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
   int _selectedTab = 0;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -45,6 +47,32 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate: now,
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : DateTimeRange(start: now.subtract(const Duration(days: 30)), end: now),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+      final bp = context.read<BoutiqueProvider>();
+      if (bp.activeBoutique != null) {
+        context.read<OrdersProvider>().loadOrders(
+          bp.activeBoutique!.id, refresh: true,
+          startDate: _startDate!.toIso8601String().substring(0, 10),
+          endDate: _endDate!.toIso8601String().substring(0, 10),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -58,6 +86,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
       appBar: AppBar(
         title: const Text('Commandes'),
         actions: [
+          if (_startDate != null)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                setState(() { _startDate = null; _endDate = null; });
+                final bp = context.read<BoutiqueProvider>();
+                if (bp.activeBoutique != null) {
+                  context.read<OrdersProvider>().loadOrders(bp.activeBoutique!.id, refresh: true);
+                }
+              },
+            ),
+          IconButton(
+            icon: Icon(Icons.date_range, color: _startDate != null ? AppColors.primary : null),
+            onPressed: _pickDateRange,
+          ),
           IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: () {}),
         ],
       ),

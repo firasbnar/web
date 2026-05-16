@@ -11,37 +11,63 @@ import java.util.UUID;
 
 public class UserPrincipal implements UserDetails {
 
-    private final User user;
+    private final UUID id;
+    private final String email;
+    private final String password;
+    private final String role;
+    private final UUID tenantId;
+    private String tokenHash;
 
-    public UserPrincipal(User user) {
-        this.user = user;
+    public UserPrincipal(UUID id, String email, String password, String role, UUID tenantId) {
+        this.id = id;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.tenantId = tenantId;
+    }
+
+    public UserPrincipal(UUID id, String email, String password, String role, UUID tenantId, String tokenHash) {
+        this(id, email, password, role, tenantId);
+        this.tokenHash = tokenHash;
     }
 
     public UUID getUserId() {
-        return user.getId();
+        return id;
     }
 
     public String getEmail() {
-        return user.getEmail();
+        return email;
     }
 
     public String getRole() {
-        return user.getRole();
+        return role;
+    }
+
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
+    public String getTokenHash() {
+        return tokenHash;
+    }
+
+    public void setTokenHash(String tokenHash) {
+        this.tokenHash = tokenHash;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     @Override
     public String getPassword() {
-        return user.getPasswordHash();
+        return password;
     }
 
     @Override
     public String getUsername() {
-        return user.getId().toString();
+        return id.toString();
     }
 
     @Override

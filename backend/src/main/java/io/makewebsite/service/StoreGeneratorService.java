@@ -121,7 +121,7 @@ public class StoreGeneratorService {
         // Countries
         List<BoutiqueCountry> countries = countryRepository.findByBoutiqueId(b.getId());
         String countriesHtml = countries.stream().map(c ->
-            "<option value=\"" + esc(c.getCountryName()) + "\">" + esc(c.getCountryName()) + "</option>"
+            "<option value=\"" + esc(c.getCountryCode()) + "\">" + esc(c.getCountryCode()) + "</option>"
         ).collect(Collectors.joining("\n        "));
 
         // Products HTML
@@ -335,7 +335,7 @@ public class StoreGeneratorService {
         "<footer class=\"footer\"><div class=\"footer-inner\">" +
         "<div class=\"footer-top\">" +
         "<div class=\"footer-brand\"><div class=\"logo\"><a href=\"./\"><img src=\"" + esc(logoUrl) + "\" alt=\"" + esc(b.getName()) + "\"><span>" + esc(b.getName()) + "</span></a></div><p>" + esc(b.getDescription()) + "</p></div>" +
-        "<div class=\"footer-col\"><h4>" + esc(menuLabel) + "</h4><ul><li><a href=\"./\">" + esc(seeAll) + "</a></li>" + navCatHtml.replaceAll("?menu_item_id=", "?menu_item_id=").replaceAll("</a>", "</a></li>") + "</ul></div>" +
+        "<div class=\"footer-col\"><h4>" + esc(menuLabel) + "</h4><ul><li><a href=\"./\">" + esc(seeAll) + "</a></li>" + navCatHtml.replace("?menu_item_id=", "?menu_item_id=").replace("</a>", "</a></li>") + "</ul></div>" +
         "<div class=\"footer-col\"><h4>" + esc(supportLabel) + "</h4><ul>" +
         (b.getWhatsappNumber() != null && !b.getWhatsappNumber().isEmpty() ? "<li><a href=\"https://wa.me/" + b.getWhatsappNumber() + "\"><i class=\"fab fa-whatsapp\"></i> WhatsApp</a></li>" : "") +
         "</ul></div>" +

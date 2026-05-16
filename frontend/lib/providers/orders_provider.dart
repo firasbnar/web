@@ -19,7 +19,7 @@ class OrdersProvider extends ChangeNotifier {
   String? get error => _error;
   bool get hasMore => _hasMore;
 
-  Future<void> loadOrders(String boutiqueId, {bool refresh = false, String? search}) async {
+  Future<void> loadOrders(String boutiqueId, {bool refresh = false, String? search, String? startDate, String? endDate}) async {
     if (refresh) { _currentPage = 0; _orders = []; _hasMore = true; }
     if (!_hasMore || _loading) return;
     _loading = true; notifyListeners();
@@ -29,6 +29,8 @@ class OrdersProvider extends ChangeNotifier {
       };
       if (_statusFilter.isNotEmpty) params['status'] = _statusFilter;
       if (search != null && search.isNotEmpty) params['search'] = search;
+      if (startDate != null) params['startDate'] = startDate;
+      if (endDate != null) params['endDate'] = endDate;
       final res = await _api.get('/orders', queryParameters: params);
       final data = res['data'];
       final List content = data['content'] ?? [];
@@ -90,4 +92,28 @@ class OrdersProvider extends ChangeNotifier {
     _statusFilter = status == 'ALL' ? '' : status;
     loadOrders(boutiqueId, refresh: true);
   }
+
+  Future<bool> generateInvoice(String id) async {
+    try {
+      final res = await _api.post('/orders/$id/invoice');
+      if (_selectedOrder != null && _selectedOrder!.id == id) {
+        _selectedOrder = _selectedOrder!.copyWith(
+          invoiceNumber: res['data']?.toString(),
+        );
+        final idx = _orders.indexWhere((o) => o.id == id);
+        if (idx >= 0) _orders[idx] = _selectedOrder!;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  String invoiceUrl(String id) => '${ApiClient.baseUrl}/orders/$id/invoice';
+
+  String invoicePrintUrl(String boutiqueId, String orderId) =>
+      '${ApiClient.baseUrl}/boutiques/$boutiqueId/orders/$orderId/invoice/print';
 }

@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -197,7 +198,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       Text('Livraison', style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _deliveryOptions.contains(order.deliveryCompany) ? order.deliveryCompany : null,
+                        initialValue: _deliveryOptions.contains(order.deliveryCompany) ? order.deliveryCompany : null,
                         decoration: const InputDecoration(labelText: 'Transporteur'),
                         items: _deliveryOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                         onChanged: (v) {},
@@ -211,6 +212,53 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       AppButton(label: 'Mettre à jour', onPressed: () {
                         op.updateTracking(widget.orderId, order.deliveryCompany ?? '', _trackingCtrl.text);
                       }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Facture', style: AppTypography.heading4),
+                      const SizedBox(height: 8),
+                      if (order.invoiceNumber != null) ...[
+                        Text('N° ${order.invoiceNumber}', style: AppTypography.body2),
+                        if (order.invoiceCreatedAt != null)
+                          Text('Générée le ${order.invoiceCreatedAt}', style: AppTypography.caption),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        children: [
+                          if (order.invoiceNumber == null)
+                            Expanded(
+                              child: AppButton(
+                                label: 'Générer la facture',
+                                onPressed: () async {
+                                  await op.generateInvoice(widget.orderId);
+                                  await op.loadOrder(widget.orderId);
+                                },
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppButton(
+                              label: order.invoiceNumber != null ? 'Imprimer' : 'Aperçu',
+                              outlined: order.invoiceNumber != null,
+                              onPressed: order.invoiceNumber != null && order.boutiqueId != null
+                                  ? () => html.window.open(op.invoicePrintUrl(order.boutiqueId!, widget.orderId), '_blank')
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

@@ -3,6 +3,7 @@ package io.makewebsite.config;
 import io.makewebsite.repository.UserRepository;
 import io.makewebsite.security.JwtAuthFilter;
 import io.makewebsite.security.UserPrincipal;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +23,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 @Configuration
@@ -44,13 +46,45 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"success\":false,\"message\":\"Email ou mot de passe incorrect\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("{\"success\":false,\"message\":\"Accès refusé\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/plans", "/ws/**", "/api/payments/d17/webhook", "/api/boutiques/public", "/uploads/**", "/api/public/**", "/store/**", "/api/traffic/**").permitAll()
+                .requestMatchers(
+                    "/api/auth/register",
+                    "/api/auth/login",
+                    "/api/auth/verify",
+                    "/api/auth/verify-email",
+                    "/api/auth/resend-verification",
+                    "/api/auth/refresh",
+                    "/api/auth/google-login",
+                    "/api/plans",
+                    "/ws/**",
+                    "/api/payments/d17/webhook",
+                    "/api/boutiques/public",
+                    "/uploads/**",
+                    "/api/public/**",
+                    "/store/**",
+                    "/api/traffic/**"
+                ).permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/messages/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/products/*/reviews").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/boutiques/**").hasAnyRole("OWNER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/orders/public").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/orders/*/invoice").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/boutiques/*/orders/*/invoice/print").permitAll()
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/boutiques/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/stores/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -78,8 +112,10 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return email -> userRepository.findByEmail(email)
-                .map(UserPrincipal::new)
+        return email -> userRepository.findByEmailWithTenant(email)
+                .map(user -> new UserPrincipal(
+                        user.getId(), user.getEmail(), user.getPasswordHash(),
+                        user.getRole(), user.getTenant().getId()))
                 .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
     }
 

@@ -17,6 +17,8 @@ class Order {
   final String? deliveryCompany;
   final String? trackingNumber;
   final String? notes;
+  final String? invoiceNumber;
+  final String? invoiceCreatedAt;
   final String? createdAt;
   final List<OrderItem> items;
 
@@ -26,8 +28,58 @@ class Order {
     required this.subtotal, this.shippingFee = 0, this.discount = 0, required this.total,
     this.paymentMethod, this.paymentStatus, this.paymentRef,
     this.shippingAddress, this.deliveryCompany, this.trackingNumber,
-    this.notes, this.createdAt, this.items = const [],
+    this.notes, this.invoiceNumber, this.invoiceCreatedAt, this.createdAt, this.items = const [],
   });
+
+  Order copyWith({
+    String? id,
+    String? boutiqueId,
+    String? userId,
+    String? customerId,
+    String? customerName,
+    String? orderNumber,
+    String? status,
+    double? subtotal,
+    double? shippingFee,
+    double? discount,
+    double? total,
+    String? paymentMethod,
+    String? paymentStatus,
+    String? paymentRef,
+    String? shippingAddress,
+    String? deliveryCompany,
+    String? trackingNumber,
+    String? notes,
+    String? invoiceNumber,
+    String? invoiceCreatedAt,
+    String? createdAt,
+    List<OrderItem>? items,
+  }) {
+    return Order(
+      id: id ?? this.id,
+      boutiqueId: boutiqueId ?? this.boutiqueId,
+      userId: userId ?? this.userId,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
+      orderNumber: orderNumber ?? this.orderNumber,
+      status: status ?? this.status,
+      subtotal: subtotal ?? this.subtotal,
+      shippingFee: shippingFee ?? this.shippingFee,
+      discount: discount ?? this.discount,
+      total: total ?? this.total,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentRef: paymentRef ?? this.paymentRef,
+      shippingAddress: shippingAddress ?? this.shippingAddress,
+      deliveryCompany: deliveryCompany ?? this.deliveryCompany,
+      trackingNumber: trackingNumber ?? this.trackingNumber,
+      notes: notes ?? this.notes,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      invoiceCreatedAt: invoiceCreatedAt ?? this.invoiceCreatedAt,
+      createdAt: createdAt ?? this.createdAt,
+      items: items ?? this.items,
+    );
+  }
 
   factory Order.fromJson(Map<String, dynamic> json) {
     List<OrderItem> itemList = [];
@@ -53,6 +105,8 @@ class Order {
       deliveryCompany: json['deliveryCompany'],
       trackingNumber: json['trackingNumber'],
       notes: json['notes'],
+      invoiceNumber: json['invoiceNumber'],
+      invoiceCreatedAt: json['invoiceCreatedAt'],
       createdAt: json['createdAt'],
       items: itemList,
     );

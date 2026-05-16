@@ -37,7 +37,21 @@ class _LoginScreenState extends State<LoginScreen> {
           context.go('/home');
         }
       } else if (provider.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.error!)));
+        if (provider.error!.contains('vérifier') || provider.error!.contains('email')) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${provider.error!} → '),
+            action: SnackBarAction(
+              label: 'Renvoyer',
+              onPressed: () {
+                context.go('/verify-email', extra: _emailCtrl.text.trim());
+              },
+            ),
+            duration: const Duration(seconds: 8),
+            backgroundColor: AppColors.warning,
+          ));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.error!)));
+        }
       }
     }
   }
@@ -122,8 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text("Pas de compte?", style: AppTypography.body2),
                     TextButton(

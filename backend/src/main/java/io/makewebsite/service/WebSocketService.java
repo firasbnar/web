@@ -31,4 +31,28 @@ public class WebSocketService {
     public void sendVisitorListUpdate(UUID boutiqueId, Object visitorPage) {
         messagingTemplate.convertAndSend("/topic/traffic/" + boutiqueId + "/visitors", visitorPage);
     }
+
+    public void sendCaisseStatsUpdate(UUID boutiqueId, CaisseDashboardResponse stats) {
+        messagingTemplate.convertAndSend("/topic/caisse/" + boutiqueId + "/stats", stats);
+    }
+
+    public void sendCaisseOrderUpdate(UUID boutiqueId, OrderResponse order) {
+        messagingTemplate.convertAndSend("/topic/caisse/" + boutiqueId + "/orders", order);
+    }
+
+    public void sendCaisseActivityUpdate(UUID boutiqueId, ActivityLogResponse activity) {
+        messagingTemplate.convertAndSend("/topic/caisse/" + boutiqueId + "/activities", activity);
+    }
+
+    public void sendActivityEvent(ActivityLogResponse activity) {
+        messagingTemplate.convertAndSend("/topic/activity", activity);
+    }
+
+    public void sendPresenceUpdate(long onlineCount) {
+        messagingTemplate.convertAndSend("/topic/presence", onlineCount);
+    }
+
+    public void sendSecurityAlert(Object alert) {
+        messagingTemplate.convertAndSend("/topic/security", alert);
+    }
 }

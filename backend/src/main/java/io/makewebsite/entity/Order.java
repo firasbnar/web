@@ -93,6 +93,13 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Size(max = 30)
+    @Column(name = "invoice_number")
+    private String invoiceNumber;
+
+    @Column(name = "invoice_created_at")
+    private LocalDateTime invoiceCreatedAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

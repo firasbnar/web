@@ -25,6 +25,7 @@ public class BoutiqueService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
 
     @Transactional
     public List<BoutiqueResponse> getMyBoutiques(UUID userId) {
@@ -51,8 +52,17 @@ public class BoutiqueService {
     public BoutiqueResponse createBoutique(CreateBoutiqueRequest request, UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        Tenant tenant = user.getTenant();
+        if (tenant == null) {
+            tenant = tenantRepository.save(Tenant.builder()
+                    .name((user.getFullName() != null ? user.getFullName() : "User") + "'s Tenant")
+                    .build());
+            user.setTenant(tenant);
+            userRepository.save(user);
+        }
         Boutique boutique = Boutique.builder()
                 .user(user)
+                .tenant(tenant)
                 .name(request.getName())
                 .slug(request.getSlug())
                 .description(request.getDescription())
@@ -71,8 +81,13 @@ public class BoutiqueService {
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
         if (request.getName() != null) boutique.setName(request.getName());
         if (request.getDescription() != null) boutique.setDescription(request.getDescription());
+        if (request.getEmail() != null) boutique.setEmail(request.getEmail());
+        if (request.getPhone() != null) boutique.setPhone(request.getPhone());
+        if (request.getAddress() != null) boutique.setAddress(request.getAddress());
         if (request.getCurrency() != null) boutique.setCurrency(request.getCurrency());
         if (request.getLanguage() != null) boutique.setLanguage(request.getLanguage());
+        if (request.getTimezone() != null) boutique.setTimezone(request.getTimezone());
+        if (request.getCustomDomain() != null) boutique.setCustomDomain(request.getCustomDomain());
         boutique = boutiqueRepository.save(boutique);
         return mapToResponse(boutique);
     }
@@ -85,6 +100,8 @@ public class BoutiqueService {
         if (request.getSecondaryColor() != null) boutique.setSecondaryColor(request.getSecondaryColor());
         if (request.getCustomCss() != null) boutique.setCustomCss(request.getCustomCss());
         if (request.getLogoUrl() != null) boutique.setLogoUrl(request.getLogoUrl());
+        if (request.getFontFamily() != null) boutique.setFontFamily(request.getFontFamily());
+        if (request.getDarkMode() != null) boutique.setDarkMode(request.getDarkMode());
         boutique = boutiqueRepository.save(boutique);
         return mapToResponse(boutique);
     }
@@ -96,6 +113,9 @@ public class BoutiqueService {
         if (request.getSeoTitle() != null) boutique.setSeoTitle(request.getSeoTitle());
         if (request.getSeoDescription() != null) boutique.setSeoDescription(request.getSeoDescription());
         if (request.getSeoKeywords() != null) boutique.setSeoKeywords(request.getSeoKeywords());
+        if (request.getOgImageUrl() != null) boutique.setOgImageUrl(request.getOgImageUrl());
+        if (request.getFacebookPixelId() != null) boutique.setFacebookPixelId(request.getFacebookPixelId());
+        if (request.getGoogleAnalyticsId() != null) boutique.setGoogleAnalyticsId(request.getGoogleAnalyticsId());
         boutique = boutiqueRepository.save(boutique);
         return mapToResponse(boutique);
     }
@@ -122,6 +142,18 @@ public class BoutiqueService {
         if (request.getEnableAdeex() != null) boutique.setEnableAdeex(request.getEnableAdeex());
         if (request.getEnableJax() != null) boutique.setEnableJax(request.getEnableJax());
         if (request.getEnableIntigo() != null) boutique.setEnableIntigo(request.getEnableIntigo());
+        if (request.getStripePublishableKey() != null) boutique.setStripePublishableKey(request.getStripePublishableKey());
+        if (request.getStripeSecretKey() != null) boutique.setStripeSecretKey(request.getStripeSecretKey());
+        if (request.getStripeWebhookSecret() != null) boutique.setStripeWebhookSecret(request.getStripeWebhookSecret());
+        if (request.getPaypalClientId() != null) boutique.setPaypalClientId(request.getPaypalClientId());
+        if (request.getPaypalSecret() != null) boutique.setPaypalSecret(request.getPaypalSecret());
+        if (request.getPaypalWebhookId() != null) boutique.setPaypalWebhookId(request.getPaypalWebhookId());
+        if (request.getKonnectMerchantId() != null) boutique.setKonnectMerchantId(request.getKonnectMerchantId());
+        if (request.getKonnectApiKey() != null) boutique.setKonnectApiKey(request.getKonnectApiKey());
+        if (request.getKonnectStatus() != null) boutique.setKonnectStatus(request.getKonnectStatus());
+        if (request.getD17MerchantNumber() != null) boutique.setD17MerchantNumber(request.getD17MerchantNumber());
+        if (request.getD17QrCodeUrl() != null) boutique.setD17QrCodeUrl(request.getD17QrCodeUrl());
+        if (request.getD17Status() != null) boutique.setD17Status(request.getD17Status());
         boutique = boutiqueRepository.save(boutique);
         return mapToResponse(boutique);
     }
@@ -231,20 +263,73 @@ public class BoutiqueService {
                 .build();
     }
 
+    @Transactional
+    public BoutiqueResponse updateTelegramSettings(UUID boutiqueId, TelegramSettingsRequest request, UUID userId) {
+        Boutique boutique = boutiqueRepository.findById(boutiqueId)
+                .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        if (!boutique.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Accès refusé");
+        }
+        User owner = boutique.getUser();
+
+        if (request.getTelegramChatId() != null) {
+            String cleaned = request.getTelegramChatId().replaceAll("[^0-9]", "");
+            if (cleaned.isEmpty()) {
+                throw new RuntimeException("L'ID Chat Telegram doit être un nombre valide");
+            }
+            owner.setTelegramChatId(cleaned);
+        }
+
+        if (request.getTelegramEnabled() != null) {
+            if (Boolean.TRUE.equals(request.getTelegramEnabled()) && owner.getTelegramChatId() == null) {
+                throw new RuntimeException("Veuillez d'abord saisir un ID Chat Telegram");
+            }
+            owner.setTelegramEnabled(request.getTelegramEnabled());
+        }
+
+        userRepository.save(owner);
+        return mapToResponse(boutique);
+    }
+
     private BoutiqueResponse mapToResponse(Boutique b) {
         return BoutiqueResponse.builder()
                 .id(b.getId()).name(b.getName()).slug(b.getSlug())
                 .logoUrl(b.getLogoUrl()).description(b.getDescription())
+                .email(b.getEmail()).phone(b.getPhone()).address(b.getAddress())
                 .primaryColor(b.getPrimaryColor()).secondaryColor(b.getSecondaryColor())
-                .currency(b.getCurrency()).language(b.getLanguage())
+                .currency(b.getCurrency()).language(b.getLanguage()).timezone(b.getTimezone())
+                .storeConfig(b.getStoreConfig())
+                .headerColor(b.getHeaderColor()).footerColor(b.getFooterColor())
+                .bodyColor(b.getBodyColor()).cardProductColor(b.getCardProductColor())
+                .buttonColor(b.getButtonColor()).topBarColor(b.getTopBarColor())
+                .textColor(b.getTextColor())
                 .isActive(b.getIsActive()).customDomain(b.getCustomDomain())
                 .seoTitle(b.getSeoTitle()).seoDescription(b.getSeoDescription()).seoKeywords(b.getSeoKeywords())
+                .ogImageUrl(b.getOgImageUrl())
                 .facebookUrl(b.getFacebookUrl()).instagramUrl(b.getInstagramUrl())
-                .tiktokUrl(b.getTiktokUrl()).whatsappNumber(b.getWhatsappNumber())
-                .customCss(b.getCustomCss())
+                .tiktokUrl(b.getTiktokUrl()).twitterUrl(b.getTwitterUrl())
+                .linkedinUrl(b.getLinkedinUrl()).whatsappNumber(b.getWhatsappNumber())
+                .customCss(b.getCustomCss()).customJs(b.getCustomJs())
                 .enablePaypal(b.getEnablePaypal()).enableCod(b.getEnableCod())
                 .enableD17(b.getEnableD17()).enableAdeex(b.getEnableAdeex())
                 .enableJax(b.getEnableJax()).enableIntigo(b.getEnableIntigo())
+                .bannerUrl(b.getBannerUrl()).faviconUrl(b.getFaviconUrl())
+                .fontFamily(b.getFontFamily()).darkMode(b.getDarkMode())
+                .announcementText(b.getAnnouncementText())
+                .deliveryFees(b.getDeliveryFees()).tva(b.getTva())
+                .simpleCheckout(b.getSimpleCheckout()).cashOnDelivery(b.getCashOnDelivery())
+                .konnectMerchantId(b.getKonnectMerchantId()).konnectApiKey(b.getKonnectApiKey()).konnectStatus(b.getKonnectStatus())
+                .d17MerchantNumber(b.getD17MerchantNumber()).d17QrCodeUrl(b.getD17QrCodeUrl()).d17Status(b.getD17Status())
+                .facebookPixelId(b.getFacebookPixelId()).googleAnalyticsId(b.getGoogleAnalyticsId())
+                .stripePublishableKey(b.getStripePublishableKey()).paypalClientId(b.getPaypalClientId())
+                .freeShippingThreshold(b.getFreeShippingThreshold()).estimatedDeliveryDays(b.getEstimatedDeliveryDays())
+                .enableLocalPickup(b.getEnableLocalPickup())
+                .enableEmailNotifications(b.getEnableEmailNotifications()).enableSmsNotifications(b.getEnableSmsNotifications())
+                .enablePushNotifications(b.getEnablePushNotifications()).enableMarketingEmails(b.getEnableMarketingEmails())
+                .enableOrderAlerts(b.getEnableOrderAlerts())
+                .teamEnabled(b.getTeamEnabled()).clientMessagingEnabled(b.getClientMessagingEnabled())
+                .telegramChatId(b.getUser().getTelegramChatId())
+                .telegramEnabled(b.getUser().getTelegramEnabled())
                 .createdAt(b.getCreatedAt())
                 .build();
     }

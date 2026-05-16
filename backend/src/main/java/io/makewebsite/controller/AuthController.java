@@ -2,13 +2,16 @@ package io.makewebsite.controller;
 
 import io.makewebsite.dto.request.*;
 import io.makewebsite.dto.response.*;
+import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import io.makewebsite.security.UserPrincipal;
+
 import java.util.Map;
 
 @RestController
@@ -19,12 +22,28 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Inscription réussie", authService.register(request)));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Inscription réussie. Vérifiez votre email.", authService.register(request)));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Connexion réussie", authService.login(request)));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request,
+                                                            HttpServletRequest httpRequest) {
+        String ip = extractIp(httpRequest);
+        String device = httpRequest.getHeader("User-Agent");
+        return ResponseEntity.ok(ApiResponse.ok("Connexion réussie", authService.login(request, ip, device)));
+    }
+
+    @GetMapping({"/verify", "/verify-email"})
+    public ResponseEntity<ApiResponse<String>> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(ApiResponse.ok("Email vérifié avec succès. Vous pouvez maintenant vous connecter."));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<String>> resendVerification(@RequestBody Map<String, String> body) {
+        authService.resendVerification(body.get("email"));
+        return ResponseEntity.ok(ApiResponse.ok("Email de vérification renvoyé. Vérifiez votre boîte de réception."));
     }
 
     @PostMapping("/refresh")
@@ -56,8 +75,25 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request);
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request,
+                                                     HttpServletRequest httpRequest) {
+        String ip = extractIp(httpRequest);
+        String device = httpRequest.getHeader("User-Agent");
+        authService.logout(request, ip, device);
         return ResponseEntity.ok(ApiResponse.ok("Déconnexion réussie", null));
+    }
+
+    private String extractIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 }

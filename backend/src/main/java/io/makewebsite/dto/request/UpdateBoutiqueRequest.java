@@ -12,6 +12,11 @@ import lombok.NoArgsConstructor;
 public class UpdateBoutiqueRequest {
     private String name;
     private String description;
+    private String email;
+    private String phone;
+    private String address;
     private String currency;
     private String language;
+    private String timezone;
+    private String customDomain;
 }

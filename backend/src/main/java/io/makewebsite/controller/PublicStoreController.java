@@ -1,8 +1,11 @@
 package io.makewebsite.controller;
 
+import io.makewebsite.dto.request.TrackVisitRequest;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import io.makewebsite.service.StoreGeneratorService;
+import io.makewebsite.service.TrafficService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,18 +26,21 @@ public class PublicStoreController {
     private final CategoryRepository categoryRepository;
     private final OrderRepository orderRepository;
     private final StoreGeneratorService storeGeneratorService;
+    private final TrafficService trafficService;
 
     // Serve full generated store HTML
     @GetMapping("/store/{slug}")
-    public ResponseEntity<String> serveStore(@PathVariable String slug) {
+    public ResponseEntity<String> serveStore(@PathVariable String slug, HttpServletRequest request) {
+        Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
+        if (b == null) return ResponseEntity.notFound().build();
         String html = storeGeneratorService.loadHtml(slug);
         if (html == null) {
-            Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
-            if (b == null) return ResponseEntity.notFound().build();
             storeGeneratorService.regenerate(b.getId());
             html = b.getGeneratedHtml();
             if (html == null) return ResponseEntity.notFound().build();
         }
+        // Track visit
+        trackStoreVisit(b, request);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
                 .body(html);
@@ -173,12 +179,6 @@ public class PublicStoreController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Inscription réussie"));
     }
 
-    // Track visit
-    @PostMapping("/visit")
-    public ResponseEntity<Map<String, Object>> trackVisit(@RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(Map.of("success", true));
-    }
-
     // Check name availability (public)
     @PostMapping("/check-name")
     public ResponseEntity<Map<String, Object>> checkName(@RequestBody Map<String, String> body) {
@@ -187,5 +187,21 @@ public class PublicStoreController {
         Optional<Boutique> existing = boutiqueRepository.findBySlug(name != null ? name.toLowerCase() : "");
         boolean available = existing.isEmpty() || (currentId != null && existing.get().getId().toString().equals(currentId));
         return ResponseEntity.ok(Map.of("available", available));
+    }
+
+    private void trackStoreVisit(Boutique boutique, HttpServletRequest request) {
+        try {
+            TrackVisitRequest req = new TrackVisitRequest();
+            req.setBoutiqueId(boutique.getId());
+            req.setBoutiqueSlug(boutique.getSlug());
+            req.setPage("/store/" + boutique.getSlug());
+            req.setIpAddress(request.getRemoteAddr());
+            req.setUserAgent(request.getHeader("User-Agent"));
+            req.setReferrer(request.getHeader("Referer"));
+            req.setPlatform("WEB");
+            trafficService.trackVisit(req);
+        } catch (Exception e) {
+            // Don't let tracking break the store page
+        }
     }
 }

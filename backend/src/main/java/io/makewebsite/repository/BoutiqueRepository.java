@@ -17,5 +17,9 @@ public interface BoutiqueRepository extends JpaRepository<Boutique, UUID> {
 
     Optional<Boutique> findByUserIdAndId(UUID userId, UUID id);
 
+    Optional<Boutique> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    List<Boutique> findByTenantId(UUID tenantId);
+
     List<Boutique> findAllByIsActiveTrue();
 }

@@ -30,6 +30,10 @@ public class Boutique {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
     @NotNull
     @Size(max = 100)
     @Column(nullable = false)
@@ -206,11 +210,96 @@ public class Boutique {
     @Column(name = "d17_status", length = 20)
     private String d17Status = "inactive";
 
+    @Builder.Default
+    @Column(name = "invoice_sequence")
+    private Long invoiceSequence = 0L;
+
     @Column(name = "facebook_pixel_id", length = 50)
     private String facebookPixelId;
 
     @Column(name = "google_analytics_id", length = 50)
     private String googleAnalyticsId;
+
+    // ====== New store settings fields ======
+
+    @Column(length = 200)
+    private String email;
+
+    @Column(length = 50)
+    private String phone;
+
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
+    @Builder.Default
+    @Column(length = 50)
+    private String timezone = "Africa/Tunis";
+
+    @Column(name = "banner_url", columnDefinition = "TEXT")
+    private String bannerUrl;
+
+    @Column(name = "favicon_url", columnDefinition = "TEXT")
+    private String faviconUrl;
+
+    @Column(name = "og_image_url", columnDefinition = "TEXT")
+    private String ogImageUrl;
+
+    @Builder.Default
+    @Column(name = "font_family", length = 100)
+    private String fontFamily = "Inter";
+
+    @Builder.Default
+    @Column(name = "dark_mode")
+    private Boolean darkMode = false;
+
+    @Column(name = "stripe_publishable_key", length = 200)
+    private String stripePublishableKey;
+
+    @Column(name = "stripe_secret_key", length = 200)
+    private String stripeSecretKey;
+
+    @Column(name = "stripe_webhook_secret", length = 200)
+    private String stripeWebhookSecret;
+
+    @Column(name = "paypal_client_id", length = 200)
+    private String paypalClientId;
+
+    @Column(name = "paypal_secret", length = 200)
+    private String paypalSecret;
+
+    @Column(name = "paypal_webhook_id", length = 200)
+    private String paypalWebhookId;
+
+    @Column(name = "free_shipping_threshold")
+    private Double freeShippingThreshold;
+
+    @Builder.Default
+    @Column(name = "estimated_delivery_days")
+    private Integer estimatedDeliveryDays = 3;
+
+    @Builder.Default
+    @Column(name = "enable_local_pickup")
+    private Boolean enableLocalPickup = false;
+
+    @Builder.Default
+    @Column(name = "enable_email_notifications")
+    private Boolean enableEmailNotifications = true;
+
+    @Builder.Default
+    @Column(name = "enable_sms_notifications")
+    private Boolean enableSmsNotifications = false;
+
+    @Builder.Default
+    @Column(name = "enable_push_notifications")
+    private Boolean enablePushNotifications = true;
+
+    @Builder.Default
+    @Column(name = "enable_marketing_emails")
+    private Boolean enableMarketingEmails = false;
+
+    @Builder.Default
+    @Column(name = "enable_order_alerts")
+    private Boolean enableOrderAlerts = true;
 
     @Column(name = "template_id")
     private Integer templateId;

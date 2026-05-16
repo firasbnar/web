@@ -14,4 +14,6 @@ public class UpdateThemeRequest {
     private String secondaryColor;
     private String customCss;
     private String logoUrl;
+    private String fontFamily;
+    private Boolean darkMode;
 }

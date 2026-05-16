@@ -33,6 +33,8 @@ public class OrderResponse {
     private String deliveryCompany;
     private String trackingNumber;
     private String notes;
+    private String invoiceNumber;
+    private LocalDateTime invoiceCreatedAt;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
 }

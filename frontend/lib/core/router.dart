@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../screens/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/auth/verification_pending_screen.dart';
 import '../screens/home/store_dashboard_screen.dart';
 import '../screens/home/store_selector_screen.dart';
 import '../screens/products/products_screen.dart';
@@ -37,12 +38,15 @@ import '../screens/order_tracking/order_tracking_screen.dart';
 import '../screens/traffic/traffic_screen.dart';
 import '../screens/traffic/traffic_analytics_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
+import '../screens/admin/pos_admin_screen.dart';
+import '../screens/admin/journal_activite_screen.dart';
 import '../screens/product_manager/product_manager_screen.dart';
 
 import '../screens/products/bulk_add_products_screen.dart';
 import '../screens/team/team_screen.dart';
 import '../screens/messages/messages_screen.dart';
 import '../screens/messages/conversation_screen.dart';
+import '../screens/boutique/telegram_settings_screen.dart';
 import '../models/conversation.dart';
 import '../widgets/main_scaffold.dart';
 
@@ -56,13 +60,17 @@ GoRouter createRouter(AuthProvider auth) {
       final role = auth.role;
 
       // Always allow public routes
-      if (location == '/splash' || location == '/login' || location == '/register') return null;
+      if (location == '/splash' || location == '/login' || location == '/register' || location == '/verify-email') return null;
 
       // Not logged in → redirect to login
       if (!isLoggedIn) return '/login';
 
-      // Admin-only routes
-      if ((location == '/admin' || location.startsWith('/pos/admin')) && role != 'ADMIN') {
+      // Super admin routes
+      if ((location == '/admin' || location == '/admin/activities') && role != 'ADMIN') {
+        return '/home';
+      }
+      // Caisse admin routes (admin or boutique owner)
+      if (location.startsWith('/pos/admin') && role != 'ADMIN' && role != 'OWNER') {
         return '/home';
       }
 
@@ -72,6 +80,7 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/verify-email', builder: (_, state) => VerificationPendingScreen(email: state.extra as String? ?? '')),
       ShellRoute(
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
@@ -83,8 +92,8 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/reviews', builder: (_, __) => const ReviewsScreen()),
           GoRoute(path: '/boutique/theme', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Theme')))),
           GoRoute(path: '/boutique/template', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Template')))),
-          GoRoute(path: '/pos/admin', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Administration Caisse')))),
-          GoRoute(path: '/telegram', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Telegram')))),
+          GoRoute(path: '/pos/admin', builder: (_, __) => const PosAdminScreen()),
+          GoRoute(path: '/telegram', builder: (_, __) => const TelegramSettingsScreen()),
           GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
           GoRoute(path: '/products/add', builder: (_, __) => const AddEditProductScreen()),
           GoRoute(path: '/products/edit/:id', builder: (_, state) => AddEditProductScreen(productId: state.pathParameters['id'])),
@@ -100,6 +109,7 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/traffic', builder: (_, __) => const TrafficScreen()),
            GoRoute(path: '/traffic/analytics', builder: (_, __) => const TrafficAnalyticsScreen()),
           GoRoute(path: '/admin', builder: (_, __) => const AdminDashboardScreen()),
+          GoRoute(path: '/admin/activities', builder: (_, __) => const JournalActiviteScreen()),
           GoRoute(path: '/products/variants/:id', builder: (_, state) => ProductManagerScreen(productId: state.pathParameters['id'])),
           GoRoute(path: '/payment-settings', redirect: (_, __) => '/boutique-settings'),
           GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),

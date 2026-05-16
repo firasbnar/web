@@ -25,11 +25,6 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.ok(paymentService.capturePayPalOrder(orderId)));
     }
 
-    @PostMapping("/d17/webhook")
-    public ResponseEntity<String> handleD17Webhook(@RequestBody String payload) {
-        return ResponseEntity.ok(paymentService.handleD17Webhook(payload));
-    }
-
     @PostMapping("/stripe/create-intent")
     public ResponseEntity<ApiResponse<JsonNode>> createStripeIntent(@Valid @RequestBody CreatePaymentRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(paymentService.createStripePaymentIntent(request)));

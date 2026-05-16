@@ -58,7 +58,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     }
     if (isEditing) {
       final pp = context.read<ProductsProvider>();
-      final product = pp.products.where((p) => p.id == widget.productId).firstOrNull;
+      final product = _findLoadedProduct(pp, widget.productId!);
       if (product != null) {
         _fillForm(product);
       } else if (widget.productId != null) {
@@ -78,9 +78,21 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _colorsCtrl.text = product.colors ?? '';
     _sizesCtrl.text = product.sizes ?? '';
     _uploadedImageUrls = List.from(product.images);
-    final description = product.description ?? '';
-    if (description.isNotEmpty && _quillCtrl.document.toPlainText().trim().isEmpty) {
-      _quillCtrl.document.insert(0, description);
+    if (_quillCtrl.document.toPlainText().trim().isEmpty) {
+      final descriptionHtml = product.descriptionHtml;
+      final description = product.description ?? '';
+      if (descriptionHtml != null && descriptionHtml.isNotEmpty) {
+        try {
+          final delta = jsonDecode(descriptionHtml) as List<dynamic>;
+          _quillCtrl.document = Document.fromJson(delta);
+        } catch (_) {
+          if (description.isNotEmpty) {
+            _quillCtrl.document.insert(0, description);
+          }
+        }
+      } else if (description.isNotEmpty) {
+        _quillCtrl.document.insert(0, description);
+      }
     }
     setState(() {});
   }
@@ -121,8 +133,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         }
       }
       done++;
+      if (!mounted) return;
       setState(() => _uploadProgress = done / total);
     }
+    if (!mounted) return;
     setState(() => _isUploading = false);
   }
 
@@ -179,7 +193,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       'categoryId': _categoryId,
       'name': _nameCtrl.text.trim(),
       'description': _quillCtrl.document.toPlainText(),
-      'descriptionHtml': _quillCtrl.document.toDelta().toJson().toString(),
+      'descriptionHtml': jsonEncode(_quillCtrl.document.toDelta().toJson()),
       'price': price,
       'comparePrice': _comparePriceCtrl.text.isNotEmpty
           ? double.tryParse(_comparePriceCtrl.text.trim()) : null,
@@ -351,9 +365,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                       child: Column(
                         children: [
-                          QuillToolbar.simple(
-                            configurations: QuillSimpleToolbarConfigurations(
-                              controller: _quillCtrl,
+                          QuillSimpleToolbar(
+                            controller: _quillCtrl,
+                            config: const QuillSimpleToolbarConfig(
                               showBoldButton: true,
                               showItalicButton: true,
                               showUnderLineButton: true,
@@ -374,8 +388,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             constraints: const BoxConstraints(minHeight: 200),
                             padding: const EdgeInsets.all(12),
                             child: QuillEditor.basic(
-                              configurations: QuillEditorConfigurations(
-                                controller: _quillCtrl,
+                              controller: _quillCtrl,
+                              config: const QuillEditorConfig(
                                 placeholder: 'Description du produit...',
                               ),
                             ),
@@ -536,6 +550,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ),
       ],
     );
+  }
+
+  Product? _findLoadedProduct(ProductsProvider provider, String id) {
+    for (final product in provider.products) {
+      if (product.id == id) return product;
+    }
+    return null;
   }
 
   Widget _sectionHeader(String title) {

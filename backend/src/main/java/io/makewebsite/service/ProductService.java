@@ -22,6 +22,7 @@ public class ProductService {
     private final BoutiqueRepository boutiqueRepository;
     private final CategoryRepository categoryRepository;
     private final ObjectMapper objectMapper;
+    private final TenantAccessService tenantAccessService;
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProducts(UUID boutiqueId, String search, UUID categoryId, Boolean isActive, Pageable pageable) {
@@ -46,8 +47,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(CreateProductRequest request) {
-        Boutique boutique = boutiqueRepository.findById(request.getBoutiqueId())
-                .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        Boutique boutique = tenantAccessService.requireBoutiqueAccess(request.getBoutiqueId());
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId()).orElse(null);
@@ -77,8 +77,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse updateProduct(UUID id, CreateProductRequest request) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        Product product = findTenantProduct(id);
         if (request.getCategoryId() != null) {
             product.setCategory(categoryRepository.findById(request.getCategoryId()).orElse(null));
         }
@@ -103,13 +102,13 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(UUID id) {
-        productRepository.deleteById(id);
+        Product product = findTenantProduct(id);
+        productRepository.delete(product);
     }
 
     @Transactional
     public ProductResponse updateStock(UUID id, UpdateStockRequest request) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        Product product = findTenantProduct(id);
         product.setStock(request.getStock());
         product = productRepository.save(product);
         return mapToResponse(product);
@@ -117,7 +116,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse toggleActive(UUID id) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        Product product = findTenantProduct(id);
         product.setIsActive(!product.getIsActive());
         product = productRepository.save(product);
         return mapToResponse(product);
@@ -125,7 +124,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse toggleFeatured(UUID id) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        Product product = findTenantProduct(id);
         product.setIsFeatured(!product.getIsFeatured());
         product = productRepository.save(product);
         return mapToResponse(product);
@@ -154,5 +153,15 @@ public class ProductService {
                 .seoDescription(p.getSeoDescription())
                 .createdAt(p.getCreatedAt())
                 .build();
+    }
+
+    private Product findTenantProduct(UUID id) {
+        if (io.makewebsite.security.TenantContext.isSuperAdmin()) {
+            return productRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        }
+        UUID tenantId = tenantAccessService.currentTenantIdOrThrow();
+        return productRepository.findByIdAndBoutiqueTenantId(id, tenantId)
+                .orElseThrow(() -> new SecurityException("Accès tenant refusé"));
     }
 }

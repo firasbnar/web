@@ -205,9 +205,9 @@ class ApiClient {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> put(String path, {dynamic data}) async {
+  Future<Map<String, dynamic>> put(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
     _validateRequestData('PUT', path, data);
-    final response = await _dio.put(path, data: data);
+    final response = await _dio.put(path, data: data, queryParameters: queryParameters);
     return response.data as Map<String, dynamic>;
   }
 

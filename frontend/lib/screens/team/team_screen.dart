@@ -71,6 +71,45 @@ class _TeamScreenState extends State<TeamScreen> {
     }
   }
 
+  Future<void> _deleteMember(dynamic id) async {
+    final bp = context.read<BoutiqueProvider>();
+    final bid = bp.activeBoutique?.id;
+    if (bid == null || id == null) return;
+    try {
+      await _api.delete('/team/$id', queryParameters: {'boutiqueId': bid});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Membre retiré'), backgroundColor: AppColors.success));
+      }
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger));
+      }
+    }
+  }
+
+  void _confirmDeleteMember(dynamic id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer'),
+        content: const Text('Supprimer ce membre ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteMember(id);
+            },
+            child: const Text('Supprimer', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,7 +142,6 @@ class _TeamScreenState extends State<TeamScreen> {
               onRefresh: _load,
               child: ListView(
               children: [
-                // Gradient header bar
                 Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
@@ -125,11 +163,7 @@ class _TeamScreenState extends State<TeamScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('Gestion d\'Équipe',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              )),
+                              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 4),
                           Text('${_members.length} membre(s)',
                               style: const TextStyle(color: Colors.white70, fontSize: 13)),
@@ -138,7 +172,6 @@ class _TeamScreenState extends State<TeamScreen> {
                     ],
                   ),
                 ),
-                // Store card
                 Card(
                   margin: const EdgeInsets.all(16),
                   child: Padding(
@@ -167,8 +200,7 @@ class _TeamScreenState extends State<TeamScreen> {
                               onPressed: _showAddMemberSheet,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF4040C8),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                               ),
                             ),
                           ],
@@ -177,7 +209,6 @@ class _TeamScreenState extends State<TeamScreen> {
                     ),
                   ),
                 ),
-                // Members table
                 if (_members.isNotEmpty)
                   Card(
                     margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -187,10 +218,7 @@ class _TeamScreenState extends State<TeamScreen> {
                         const Padding(
                           padding: EdgeInsets.all(16),
                           child: Text('Membres de l\'équipe',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              )),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                         const Divider(height: 1),
                         SingleChildScrollView(
@@ -205,33 +233,27 @@ class _TeamScreenState extends State<TeamScreen> {
                               _col('Actions'),
                             ],
                             rows: _members.map((m) => DataRow(cells: [
-                              DataCell(Text(m['invitedEmail']?.toString() ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w500,
-                                  ))),
+                              DataCell(Text(m['invitedEmail']?.toString() ?? m['name']?.toString() ?? '',
+                                  style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w500))),
                               DataCell(_RoleBadge(
                                 role: m['role'] ?? 'STAFF',
                                 bgColor: _roleBg(m['role'] ?? 'STAFF'),
                                 textColor: _roleText(m['role'] ?? 'STAFF'),
                               )),
-                              DataCell(Text(_formatDate(m['createdAt']),
+                              DataCell(Text(_formatDate(m['invitedAt'] ?? m['createdAt']),
                                   style: const TextStyle(fontSize: 12))),
                               DataCell(
                                 SizedBox(
                                   height: 28,
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.security, size: 14),
-                                    label: const Text('Permissions',
-                                        style: TextStyle(fontSize: 11)),
+                                    label: const Text('Permissions', style: TextStyle(fontSize: 11)),
                                     onPressed: () => _showPermissionsSheet(m),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 8),
                                       side: const BorderSide(color: AppColors.border),
                                       foregroundColor: AppColors.textPrimary,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(6)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                     ),
                                   ),
                                 ),
@@ -241,15 +263,13 @@ class _TeamScreenState extends State<TeamScreen> {
                                   height: 28,
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.delete_outline, size: 14),
-                                    label: const Text('Supprimer',
-                                        style: TextStyle(fontSize: 11)),
+                                    label: const Text('Supprimer', style: TextStyle(fontSize: 11)),
                                     onPressed: () => _confirmDeleteMember(m['id']),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 8),
                                       side: const BorderSide(color: AppColors.danger),
                                       foregroundColor: AppColors.danger,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(6)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                     ),
                                   ),
                                 ),
@@ -285,11 +305,7 @@ class _TeamScreenState extends State<TeamScreen> {
 
   DataColumn _col(String label) => DataColumn(
     label: Text(label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1,
-        )));
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)));
 
   void _showPermissionsSheet(dynamic member) {
     showModalBottomSheet(
@@ -314,28 +330,6 @@ class _TeamScreenState extends State<TeamScreen> {
       ),
     );
   }
-
-  void _confirmDeleteMember(dynamic id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer'),
-        content: const Text('Supprimer ce membre ?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _load();
-            },
-            child: const Text('Supprimer',
-                style: TextStyle(color: AppColors.danger)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _RoleBadge extends StatelessWidget {
@@ -343,27 +337,15 @@ class _RoleBadge extends StatelessWidget {
   final Color bgColor;
   final Color textColor;
 
-  const _RoleBadge({
-    required this.role,
-    required this.bgColor,
-    required this.textColor,
-  });
+  const _RoleBadge({required this.role, required this.bgColor, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
     final displayName = role[0] + role.substring(1).toLowerCase();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Text(displayName,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          )),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(100)),
+      child: Text(displayName, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -405,7 +387,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger));
       }
     }
     if (mounted) setState(() => _saving = false);
