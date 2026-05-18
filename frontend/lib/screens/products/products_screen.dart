@@ -64,7 +64,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           IconButton(
             icon: const Icon(Icons.playlist_add, size: 20),
             tooltip: 'Ajout en masse',
-            onPressed: () => context.go('/products/bulk-add'),
+            onPressed: () => context.push('/products/bulk-add'),
           ),
           IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
         ],
@@ -134,7 +134,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         final product = pp.products[i];
                         return ProductCard(
                           product: product,
-                          onTap: () => context.go('/products/edit/${product.id}'),
+                            onTap: () => context.push('/products/edit/${product.id}'),
                           onToggleActive: () => pp.toggleActive(product.id),
                         );
                       },
@@ -147,7 +147,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/products/add'),
+        onPressed: () => context.push('/products/add'),
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),

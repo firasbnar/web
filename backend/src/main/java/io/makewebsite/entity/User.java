@@ -84,6 +84,10 @@ public class User {
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = false;
 
+    @Builder.Default
+    @Column(name = "must_change_password", nullable = false)
+    private Boolean mustChangePassword = false;
+
     @Column(name = "verification_token", length = 255)
     private String verificationToken;
 

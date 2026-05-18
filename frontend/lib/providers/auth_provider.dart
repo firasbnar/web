@@ -12,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isAuthenticated = false;
   String? _role;
   bool _emailVerificationRequired = false;
+  bool _mustChangePassword = false;
   String? _pendingEmail;
 
   User? get user => _user;
@@ -20,15 +21,17 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isAuthenticated => _isAuthenticated;
   bool get emailVerificationRequired => _emailVerificationRequired;
+  bool get mustChangePassword => _mustChangePassword;
   String? get pendingEmail => _pendingEmail;
 
   Future<bool> login(String email, String password) async {
-    _loading = true; _error = null; _emailVerificationRequired = false; notifyListeners();
+    _loading = true; _error = null; _emailVerificationRequired = false; _mustChangePassword = false; notifyListeners();
     try {
       final res = await _api.post('/auth/login', data: {'email': email, 'password': password});
       final data = res['data'];
       _user = User.fromJson(data['user']);
       _role = data['user']['role'] ?? 'OWNER';
+      _mustChangePassword = data['mustChangePassword'] == true;
       await _api.storage.saveUserRole(_role!);
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
@@ -48,13 +51,13 @@ class AuthProvider extends ChangeNotifier {
       final googleSignIn = GoogleSignIn.instance;
       await googleSignIn.initialize();
       final account = await googleSignIn.authenticate();
-      if (account == null) { _loading = false; notifyListeners(); return false; }
-      final auth = await account.authentication;
+      final auth = account.authentication;
       if (auth.idToken == null) throw Exception('Token Google manquant');
       final res = await _api.post('/auth/google-login', data: {'idToken': auth.idToken});
       final data = res['data'];
       _user = User.fromJson(data['user']);
       _role = data['user']['role'] ?? 'OWNER';
+      _mustChangePassword = data['mustChangePassword'] == true;
       await _api.storage.saveUserRole(_role!);
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);

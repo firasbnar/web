@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../models/traffic_stats.dart';
@@ -81,7 +82,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
   }
 
   void _openAnalytics() {
-    Navigator.pushNamed(context, '/traffic/analytics');
+    context.go('/traffic/analytics');
   }
 
   @override

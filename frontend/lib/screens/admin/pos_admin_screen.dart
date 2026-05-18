@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
@@ -370,7 +371,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(labelText: 'Rôle', border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'STAFF', child: Text('STAFF')),
@@ -757,7 +758,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
               TextButton.icon(
                 icon: const Icon(Icons.open_in_new, size: 16),
                 label: const Text('Voir le journal complet', style: TextStyle(fontSize: 12)),
-                onPressed: () => Navigator.pushNamed(context, '/admin/activities'),
+                onPressed: () => context.go('/admin/activities'),
               ),
               const Spacer(),
               Text('${p.activities.length} activités', style: AppTypography.caption.copyWith(fontSize: 11)),

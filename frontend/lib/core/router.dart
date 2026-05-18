@@ -1,9 +1,11 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../screens/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
-import '../screens/auth/register_screen.dart';
+import '../screens/auth/change_password_screen.dart';
+
 import '../screens/auth/verification_pending_screen.dart';
 import '../screens/home/store_dashboard_screen.dart';
 import '../screens/home/store_selector_screen.dart';
@@ -44,6 +46,7 @@ import '../screens/product_manager/product_manager_screen.dart';
 
 import '../screens/products/bulk_add_products_screen.dart';
 import '../screens/team/team_screen.dart';
+
 import '../screens/messages/messages_screen.dart';
 import '../screens/messages/conversation_screen.dart';
 import '../screens/boutique/telegram_settings_screen.dart';
@@ -53,18 +56,39 @@ import '../widgets/main_scaffold.dart';
 GoRouter createRouter(AuthProvider auth) {
   return GoRouter(
     refreshListenable: auth,
-    initialLocation: '/splash',
     redirect: (context, state) {
       final location = state.uri.toString();
       final isLoggedIn = auth.isAuthenticated;
       final role = auth.role;
 
-      // Always allow public routes
-      if (location == '/splash' || location == '/login' || location == '/register' || location == '/verify-email') return null;
+      // ignore: avoid_print
+      developer.log('[ROUTER] redirect: location="$location" isLoggedIn=$isLoggedIn role=$role');
+
+      // Root path → splash
+      if (location == '/' || location.isEmpty) return '/splash';
+
+      // Always allow public routes (except login when already authenticated)
+      if (isLoggedIn && (location == '/login' || location.startsWith('/login?'))) {
+        return role == 'ADMIN' ? '/admin' : '/home';
+      }
+
+      final publicRoutes = ['/splash', '/login', '/verify-email'];
+      final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
+      if (isPublic) return null;
+
+      // Allow change-password when authenticated
+      if (isLoggedIn && (location == '/change-password')) return null;
 
       // Not logged in → redirect to login
       if (!isLoggedIn) return '/login';
 
+      // Must change password → force to change-password
+      if (auth.mustChangePassword && location != '/change-password') return '/change-password';
+
+      // Team management (owner or admin only)
+      if (location == '/team' && role != 'OWNER' && role != 'ADMIN') {
+        return '/home';
+      }
       // Super admin routes
       if ((location == '/admin' || location == '/admin/activities') && role != 'ADMIN') {
         return '/home';
@@ -78,9 +102,15 @@ GoRouter createRouter(AuthProvider auth) {
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/login',
+        builder: (_, state) {
+          final email = state.uri.queryParameters['email'];
+          return LoginScreen(initialEmail: email);
+        },
+      ),
       GoRoute(path: '/verify-email', builder: (_, state) => VerificationPendingScreen(email: state.extra as String? ?? '')),
+      GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
       ShellRoute(
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
@@ -95,9 +125,6 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/pos/admin', builder: (_, __) => const PosAdminScreen()),
           GoRoute(path: '/telegram', builder: (_, __) => const TelegramSettingsScreen()),
           GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
-          GoRoute(path: '/products/add', builder: (_, __) => const AddEditProductScreen()),
-          GoRoute(path: '/products/edit/:id', builder: (_, state) => AddEditProductScreen(productId: state.pathParameters['id'])),
-          GoRoute(path: '/products/bulk-add', builder: (_, __) => const BulkAddProductsScreen()),
           GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
           GoRoute(path: '/orders/:id', builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['id']!)),
           GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
@@ -110,7 +137,6 @@ GoRouter createRouter(AuthProvider auth) {
            GoRoute(path: '/traffic/analytics', builder: (_, __) => const TrafficAnalyticsScreen()),
           GoRoute(path: '/admin', builder: (_, __) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/activities', builder: (_, __) => const JournalActiviteScreen()),
-          GoRoute(path: '/products/variants/:id', builder: (_, state) => ProductManagerScreen(productId: state.pathParameters['id'])),
           GoRoute(path: '/payment-settings', redirect: (_, __) => '/boutique-settings'),
           GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),
           GoRoute(path: '/boutique-settings', builder: (_, __) => const BoutiqueSettingsScreen()),
@@ -121,6 +147,10 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
         ],
       ),
+      GoRoute(path: '/products/add', builder: (_, __) => const AddEditProductScreen()),
+      GoRoute(path: '/products/edit/:id', builder: (_, state) => AddEditProductScreen(productId: state.pathParameters['id'])),
+      GoRoute(path: '/products/bulk-add', builder: (_, __) => const BulkAddProductsScreen()),
+      GoRoute(path: '/products/variants/:id', builder: (_, state) => ProductManagerScreen(productId: state.pathParameters['id'])),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),
       GoRoute(path: '/store/:boutiqueId', builder: (_, state) {
         final extra = state.extra;

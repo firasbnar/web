@@ -143,8 +143,12 @@ class ApiClient {
           }
         } catch (_) {}
 
-        // Token refresh logic for 401
+        // Token refresh logic for 401 — skip for auth endpoints (login/register can't be fixed by retrying)
         if (error.response?.statusCode == 401) {
+          final path = error.requestOptions.path;
+          if (path.startsWith('/auth/') || path.startsWith('/register') || path.startsWith('/login')) {
+            return handler.next(error);
+          }
           final refreshToken = await _storage.getRefreshToken();
           if (refreshToken != null) {
             try {
@@ -191,14 +195,25 @@ class ApiClient {
 
   // ---------- Public convenience methods ----------
 
+  String _guardPath(String path) {
+    if (path.isEmpty || path == '/') {
+      // ignore: avoid_print
+      print('[API ERROR] Refusing to send request to "$path" — would go to "$baseUrl$path"');
+      throw Exception('Requête invalide vers "$path"');
+    }
+    return path;
+  }
+
   Future<Map<String, dynamic>> get(String path,
       {Map<String, dynamic>? queryParameters}) async {
+    _guardPath(path);
     final response = await _dio.get(path, queryParameters: queryParameters);
     return response.data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> post(String path,
       {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    _guardPath(path);
     _validateRequestData('POST', path, data);
     final response =
         await _dio.post(path, data: data, queryParameters: queryParameters);
@@ -206,6 +221,7 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> put(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    _guardPath(path);
     _validateRequestData('PUT', path, data);
     final response = await _dio.put(path, data: data, queryParameters: queryParameters);
     return response.data as Map<String, dynamic>;
@@ -213,6 +229,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(String path,
       {Map<String, dynamic>? queryParameters}) async {
+    _guardPath(path);
     final response =
         await _dio.delete(path, queryParameters: queryParameters);
     return response.data as Map<String, dynamic>;
@@ -238,16 +255,20 @@ class ApiClient {
     final token = await AppStorage().getAccessToken();
     final response = await Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 60),
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
     )).post('/upload/image',
         data: formData,
         options: Options(
           headers: {
             if (token != null) 'Authorization': 'Bearer $token',
           },
-        ));
+        )).timeout(const Duration(seconds: 30));
     final data = response.data as Map<String, dynamic>;
+    if (data['success'] != true) {
+      throw Exception(data['message'] as String? ?? 'Échec de l\'upload');
+    }
     return data['data']['url'] as String;
   }
 

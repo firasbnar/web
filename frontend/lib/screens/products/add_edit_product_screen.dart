@@ -118,26 +118,28 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _isUploading = true;
       _uploadProgress = 0;
     });
-    final total = picked.length;
-    int done = 0;
-    for (final img in picked) {
-      try {
-        final url = await ApiClient.uploadImage(img);
-        _uploadedImageUrls.add(url);
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur upload ${img.name}: $e'),
-            backgroundColor: AppColors.danger,
-          ));
+    try {
+      final total = picked.length;
+      int done = 0;
+      for (final img in picked) {
+        try {
+          final url = await ApiClient.uploadImage(img);
+          _uploadedImageUrls.add(url);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Erreur upload ${img.name}: $e'),
+              backgroundColor: AppColors.danger,
+            ));
+          }
         }
+        done++;
+        if (!mounted) return;
+        setState(() => _uploadProgress = done / total);
       }
-      done++;
-      if (!mounted) return;
-      setState(() => _uploadProgress = done / total);
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
-    if (!mounted) return;
-    setState(() => _isUploading = false);
   }
 
   void _removeImage(int index) {
@@ -214,29 +216,30 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       } else {
         product = await pp.createProduct(data);
       }
+      if (!mounted) return;
       setState(() => _saving = false);
-      if (mounted) {
-        if (product != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(isEditing ? 'Produit mis à jour' : 'Produit créé'),
-            backgroundColor: AppColors.success,
-          ));
-          context.go('/products');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(pp.error ?? "Erreur lors de l'enregistrement"),
-            backgroundColor: AppColors.danger,
-          ));
-        }
-      }
-    } catch (e) {
-      setState(() => _saving = false);
-      if (mounted) {
+      if (!context.mounted) return;
+      if (product != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur: $e'),
+          content: Text(isEditing ? 'Produit mis à jour' : 'Produit créé'),
+          backgroundColor: AppColors.success,
+        ));
+        if (!context.mounted) return;
+          context.pop();
+        } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(pp.error ?? "Erreur lors de l'enregistrement"),
           backgroundColor: AppColors.danger,
         ));
       }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur: $e'),
+        backgroundColor: AppColors.danger,
+      ));
     }
   }
 
@@ -248,7 +251,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/products'),
+          onPressed: () => context.pop(),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -346,14 +349,24 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     const SizedBox(height: 16),
                     _buildLabel('Catégorie'),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: _categoryId,
+                    InputDecorator(
                       decoration: _inputDecoration(hint: 'Choisir une catégorie'),
-                      items: [
-                        const DropdownMenuItem(value: null, child: Text('Choisir une catégorie')),
-                        ...categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                      ],
-                      onChanged: (v) => setState(() => _categoryId = v),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _categoryId,
+                          isExpanded: true,
+                          isDense: true,
+                          hint: const Text('Choisir une catégorie',
+                              style: TextStyle(color: Color(0xFF9B97B8), fontSize: 14)),
+                          items: categories
+                              .map((c) => DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.name),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() => _categoryId = v),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     _sectionHeader('Description du Produit'),

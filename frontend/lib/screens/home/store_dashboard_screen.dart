@@ -9,6 +9,7 @@ import '../../providers/notifications_provider.dart';
 import '../../providers/reviews_provider.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/ai_chat_widget.dart';
 
 
 class StoreDashboardScreen extends StatefulWidget {
@@ -44,78 +45,96 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        leading: Consumer<BoutiqueProvider>(
-          builder: (_, bp, __) => GestureDetector(
-            onTap: () => context.go('/store-selector'),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primary,
-                backgroundImage: bp.activeBoutique?.logoUrl != null && bp.activeBoutique!.logoUrl!.isNotEmpty
-                    ? NetworkImage(bp.activeBoutique!.logoUrl!) : null,
-                child: bp.activeBoutique?.logoUrl == null || bp.activeBoutique!.logoUrl!.isEmpty
-                    ? Text((bp.activeBoutique?.name ?? 'S')[0].toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600))
-                    : null,
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            leading: Consumer<BoutiqueProvider>(
+              builder: (_, bp, __) => GestureDetector(
+                onTap: () => context.go('/store-selector'),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: AppColors.primary,
+                    backgroundImage: bp.activeBoutique?.logoUrl != null && bp.activeBoutique!.logoUrl!.isNotEmpty
+                        ? NetworkImage(bp.activeBoutique!.logoUrl!) : null,
+                    child: bp.activeBoutique?.logoUrl == null || bp.activeBoutique!.logoUrl!.isEmpty
+                        ? Text((bp.activeBoutique?.name ?? 'S')[0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600))
+                        : null,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        title: Consumer<BoutiqueProvider>(
-          builder: (_, bp, __) => Text(bp.activeBoutique?.name ?? 'MakeWebsite', style: AppTypography.heading4),
-        ),
-        actions: [
-          Consumer<NotificationsProvider>(
-            builder: (_, np, __) => Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () => context.go('/notifications'),
-                ),
-                if (np.unreadCount > 0)
-                  Positioned(
-                    right: 8, top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
-                      child: Text('${np.unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 10)),
-                    ),
-                  ),
-              ],
+            title: Consumer<BoutiqueProvider>(
+              builder: (_, bp, __) => Text(bp.activeBoutique?.name ?? 'MakeWebsite', style: AppTypography.heading4),
             ),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async { await _loadData(); },
-        child: _loadingDashboard
-            ? const LoadingSkeleton()
-            : SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            actions: [
+              Consumer<NotificationsProvider>(
+                builder: (_, np, __) => Stack(
                   children: [
-                    _buildStoreHeader(),
-                    _buildStatsRow(),
-                    const SizedBox(height: 16),
-                    _buildQuickActionsRow1(),
-                    const SizedBox(height: 8),
-                    _buildQuickActionsRow2(),
-                    const SizedBox(height: 16),
-                    _buildBigCTAButtons(),
-                    const SizedBox(height: 16),
-                    _buildRecentOrders(),
-                    const SizedBox(height: 16),
-                    _buildLowStockAlert(),
-                    const SizedBox(height: 24),
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined),
+                      onPressed: () => context.go('/notifications'),
+                    ),
+                    if (np.unreadCount > 0)
+                      Positioned(
+                        right: 8, top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                          child: Text('${np.unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                        ),
+                      ),
                   ],
                 ),
               ),
-      ),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: () async { await _loadData(); },
+            child: _loadingDashboard
+                ? const LoadingSkeleton()
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStoreHeader(),
+                        _buildStatsRow(),
+                        const SizedBox(height: 16),
+                        _buildQuickActionsRow1(),
+                        const SizedBox(height: 8),
+                        _buildQuickActionsRow2(),
+                        const SizedBox(height: 16),
+                        _buildBigCTAButtons(),
+                        const SizedBox(height: 16),
+                        _buildRecentOrders(),
+                        const SizedBox(height: 16),
+                        _buildLowStockAlert(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+        // Floating AI chatbot
+        Positioned(
+          bottom: 28,
+          right: 28,
+          child: Consumer<BoutiqueProvider>(
+            builder: (_, bp, __) {
+              if (bp.activeBoutique == null) return const SizedBox.shrink();
+              return AiChatWidget(
+                boutiqueId: bp.activeBoutique!.id.toString(),
+                boutiqueName: bp.activeBoutique!.name ?? '',
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -226,7 +245,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           const SizedBox(width: 8),
           _actionChip(Icons.settings, 'Paramètres', false, () => context.go('/boutique-settings')),
           const SizedBox(width: 8),
-          _actionChip(Icons.add, 'Ajouter un produit', false, () => context.go('/products/add'), grey: true),
+          _actionChip(Icons.add, 'Ajouter un produit', false, () => context.push('/products/add'), grey: true),
           const SizedBox(width: 8),
           _actionChip(Icons.upload_file, 'Ajouter des produits', false, () {
             ScaffoldMessenger.of(context).showSnackBar(

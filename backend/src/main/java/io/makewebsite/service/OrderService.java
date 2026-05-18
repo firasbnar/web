@@ -182,8 +182,8 @@ public class OrderService {
 
         try {
             caisseService.recordActivity(boutique.getId(), user != null ? user.getId() : null,
-                    user != null ? user.getFullName() : "Client", "CREATION_COMMANDE",
-                    "SUCCESS", "Commande " + orderNumber + " créée - " + total + " TND", null, null);
+                    user != null ? user.getFullName() : "Client", "ORDER_CREATED",
+                    "Commande " + orderNumber + " créée - " + total + " TND");
         } catch (Exception e) {
             log.warn("Failed to record order activity: {}", e.getMessage());
         }
@@ -204,14 +204,11 @@ public class OrderService {
         if (!oldStatus.equals(request.getStatus())) {
             try {
                 Boutique boutique = order.getBoutique();
-                String action = "CANCELLED".equals(request.getStatus()) ? "ANNULATION_COMMANDE" : "ORDER_STATUS_CHANGED";
-                String status = "CANCELLED".equals(request.getStatus()) ? "FAILED" : "SUCCESS";
                 caisseService.recordActivity(boutique.getId(),
                         order.getUser() != null ? order.getUser().getId() : null,
                         order.getUser() != null ? order.getUser().getFullName() : "Système",
-                        action, status,
-                        "Commande " + order.getOrderNumber() + " : " + oldStatus + " → " + request.getStatus(),
-                        null, null);
+                        "ORDER_STATUS_CHANGED",
+                        "Commande " + order.getOrderNumber() + " : " + oldStatus + " → " + request.getStatus());
             } catch (Exception e) {
                 log.warn("Failed to record status change activity: {}", e.getMessage());
             }

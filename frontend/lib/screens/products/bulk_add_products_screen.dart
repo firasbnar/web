@@ -9,6 +9,7 @@ import '../../theme/app_typography.dart';
 import '../../core/api_client.dart';
 import '../../providers/products_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../models/product.dart';
 
 class ProductFormData {
   final TextEditingController nameCtrl = TextEditingController();
@@ -82,10 +83,12 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+            content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'),
+            backgroundColor: AppColors.danger));
       }
+    } finally {
+      if (mounted) setState(() => _isUploadingForIndex.remove(index));
     }
-    if (mounted) setState(() => _isUploadingForIndex.remove(index));
   }
 
   final Set<int> _isUploadingForIndex = {};
@@ -122,13 +125,17 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
       };
       final result = await pp.createProduct(data);
       if (result != null) successCount++;
+      if (!mounted) return;
     }
+    if (!mounted) return;
     setState(() => _saving = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$successCount produit(s) créé(s)'),
-          backgroundColor: AppColors.success));
-      if (successCount > 0) context.go('/products');
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('$successCount produit(s) créé(s)'),
+        backgroundColor: AppColors.success));
+    if (successCount > 0) {
+      if (!context.mounted) return;
+      context.pop();
     }
   }
 
@@ -140,7 +147,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/products'),
+          onPressed: () => context.pop(),
         ),
         title: const Text('Ajout en Masse de Produits'),
         backgroundColor: Colors.white,
@@ -187,7 +194,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
             OutlinedButton.icon(
               icon: const Icon(Icons.close, size: 16),
               label: const Text('Annuler'),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textPrimary,
                 side: const BorderSide(color: AppColors.border),
@@ -221,12 +228,13 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
 class _ProductCard extends StatelessWidget {
   final int index;
   final ProductFormData data;
-  final List<dynamic> categories;
+  final List<Category> categories;
   final VoidCallback onDelete;
   final VoidCallback onPickImages;
   final bool isUploading;
 
-  const _ProductCard({
+  // ignore: prefer_const_constructors_in_immutables
+  _ProductCard({
     required this.index,
     required this.data,
     required this.categories,
@@ -290,21 +298,30 @@ class _ProductCard extends StatelessWidget {
                           children: [
                             _label('Catégorie *'),
                             const SizedBox(height: 6),
-                            DropdownButtonFormField<String>(
-                              initialValue: data.categoryId,
-                              decoration:
-                                  _decoration(hint: 'Choisir une catégorie'),
-                              items: [
-                                const DropdownMenuItem(
-                                    value: null,
-                                    child: Text('Choisir une catégorie')),
-                                ...categories.map((c) => DropdownMenuItem(
-                                      value: c.id,
-                                      child: Text(c.name,
-                                          overflow: TextOverflow.ellipsis),
-                                    )),
-                              ],
-                              onChanged: (v) => data.categoryId = v,
+                            InputDecorator(
+                              decoration: _decoration(
+                                  hint: 'Choisir une catégorie'),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: data.categoryId,
+                                  isExpanded: true,
+                                  isDense: true,
+                                  hint: const Text('Choisir une catégorie',
+                                      style: TextStyle(
+                                          color: Color(0xFF9B97B8),
+                                          fontSize: 13)),
+                                  items: categories
+                                      .map((c) => DropdownMenuItem(
+                                            value: c.id,
+                                            child: Text(c.name,
+                                                overflow:
+                                                    TextOverflow.ellipsis),
+                                          ))
+                                      .toList(),
+                                  onChanged: (v) =>
+                                      data.categoryId = v,
+                                ),
+                              ),
                             ),
                           ],
                         )),

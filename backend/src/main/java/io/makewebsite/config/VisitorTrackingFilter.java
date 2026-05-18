@@ -35,9 +35,13 @@ public class VisitorTrackingFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        // Skip static resources, websocket, auth, and health endpoints
-        return path.startsWith("/ws/") ||
+        // Skip auth pages, static resources, websocket, auth API, and health endpoints
+        return path.equals("/login") ||
+               path.equals("/register") ||
+               path.equals("/error") ||
+               path.startsWith("/ws/") ||
                path.startsWith("/api/auth/") ||
+               path.startsWith("/api/team/public/") ||
                path.startsWith("/api/traffic/") ||
                path.startsWith("/api/plans") ||
                path.startsWith("/uploads/") ||

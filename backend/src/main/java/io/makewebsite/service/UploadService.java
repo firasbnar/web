@@ -50,7 +50,7 @@ public class UploadService {
     }
 
     public String uploadFile(MultipartFile file, String folder) {
-        if (file == null || file.isEmpty()) throw new RuntimeException("Fichier vide ou manquant");
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("Fichier vide ou manquant");
         String originalName = Paths.get(file.getOriginalFilename() == null ? "" : file.getOriginalFilename())
                 .getFileName()
                 .toString();
@@ -58,18 +58,18 @@ public class UploadService {
         if (extension.isBlank()) {
             extension = extensionFromContentType(file.getContentType());
         }
-        if (extension.isBlank()) throw new RuntimeException("Type de fichier non supporte");
+        if (extension.isBlank()) throw new IllegalArgumentException("Type de fichier non supporte");
         String fileName = UUID.randomUUID() + extension;
         String prefix = normalizeFolder(folder);
 
         Path basePath = absoluteUploadPath != null ? absoluteUploadPath : Paths.get(uploadPath).toAbsolutePath().normalize();
         Path targetDir = prefix.isBlank() ? basePath : basePath.resolve(prefix).normalize();
         if (!targetDir.startsWith(basePath)) {
-            throw new RuntimeException("Chemin d'upload invalide");
+            throw new IllegalArgumentException("Chemin d'upload invalide");
         }
         Path targetFile = targetDir.resolve(fileName).normalize();
         if (!targetFile.startsWith(targetDir)) {
-            throw new RuntimeException("Nom de fichier invalide");
+            throw new IllegalArgumentException("Nom de fichier invalide");
         }
 
         try {
@@ -100,24 +100,24 @@ public class UploadService {
     }
 
     private void validateImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new RuntimeException("Image vide ou manquante");
-        if (file.getSize() > MAX_IMAGE_BYTES) throw new RuntimeException("Image trop volumineuse (max 5MB)");
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("Image vide ou manquante");
+        if (file.getSize() > MAX_IMAGE_BYTES) throw new IllegalArgumentException("Image trop volumineuse (max 5MB)");
 
         String extension = extensionFrom(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
         String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
         if ((!contentType.isBlank() && !contentType.startsWith("image/"))
                 || !(extension.equals(".jpg") || extension.equals(".jpeg")
                 || extension.equals(".png") || extension.equals(".webp") || extension.equals(".gif"))) {
-            throw new RuntimeException("Seuls les fichiers image JPG, PNG, WEBP ou GIF sont acceptes");
+            throw new IllegalArgumentException("Seuls les fichiers image JPG, PNG, WEBP ou GIF sont acceptes");
         }
 
         try (InputStream input = file.getInputStream()) {
             byte[] header = input.readNBytes(12);
             if (!hasKnownImageSignature(header)) {
-                throw new RuntimeException("Fichier image invalide");
+                throw new IllegalArgumentException("Fichier image invalide");
             }
         } catch (IOException e) {
-            throw new RuntimeException("Impossible de lire l'image");
+            throw new RuntimeException("Impossible de lire l'image: " + e.getMessage());
         }
     }
 

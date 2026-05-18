@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +21,11 @@ public class InviteTeamMemberRequest {
     @Email
     private String email;
 
-    @Pattern(regexp = "(?i)^(ADMIN|MANAGER|STAFF)$", message = "Role d'equipe invalide")
+    @NotBlank
+    @Size(max = 100)
+    private String name;
+
+    @Pattern(regexp = "(?i)^(ADMIN|MANAGER|STAFF|CAISSIER)$", message = "Role d'equipe invalide")
     private String role;
 
     @NotNull

@@ -4,6 +4,7 @@ import io.makewebsite.dto.request.InviteTeamMemberRequest;
 import io.makewebsite.dto.request.UpdateRoleRequest;
 import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.dto.response.TeamMemberResponse;
+import io.makewebsite.dto.response.TeamStatsResponse;
 import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.TeamService;
 import jakarta.validation.Valid;
@@ -28,11 +29,29 @@ public class TeamController {
         return ResponseEntity.ok(ApiResponse.ok(teamService.getTeamMembers(boutiqueId, principal.getUserId())));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<TeamMemberResponse>>> searchMembers(
+            @RequestParam UUID boutiqueId,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String status,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                teamService.searchMembers(boutiqueId, query, role, status, principal.getUserId())));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<TeamStatsResponse>> getTeamStats(
+            @RequestParam UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(teamService.getTeamStats(boutiqueId, principal.getUserId())));
+    }
+
     @PostMapping("/invite")
     public ResponseEntity<ApiResponse<TeamMemberResponse>> inviteMember(
             @Valid @RequestBody InviteTeamMemberRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ApiResponse.ok("Invitation envoyée", teamService.inviteMember(request, principal.getUserId())));
+        return ResponseEntity.ok(ApiResponse.ok("Invitation envoyee", teamService.inviteMember(request, principal.getUserId())));
     }
 
     @DeleteMapping("/{id}")
@@ -41,7 +60,7 @@ public class TeamController {
             @RequestParam UUID boutiqueId,
             @AuthenticationPrincipal UserPrincipal principal) {
         teamService.removeMember(id, boutiqueId, principal.getUserId());
-        return ResponseEntity.ok(ApiResponse.ok("Membre retiré", null));
+        return ResponseEntity.ok(ApiResponse.ok("Membre retire", null));
     }
 
     @PutMapping("/{id}/role")
@@ -50,7 +69,18 @@ public class TeamController {
             @RequestParam UUID boutiqueId,
             @Valid @RequestBody UpdateRoleRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ApiResponse.ok("Rôle mis à jour",
+        return ResponseEntity.ok(ApiResponse.ok("Role mis a jour",
                 teamService.updateMemberRole(id, request, boutiqueId, principal.getUserId())));
+    }
+
+    @PutMapping("/{id}/toggle-status")
+    public ResponseEntity<ApiResponse<TeamMemberResponse>> toggleMemberStatus(
+            @PathVariable UUID id,
+            @RequestParam UUID boutiqueId,
+            @RequestParam boolean activate,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                activate ? "Membre active" : "Membre desactive",
+                teamService.toggleMemberStatus(id, boutiqueId, activate, principal.getUserId())));
     }
 }

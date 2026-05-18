@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -146,6 +147,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'couponCode': _couponCtrl.text.trim().isNotEmpty ? _couponCtrl.text.trim() : null,
       });
       _orderNumber = (res['data'] is Map ? res['data']['orderNumber']?.toString() : null);
+
+      if (_paymentMethod == 'stripe' && _orderNumber != null) {
+        final stripeRes = await _api.post('/payments/stripe/create-checkout-session', data: {
+          'amount': _total,
+          'currency': 'TND',
+          'boutiqueId': widget.boutiqueId,
+          'orderNumber': _orderNumber,
+        });
+        final sessionUrl = stripeRes['data']?['sessionUrl']?.toString();
+        if (sessionUrl != null && sessionUrl.isNotEmpty) {
+          await cart.clearCart(widget.boutiqueId);
+          // ignore: avoid_web_libraries_in_flutter
+          html.window.location.href = sessionUrl;
+          return;
+        }
+        throw Exception('Échec de création de la session de paiement');
+      }
+
       await cart.clearCart(widget.boutiqueId);
       setState(() { _success = true; _placing = false; });
     } catch (e) {

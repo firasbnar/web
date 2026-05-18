@@ -25,12 +25,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.io.IOException;
 import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
     private final JwtAuthFilter jwtAuthFilter;
     private final UserRepository userRepository;
     private final VisitorTrackingFilter visitorTrackingFilter;
@@ -48,6 +51,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
+                    log.warn("AUTH ENTRY POINT FIRED for {} {} (message: {})",
+                        request.getMethod(), request.getServletPath(), authException.getMessage());
                     response.setContentType("application/json;charset=UTF-8");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.getWriter().write("{\"success\":false,\"message\":\"Email ou mot de passe incorrect\"}");
@@ -59,22 +64,40 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
+                // === PUBLIC: no authentication required ===
                 .requestMatchers(
-                    "/api/auth/register",
-                    "/api/auth/login",
-                    "/api/auth/verify",
-                    "/api/auth/verify-email",
-                    "/api/auth/resend-verification",
-                    "/api/auth/refresh",
-                    "/api/auth/google-login",
-                    "/api/plans",
-                    "/ws/**",
-                    "/api/payments/d17/webhook",
-                    "/api/boutiques/public",
-                    "/uploads/**",
+                    // SPA root — serve Flutter web app without auth
+                    "/", "/index.html",
+                    // Auth pages
+                    "/login", "/register", "/error",
+                    // Auth API
+                    "/api/auth/**",
+                    // Public team API
+                    "/api/team/public/**",
+                    // General public API
                     "/api/public/**",
+                    "/api/plans",
+                    "/api/traffic/**",
+                    "/api/boutiques/public",
+                    "/api/payments/d17/webhook",
+                    "/api/payments/stripe/webhook",
+                    // WebSocket
+                    "/ws/**",
+                    // Static assets
+                    "/uploads/**",
                     "/store/**",
-                    "/api/traffic/**"
+                    "/checkout/**",
+                    "/favicon*",
+                    // Flutter web static assets
+                    "/flutter/**",
+                    "/assets/**",
+                    "/*.js",
+                    "/*.json",
+                    "/*.png",
+                    "/*.jpg",
+                    "/*.ico",
+                    "/*.css",
+                    "/*.map"
                 ).permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/messages/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
@@ -82,9 +105,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/orders/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/orders/*/invoice").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/boutiques/*/orders/*/invoice/print").permitAll()
+                // === AUTHENTICATED: role-restricted ===
                 .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                 .requestMatchers("/api/boutiques/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
                 .requestMatchers("/api/stores/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/team/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
+                // === EVERYTHING ELSE: just authenticated (any role) ===
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -112,11 +138,23 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return email -> userRepository.findByEmailWithTenant(email)
-                .map(user -> new UserPrincipal(
-                        user.getId(), user.getEmail(), user.getPasswordHash(),
-                        user.getRole(), user.getTenant().getId()))
-                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
+        return email -> {
+            log.debug("Loading user by email: '{}'", email);
+            return userRepository.findByEmailIgnoreCaseWithTenant(email)
+                    .map(user -> {
+                        log.info("UserDetailsService: FOUND user id={} email='{}' role={} hashPrefix={} enabled={}",
+                            user.getId(), user.getEmail(), user.getRole(),
+                            user.getPasswordHash() != null ? user.getPasswordHash().substring(0, Math.min(10, user.getPasswordHash().length())) : "null",
+                            user.getEnabled());
+                        return new UserPrincipal(
+                            user.getId(), user.getEmail(), user.getPasswordHash(),
+                            user.getRole(), user.getTenant().getId());
+                    })
+                    .orElseThrow(() -> {
+                        log.warn("UserDetailsService: user NOT FOUND for email: '{}'", email);
+                        return new UsernameNotFoundException("Utilisateur non trouvé");
+                    });
+        };
     }
 
     @Bean

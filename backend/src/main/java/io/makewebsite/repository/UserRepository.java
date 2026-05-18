@@ -16,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u JOIN FETCH u.tenant WHERE u.email = :email")
     Optional<User> findByEmailWithTenant(String email);
 
+    @Query("SELECT u FROM User u JOIN FETCH u.tenant WHERE LOWER(u.email) = LOWER(:email)")
+    Optional<User> findByEmailIgnoreCaseWithTenant(String email);
+
     Optional<User> findByEmailIgnoreCase(String email);
 
     Optional<User> findByVerificationToken(String verificationToken);

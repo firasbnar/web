@@ -7,7 +7,8 @@ import '../../widgets/app_button.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? initialEmail;
+  const LoginScreen({super.key, this.initialEmail});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -19,6 +20,14 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialEmail != null) {
+      _emailCtrl.text = widget.initialEmail!.trim().toLowerCase();
+    }
+  }
+
+  @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
@@ -28,10 +37,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<AuthProvider>();
-    final success = await provider.login(_emailCtrl.text.trim(), _passwordCtrl.text);
+    final email = _emailCtrl.text.trim().toLowerCase();
+    final password = _passwordCtrl.text;
+    final success = await provider.login(email, password);
     if (mounted) {
       if (success) {
-        if (provider.role == 'ADMIN') {
+        if (provider.mustChangePassword) {
+          context.go('/change-password');
+        } else if (provider.role == 'ADMIN') {
           context.go('/admin');
         } else {
           context.go('/home');
@@ -109,44 +122,39 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Consumer<AuthProvider>(
-                  builder: (_, auth, __) => SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.login),
-                      label: Text(auth.loading ? 'Connexion...' : 'Continuer avec Google'),
-                      onPressed: auth.loading ? null : () async {
-                        final ok = await auth.loginWithGoogle();
-                        if (ok && mounted) {
-                          final role = context.read<AuthProvider>().role;
-                          if (role == 'ADMIN') {
-                            context.go('/admin');
-                          } else {
-                            context.go('/home');
+                  Consumer<AuthProvider>(
+                    builder: (_, auth, __) => SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.login),
+                        label: Text(auth.loading ? 'Connexion...' : 'Continuer avec Google'),
+                        onPressed: auth.loading ? null : () async {
+                          final ok = await auth.loginWithGoogle();
+                          if (ok && mounted) {
+                            final provider = context.read<AuthProvider>();
+                            if (provider.mustChangePassword) {
+                              context.go('/change-password');
+                            } else if (provider.role == 'ADMIN') {
+                              context.go('/admin');
+                            } else {
+                              context.go('/home');
+                            }
                           }
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                        minimumSize: const Size(double.infinity, 50),
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text("Pas de compte?", style: AppTypography.body2),
-                    TextButton(
-                      onPressed: () => context.go('/register'),
-                      child: Text('Créer un compte', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () => context.go('/verify-email'),
+                    child: Text('Vérifier mon email', style: AppTypography.body2.copyWith(color: AppColors.primary)),
+                  ),
               ],
             ),
           ),

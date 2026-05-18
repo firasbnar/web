@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../providers/boutique_provider.dart';
@@ -46,16 +47,17 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
         'currency': _currency,
         'language': _language,
       });
-      if (mounted) {
-        await context.read<BoutiqueProvider>().loadBoutiques();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Boutique créée'), backgroundColor: AppColors.success));
-        Navigator.pop(context);
-      }
+      if (!mounted) return;
+      await context.read<BoutiqueProvider>().loadBoutiques();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Boutique créée'), backgroundColor: AppColors.success));
+      if (!context.mounted) return;
+      context.pop();
     } catch (e) {
+      if (!mounted) return;
       setState(() => _saving = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
-      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
     }
   }
 

@@ -32,13 +32,13 @@ public class AuthService {
     private final EmailService emailService;
     private final CaisseService caisseService;
     private final UserSessionRepository userSessionRepository;
-
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        log.info("Register attempt for email: {}", request.getEmail());
+        String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+        log.info("Register attempt for email: {}", email);
         try {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                log.warn("Registration failed: email already used: {}", request.getEmail());
+            if (userRepository.existsByEmail(email)) {
+                log.warn("Registration failed: email already used: {}", email);
                 throw new RuntimeException("Email déjà utilisé");
             }
             String verificationToken = UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
@@ -47,7 +47,7 @@ public class AuthService {
                     .build());
             User user = User.builder()
                     .fullName(request.getFullName())
-                    .email(request.getEmail())
+                    .email(email)
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .phone(request.getPhone())
                     .tenant(tenant)
@@ -97,12 +97,31 @@ public class AuthService {
         return login(request, null, null);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request, String ipAddress, String deviceInfo) {
-        log.info("Login attempt for email: {}", request.getEmail());
+        String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+        String rawPassword = request.getPassword();
+        log.info("Login attempt for email: '{}', password length: {}", email, rawPassword != null ? rawPassword.length() : 0);
+
+        // DEBUG: check if user exists before auth
+        boolean userExists = userRepository.findByEmailIgnoreCase(email).isPresent();
+        log.info("PRE-AUTH: user exists by email '{}': {}", email, userExists);
+        if (userExists) {
+            User preUser = userRepository.findByEmailIgnoreCase(email).get();
+            log.info("PRE-AUTH: found user id={} enabled={} role={} hashPrefix={}",
+                preUser.getId(), preUser.getEnabled(), preUser.getRole(),
+                preUser.getPasswordHash() != null ? preUser.getPasswordHash().substring(0, Math.min(10, preUser.getPasswordHash().length())) : "null");
+        } else {
+            // Also try exact case-sensitive match
+            userRepository.findByEmail(email).ifPresentOrElse(
+                u -> log.warn("PRE-AUTH: user FOUND with case-sensitive but NOT with ignore-case! email='{}' stored='{}'", email, u.getEmail()),
+                () -> log.warn("PRE-AUTH: user NOT FOUND with either case-sensitive or ignore-case for email='{}'", email)
+            );
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(email, rawPassword)
             );
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             User user = userRepository.findByIdWithTenant(userPrincipal.getUserId())
@@ -136,9 +155,13 @@ public class AuthService {
             log.info("Login successful for user {}", user.getId());
             return buildAuthResponse(user, accessToken, refreshToken);
         } catch (BadCredentialsException e) {
-            User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+            User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
             if (user != null) {
+                boolean pwMatch = passwordEncoder.matches(rawPassword, user.getPasswordHash());
+                log.warn("Login FAILED for email='{}': user FOUND (id={}), password match={}", email, user.getId(), pwMatch);
                 recordUserActivity(user, "CONNEXION_CAISSE_ECHOUEE", "Tentative de connexion échouée", ipAddress, deviceInfo);
+            } else {
+                log.warn("Login FAILED for email='{}': user NOT FOUND", email);
             }
             throw e;
         }
@@ -158,7 +181,42 @@ public class AuthService {
         user.setEnabled(true);
         user.setVerificationToken(null);
         user.setVerificationTokenExpiry(null);
+
+        // Generate temporary password, hash it, and send credentials email
+        String tempPassword = generateTemporaryPassword();
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        user.setMustChangePassword(true);
         userRepository.save(user);
+
+        try {
+            emailService.sendCredentialsEmail(user.getEmail(), tempPassword);
+            log.info("Credentials email sent for user {}", user.getId());
+        } catch (Exception e) {
+            log.warn("Failed to send credentials email for user {}: {}", user.getId(), e.getMessage());
+        }
+    }
+
+    private String generateTemporaryPassword() {
+        String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lower = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        String special = "!@#$%";
+        String all = upper + lower + digits + special;
+        java.util.Random random = new java.util.Random();
+        StringBuilder sb = new StringBuilder(12);
+        sb.append(upper.charAt(random.nextInt(upper.length())));
+        sb.append(lower.charAt(random.nextInt(lower.length())));
+        sb.append(digits.charAt(random.nextInt(digits.length())));
+        sb.append(special.charAt(random.nextInt(special.length())));
+        for (int i = 0; i < 8; i++) {
+            sb.append(all.charAt(random.nextInt(all.length())));
+        }
+        List<Character> chars = new java.util.ArrayList<>();
+        for (char c : sb.toString().toCharArray()) chars.add(c);
+        java.util.Collections.shuffle(chars, random);
+        StringBuilder result = new StringBuilder();
+        for (char c : chars) result.append(c);
+        return result.toString();
     }
 
     @Transactional
@@ -229,6 +287,7 @@ public class AuthService {
             throw new RuntimeException("Ancien mot de passe incorrect");
         }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 

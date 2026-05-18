@@ -1,26 +1,20 @@
 package io.makewebsite.dto.request;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreatePaymentRequest {
-    @NotNull
-    private BigDecimal amount;
-
-    @Builder.Default
-    private String currency = "TND";
-
+public class PublicChatRequest {
     private UUID boutiqueId;
-
-    private String orderNumber;
+    private String systemPrompt;
+    private List<Map<String, String>> messages;
 }

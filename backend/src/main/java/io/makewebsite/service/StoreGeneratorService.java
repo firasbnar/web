@@ -1,5 +1,6 @@
 package io.makewebsite.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -27,8 +30,21 @@ public class StoreGeneratorService {
     private final StoreSliderRepository sliderRepository;
     private final StoreLanguageRepository languageRepository;
     private final BoutiqueCountryRepository countryRepository;
+    private final ObjectMapper objectMapper;
 
     private static final String STORE_FILES_DIR = "store-files";
+
+    private static final String CHATBOT_TEMPLATE = loadChatbotTemplate();
+
+    private static String loadChatbotTemplate() {
+        try {
+            var is = StoreGeneratorService.class.getResourceAsStream("/chatbot-template.html");
+            if (is == null) throw new RuntimeException("chatbot-template.html not found on classpath");
+            return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load chatbot-template.html", e);
+        }
+    }
 
     @Transactional
     public void regenerate(UUID boutiqueId) {
@@ -168,7 +184,7 @@ public class StoreGeneratorService {
 
         boolean simpleCheckout = b.getSimpleCheckout() != null && b.getSimpleCheckout();
 
-        return "<!DOCTYPE html>\n" +
+        String html = "<!DOCTYPE html>\n" +
         "<html lang=\"fr\">\n<head>\n" +
         "<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
         "<title>" + esc(b.getName()) + " | Boutique en ligne</title>\n" +
@@ -394,7 +410,8 @@ public class StoreGeneratorService {
         "<div class=\"order-item\"><div class=\"order-label\">Méthode de paiement :</div><div class=\"order-value\" id=\"customUserPaymentMethod\"></div></div></div>" +
         "<div class=\"modal-footer\"><button class=\"close-modal-btn\" onclick=\"document.getElementById('customOrderConfirmationModal').classList.remove('open')\">Fermer</button></div></div></div>\n" +
 
-        customJs + "\n" +
+        "{{CHATBOT_BLOCK}}\n" +
+        "{{CUSTOM_JS}}\n" +
         "<script>\n" +
         "const API_BASE='';const CURRENCY_SYMBOL='" + currencySymbol + "';const DELIVERY_FEES=" + deliveryFees + ";\n" +
         "let cart=JSON.parse(localStorage.getItem('cart')||'[]');let wishlist=JSON.parse(localStorage.getItem('wishlist')||'[]');\n" +
@@ -425,21 +442,67 @@ public class StoreGeneratorService {
         "document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}" +
         "else{alert('Erreur: '+d.message)}}).catch(e=>alert('Erreur réseau'));;return false}\n" +
         "document.addEventListener('DOMContentLoaded',function(){updateCartUI();updateWishlistUI()});\n" +
-
-        // Slider autoplay
-        "!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;" +
+        "\n" +
+        "// Slider autoplay\n" +
+        "\"!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;" +
         "function go(i){n=(i+s.length)%s.length;t.style.transform='translateX(-'+(n*100)+'%)';" +
         "var d=document.getElementById('sliderDots');if(d)Array.from(d.children).forEach(function(e,j){e.classList.toggle('active',j===n)})}" +
         "var prev=document.getElementById('prevSlide'),next=document.getElementById('nextSlide');" +
         "if(prev)prev.onclick=function(){go(n-1)};if(next)next.onclick=function(){go(n+1)};" +
         "var dots=document.getElementById('sliderDots');if(dots&&s.length>1){for(var i=0;i<s.length;i++){var dot=document.createElement('span');dot.onclick=function(j){return function(){go(j)}}(i);dots.appendChild(dot)}dots.children[0].classList.add('active')}" +
         "if(s.length>1)setInterval(function(){go(n+1)},5000)}();\n" +
-
-        // Search
+        "\n" +
+        "// Search\n" +
         "document.getElementById('search-input')&&document.getElementById('search-input').addEventListener('input',function(){" +
         "var q=this.value.toLowerCase();document.querySelectorAll('.product-card').forEach(function(c){" +
         "var n=c.querySelector('.name');if(n)c.style.display=n.textContent.toLowerCase().includes(q)?'':'none'})});\n" +
         "</script>\n</body>\n</html>";
+
+        // ── Chatbot block + placeholder replacements ──
+        html = html.replace("{{CHATBOT_BLOCK}}", CHATBOT_TEMPLATE);
+        html = html.replace("{{CUSTOM_JS}}", customJs != null ? customJs : "");
+        html = html.replace("{{BOUTIQUE_NAME}}", esc(b.getName()));
+        html = html.replace("{{BOUTIQUE_DESCRIPTION}}", esc(b.getDescription() != null ? b.getDescription() : ""));
+        html = html.replace("{{CURRENCY_SYMBOL}}", esc(currencySymbol));
+        html = html.replace("{{DELIVERY_FEES}}", String.valueOf(deliveryFees));
+        html = html.replace("{{CASH_ON_DELIVERY_BOOL}}", cashOnDelivery ? "true" : "false");
+        html = html.replace("{{KONNECT_ACTIVE_BOOL}}", konnectActive ? "true" : "false");
+        html = html.replace("{{D17_ACTIVE_BOOL}}", d17Active ? "true" : "false");
+        html = html.replace("{{WHATSAPP_NUMBER}}", b.getWhatsappNumber() != null ? esc(b.getWhatsappNumber()) : "");
+        html = html.replace("{{STORE_LANGUAGE}}", b.getLanguage() != null ? esc(b.getLanguage()) : "fr");
+        html = html.replace("{{BOUTIQUE_ID}}", b.getId().toString());
+
+        // Products JSON for chatbot context
+        List<Map<String,Object>> productsMini = products.stream()
+                .map(p -> {
+                    Map<String,Object> m = new LinkedHashMap<>();
+                    m.put("id",           p.getId());
+                    m.put("name",         p.getName());
+                    m.put("price",        p.getPrice());
+                    m.put("comparePrice", p.getComparePrice());
+                    m.put("category",     p.getCategory() != null ? p.getCategory().getName() : null);
+                    return m;
+                }).collect(Collectors.toList());
+        try {
+            html = html.replace("{{PRODUCTS_JSON}}", objectMapper.writeValueAsString(productsMini));
+        } catch (Exception e) {
+            html = html.replace("{{PRODUCTS_JSON}}", "[]");
+        }
+
+        List<Map<String,Object>> catsMini = categories.stream()
+                .map(c -> {
+                    Map<String,Object> m = new LinkedHashMap<>();
+                    m.put("id", c.getId());
+                    m.put("name", c.getName());
+                    return m;
+                }).collect(Collectors.toList());
+        try {
+            html = html.replace("{{CATEGORIES_JSON}}", objectMapper.writeValueAsString(catsMini));
+        } catch (Exception e) {
+            html = html.replace("{{CATEGORIES_JSON}}", "[]");
+        }
+
+        return html;
     }
 
     private String extractFirstImage(String images) {

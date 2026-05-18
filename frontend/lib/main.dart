@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
@@ -20,21 +22,32 @@ import 'providers/traffic_provider.dart';
 import 'providers/messages_provider.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      child: Center(
+  ErrorWidget.builder = (() {
+    String lastMsg = '';
+    int repeatCount = 0;
+    return (FlutterErrorDetails details) {
+      final msg = details.exceptionAsString();
+      if (msg == lastMsg) {
+        repeatCount++;
+        if (repeatCount > 2) return const SizedBox.shrink();
+      } else {
+        lastMsg = msg;
+        repeatCount = 0;
+      }
+      final userMsg = msg.contains('FlutterQuillLocalizations')
+          ? 'Éditeur de texte non disponible'
+          : msg.contains('RenderViewport')
+              ? 'Erreur d\'affichage'
+              : 'Une erreur est survenue';
+      return ColoredBox(
+        color: Color(0xFFFFF3F0),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Text(
-              details.exceptionAsString(),
-              style: const TextStyle(color: Colors.red, fontSize: 14),
-            ),
-          ),
+          padding: EdgeInsets.all(16),
+          child: Text(userMsg, style: TextStyle(color: Color(0xFFD32F2F), fontSize: 14)),
         ),
-      ),
-    );
-  };
+      );
+    };
+  })();
   runApp(const MakeWebsiteApp());
 }
 
@@ -76,6 +89,15 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           routerConfig: _router!,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('fr', 'FR'),
+            Locale('en', 'US'),
+          ],
         );
       },
     );

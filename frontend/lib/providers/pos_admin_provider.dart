@@ -20,7 +20,7 @@ class PosAdminProvider extends ChangeNotifier {
   bool _loadingCashiers = false;
   bool _loadingOrders = false;
   bool _loadingActivities = false;
-  bool _loadingCashierStats = false;
+  final bool _loadingCashierStats = false;
   bool _searchingUsers = false;
 
   String? _dashboardError;

@@ -16,10 +16,13 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
@@ -28,10 +31,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.userRepository = userRepository;
     }
 
+    private static final java.util.Set<String> PUBLIC_PATH_PREFIXES = java.util.Set.of(
+        "/api/auth/", "/api/team/public/", "/api/public/", "/api/plans",
+        "/api/boutiques/public", "/api/traffic/",
+        "/ws/", "/uploads/", "/store/",
+        "/favicon",
+        "/flutter/", "/assets/"
+    );
+
+    private static final java.util.Set<String> PUBLIC_EXACT_PATHS = java.util.Set.of(
+        "/login", "/register", "/error"
+    );
+
+    /** All these file extensions are served as SPA static assets — no auth needed. */
+    private static final java.util.Set<String> PUBLIC_EXTENSIONS = java.util.Set.of(
+        ".js", ".json", ".png", ".jpg", ".ico", ".css", ".map", ".svg", ".wasm"
+    );
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/api/auth/") || path.startsWith("/ws/") || path.startsWith("/api/plans");
+        // Root path — must be public (SPA entry)
+        if (path.isEmpty() || "/".equals(path) || "/index.html".equals(path)) return true;
+        // Static file extensions — served by SPA or resource handlers, no auth
+        if (request.getMethod().equalsIgnoreCase("GET")) {
+            int dot = path.lastIndexOf('.');
+            if (dot >= 0 && PUBLIC_EXTENSIONS.contains(path.substring(dot))) return true;
+        }
+        boolean skip = PUBLIC_EXACT_PATHS.contains(path)
+            || PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
+        return skip;
     }
 
     private String hashToken(String token) {

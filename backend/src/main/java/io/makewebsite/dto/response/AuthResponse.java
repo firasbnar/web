@@ -18,4 +18,7 @@ public class AuthResponse {
 
     @Builder.Default
     private boolean emailVerificationRequired = false;
+
+    @Builder.Default
+    private boolean mustChangePassword = false;
 }
