@@ -9,6 +9,7 @@ class AppButton extends StatelessWidget {
   final bool outlined;
   final bool fullWidth;
   final Color? color;
+  final IconData? icon;
 
   const AppButton({
     super.key,
@@ -18,6 +19,7 @@ class AppButton extends StatelessWidget {
     this.outlined = false,
     this.fullWidth = true,
     this.color,
+    this.icon,
   });
 
   @override
@@ -27,6 +29,17 @@ class AppButton extends StatelessWidget {
       child = const SizedBox(
         width: 24, height: 24,
         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+      );
+    } else if (icon != null) {
+      child = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: outlined ? AppColors.primary : Colors.white),
+          const SizedBox(width: 8),
+          Text(label, style: AppTypography.button.copyWith(
+            color: outlined ? AppColors.primary : Colors.white,
+          )),
+        ],
       );
     } else {
       child = Text(label, style: AppTypography.button.copyWith(

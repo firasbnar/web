@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/csv_export_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
@@ -483,6 +484,9 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
 
   Future<void> _exportLogs(JournalActiviteProvider p) async {
     final csv = await p.exportCsv();
+    if (csv != null) {
+      CsvExportService.download(csv, 'activites.csv');
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

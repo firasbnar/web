@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../core/api_client.dart';
 import '../models/activity_log.dart';
 
@@ -153,8 +155,10 @@ class JournalActiviteProvider extends ChangeNotifier {
       };
       params.removeWhere((_, v) => v == null);
       if (_boutiqueId != null) params['boutiqueId'] = _boutiqueId;
-      final res = await _api.get('/admin/activities/export', queryParameters: params);
-      return res.toString();
+      final response = await _api.dio.get('/admin/activities/export',
+          queryParameters: params,
+          options: Options(responseType: ResponseType.bytes));
+      return utf8.decode(response.data as List<int>);
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
       return null;

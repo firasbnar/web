@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
@@ -20,8 +21,11 @@ import 'providers/wishlist_provider.dart';
 import 'providers/reviews_provider.dart';
 import 'providers/traffic_provider.dart';
 import 'providers/messages_provider.dart';
+import 'providers/public_cart_provider.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
+
   ErrorWidget.builder = (() {
     String lastMsg = '';
     int repeatCount = 0;
@@ -80,6 +84,7 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
         ChangeNotifierProvider(create: (_) => ReviewsProvider()),
         ChangeNotifierProvider(create: (_) => TrafficProvider()),
         ChangeNotifierProvider(create: (_) => MessagesProvider()),
+        ChangeNotifierProvider(create: (_) => PublicCartProvider()),
       ],
       builder: (context, _) {
         _router ??= createRouter(context.read<AuthProvider>());
@@ -92,6 +97,7 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
             FlutterQuillLocalizations.delegate,
           ],
           supportedLocales: const [

@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../screens/splash_screen.dart';
+import '../screens/landing_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/register_screen.dart';
+import '../screens/auth/forgot_password_screen.dart';
+import '../screens/auth/reset_password_screen.dart';
 import '../screens/auth/change_password_screen.dart';
 
 import '../screens/auth/verification_pending_screen.dart';
@@ -42,6 +46,7 @@ import '../screens/traffic/traffic_analytics_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/admin/pos_admin_screen.dart';
 import '../screens/admin/journal_activite_screen.dart';
+import '../screens/super_admin/super_admin_dashboard_screen.dart';
 import '../screens/product_manager/product_manager_screen.dart';
 
 import '../screens/products/bulk_add_products_screen.dart';
@@ -50,6 +55,11 @@ import '../screens/team/team_screen.dart';
 import '../screens/messages/messages_screen.dart';
 import '../screens/messages/conversation_screen.dart';
 import '../screens/boutique/telegram_settings_screen.dart';
+import '../screens/public_storefront/public_storefront_screen.dart';
+import '../screens/public_storefront/public_product_detail_screen.dart';
+import '../screens/public_storefront/public_cart_screen.dart';
+import '../screens/public_storefront/public_checkout_screen.dart';
+import '../screens/public_storefront/public_order_success_screen.dart';
 import '../models/conversation.dart';
 import '../widgets/main_scaffold.dart';
 
@@ -63,34 +73,62 @@ GoRouter createRouter(AuthProvider auth) {
 
       // ignore: avoid_print
       developer.log('[ROUTER] redirect: location="$location" isLoggedIn=$isLoggedIn role=$role');
+      // ignore: avoid_print
+      print('ROUTER PATH: ${state.uri.path}');
 
-      // Root path → splash
-      if (location == '/' || location.isEmpty) return '/splash';
+      // Public store routes — no auth required, never redirect to landing/login
+      if (state.uri.path.startsWith('/store/')) {
+        return null;
+      }
 
-      // Always allow public routes (except login when already authenticated)
-      if (isLoggedIn && (location == '/login' || location.startsWith('/login?'))) {
+      // Root path → landing
+      if (location == '/' || location.isEmpty) return '/landing';
+
+      final publicRoutes = ['/landing', '/splash', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store'];
+      final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
+
+      // --- SUPER_ADMIN is platform-level only, no access to owner/merchant routes ---
+      if (isLoggedIn && role == 'SUPER_ADMIN') {
+        // Allow super admin routes and public routes
+        if (location.startsWith('/super-admin')) return null;
+        if (isPublic) return '/super-admin'; // redirect from public to super admin
+        if (location == '/change-password') return null;
+        // Everything else → super admin dashboard
+        return '/super-admin';
+      }
+
+      // Not logged in → allow public routes, otherwise redirect to login
+      if (!isLoggedIn) {
+        if (isPublic) return null;
+        return '/login';
+      }
+
+      // --- LOGGED IN (non-SUPER_ADMIN) ---
+      // Redirect away from auth pages to appropriate dashboard
+      if (location == '/login' || location.startsWith('/login?') ||
+          location == '/register' || location == '/signup' ||
+          location == '/landing' || location == '/splash') {
         return role == 'ADMIN' ? '/admin' : '/home';
       }
 
-      final publicRoutes = ['/splash', '/login', '/verify-email'];
-      final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
+      // Allow public routes for logged-in users
       if (isPublic) return null;
 
       // Allow change-password when authenticated
-      if (isLoggedIn && (location == '/change-password')) return null;
-
-      // Not logged in → redirect to login
-      if (!isLoggedIn) return '/login';
+      if (location == '/change-password') return null;
 
       // Must change password → force to change-password
       if (auth.mustChangePassword && location != '/change-password') return '/change-password';
 
-      // Team management (owner or admin only)
-      if (location == '/team' && role != 'OWNER' && role != 'ADMIN') {
+      // Super admin routes — non-SUPER_ADMIN blocked
+      if (location.startsWith('/super-admin')) return '/home';
+
+      // Admin routes
+      if ((location == '/admin' || location == '/admin/activities') && role != 'ADMIN') {
         return '/home';
       }
-      // Super admin routes
-      if ((location == '/admin' || location == '/admin/activities') && role != 'ADMIN') {
+      // Team management (owner or admin only)
+      if (location == '/team' && role != 'OWNER' && role != 'ADMIN') {
         return '/home';
       }
       // Caisse admin routes (admin or boutique owner)
@@ -101,6 +139,7 @@ GoRouter createRouter(AuthProvider auth) {
       return null;
     },
     routes: [
+      GoRoute(path: '/landing', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(
         path: '/login',
@@ -109,8 +148,24 @@ GoRouter createRouter(AuthProvider auth) {
           return LoginScreen(initialEmail: email);
         },
       ),
+      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/signup', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/verify-email', builder: (_, state) => VerificationPendingScreen(email: state.extra as String? ?? '')),
+      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, state) {
+          final token = state.uri.queryParameters['token'];
+          return ResetPasswordScreen(token: token);
+        },
+      ),
       GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
+      GoRoute(path: '/super-admin', builder: (_, __) => const SuperAdminDashboardScreen()),
+      GoRoute(path: '/store/:slug', builder: (_, state) => PublicStorefrontScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(path: '/store/:slug/product/:productId', builder: (_, state) => PublicProductDetailScreen(slug: state.pathParameters['slug']!, productId: state.pathParameters['productId']!)),
+      GoRoute(path: '/store/:slug/cart', builder: (_, state) => PublicCartScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(path: '/store/:slug/checkout', builder: (_, state) => PublicCheckoutScreen(slug: state.pathParameters['slug']!)),
+      GoRoute(path: '/store/:slug/order-success/:orderId', builder: (_, state) => PublicOrderSuccessScreen(slug: state.pathParameters['slug']!, orderId: state.pathParameters['orderId']!)),
       ShellRoute(
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
@@ -152,7 +207,7 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/products/bulk-add', builder: (_, __) => const BulkAddProductsScreen()),
       GoRoute(path: '/products/variants/:id', builder: (_, state) => ProductManagerScreen(productId: state.pathParameters['id'])),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),
-      GoRoute(path: '/store/:boutiqueId', builder: (_, state) {
+      GoRoute(path: '/catalog/:boutiqueId', builder: (_, state) {
         final extra = state.extra;
         String? name;
         String? slug;
@@ -172,6 +227,7 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/order-tracking/:id', builder: (_, state) => OrderTrackingScreen(orderId: state.pathParameters['id']!)),
       GoRoute(path: '/stores', builder: (_, __) => const StoresBrowserScreen()),
       GoRoute(path: '/create-store', builder: (_, __) => const CreateStoreScreen()),
+      GoRoute(path: '/public-store/:slug', builder: (_, state) => PublicStorefrontScreen(slug: state.pathParameters['slug']!)),
     ],
   );
 }

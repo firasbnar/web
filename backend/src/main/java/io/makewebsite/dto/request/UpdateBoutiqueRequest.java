@@ -19,4 +19,5 @@ public class UpdateBoutiqueRequest {
     private String language;
     private String timezone;
     private String customDomain;
+    private String slug;
 }

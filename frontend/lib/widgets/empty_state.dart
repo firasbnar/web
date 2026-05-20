@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import 'app_button.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -26,7 +27,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 80, color: AppColors.textHint),
+            Icon(icon, size: 72, color: AppColors.textHint.withAlpha(80)),
             const SizedBox(height: 20),
             Text(title, style: AppTypography.heading3, textAlign: TextAlign.center),
             if (subtitle.isNotEmpty) ...[
@@ -35,15 +36,7 @@ class EmptyState extends StatelessWidget {
             ],
             if (buttonLabel != null && onButtonPressed != null) ...[
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: onButtonPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                ),
-                child: Text(buttonLabel!),
-              ),
+              AppButton(label: buttonLabel!, onPressed: onButtonPressed),
             ],
           ],
         ),

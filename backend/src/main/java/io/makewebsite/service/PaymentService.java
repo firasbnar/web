@@ -32,6 +32,7 @@ public class PaymentService {
     private final ObjectMapper objectMapper;
     private final OrderRepository orderRepository;
     private final BoutiqueRepository boutiqueRepository;
+    private final StoreStatusGuard storeStatusGuard;
 
     private static final Set<String> STRIPE_SUPPORTED_CURRENCIES = Set.of(
             "usd", "eur", "gbp", "cad", "aed", "jpy", "aud", "chf", "dkk", "hkd",
@@ -121,6 +122,9 @@ public class PaymentService {
     }
 
     public JsonNode createPayPalOrder(CreatePaymentRequest request) {
+        if (request.getBoutiqueId() != null) {
+            storeStatusGuard.requireActive(request.getBoutiqueId());
+        }
         try {
             RestTemplate restTemplate = new RestTemplate();
 
@@ -190,6 +194,7 @@ public class PaymentService {
 
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Commande non trouvée: " + orderNumber));
+        storeStatusGuard.requireActive(order.getBoutique());
 
         BigDecimal orderTotal = order.getTotal();
         if (orderTotal == null || orderTotal.compareTo(BigDecimal.ZERO) <= 0) {
@@ -269,6 +274,68 @@ public class PaymentService {
         }
     }
 
+    public JsonNode createPublicStripeSession(Order order, UUID boutiqueId) {
+        String key = stripeSecretKey;
+        if (key == null || key.isBlank()) {
+            key = resolveSecretKey("", "STRIPE_SECRET_KEY");
+        }
+        if (key == null || key.isBlank()) {
+            throw new RuntimeException("Stripe secret key not configured");
+        }
+
+        String orderNumber = order.getOrderNumber();
+        BigDecimal orderTotal = order.getTotal();
+        if (orderTotal == null || orderTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Montant de la commande invalide");
+        }
+
+        String currency = order.getBoutique().getCurrency() != null ? order.getBoutique().getCurrency().toLowerCase() : "tnd";
+        String stripeCurrency = STRIPE_SUPPORTED_CURRENCIES.contains(currency) ? currency : "eur";
+        long amountCents = orderTotal.multiply(BigDecimal.valueOf(100)).longValue();
+
+        try {
+            Stripe.apiKey = stripeSecretKey;
+
+            SessionCreateParams.LineItem.PriceData.ProductData productData =
+                    SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                            .setName("Commande " + orderNumber)
+                            .build();
+
+            SessionCreateParams.LineItem.PriceData priceData =
+                    SessionCreateParams.LineItem.PriceData.builder()
+                            .setCurrency(stripeCurrency)
+                            .setUnitAmount(amountCents)
+                            .setProductData(productData)
+                            .build();
+
+            SessionCreateParams.LineItem lineItem =
+                    SessionCreateParams.LineItem.builder()
+                            .setPriceData(priceData)
+                            .setQuantity(1L)
+                            .build();
+
+            String successUrl = publicUrl + "/store/" + order.getBoutique().getSlug() +
+                    "/order-success/" + order.getId().toString();
+            String cancelUrl = publicUrl + "/store/" + order.getBoutique().getSlug() + "/checkout";
+
+            Session session = Session.create(SessionCreateParams.builder()
+                    .setMode(SessionCreateParams.Mode.PAYMENT)
+                    .setSuccessUrl(successUrl)
+                    .setCancelUrl(cancelUrl)
+                    .addLineItem(lineItem)
+                    .putMetadata("orderNumber", orderNumber)
+                    .putMetadata("boutiqueId", boutiqueId.toString())
+                    .build());
+
+            return objectMapper.valueToTree(Map.of(
+                    "sessionId", session.getId(),
+                    "sessionUrl", session.getUrl()
+            ));
+        } catch (StripeException e) {
+            throw new RuntimeException("Erreur Stripe: " + e.getMessage());
+        }
+    }
+
     public Event parseStripeWebhook(String payload, String sigHeader) {
         if (stripeWebhookSecret == null || stripeWebhookSecret.isEmpty()) {
             throw new RuntimeException("Stripe webhook secret not configured. Set STRIPE_WEBHOOK_SECRET environment variable.");
@@ -282,6 +349,9 @@ public class PaymentService {
     }
 
     public JsonNode createStripePaymentIntent(CreatePaymentRequest request) {
+        if (request.getBoutiqueId() != null) {
+            storeStatusGuard.requireActive(request.getBoutiqueId());
+        }
         try {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();

@@ -184,10 +184,25 @@ public class StoreGeneratorService {
 
         boolean simpleCheckout = b.getSimpleCheckout() != null && b.getSimpleCheckout();
 
+        String storeUrl = "/store/" + slug;
+        String ogTitle = b.getSeoTitle() != null ? esc(b.getSeoTitle()) : esc(b.getName()) + " | Boutique en ligne";
+        String ogDesc = b.getSeoDescription() != null ? esc(b.getSeoDescription()) : (b.getDescription() != null ? esc(b.getDescription()) : esc(b.getName()) + " – Découvrez nos produits en ligne.");
+        String ogImage = b.getOgImageUrl() != null ? esc(b.getOgImageUrl()) : esc(logoUrl);
+
         String html = "<!DOCTYPE html>\n" +
         "<html lang=\"fr\">\n<head>\n" +
         "<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-        "<title>" + esc(b.getName()) + " | Boutique en ligne</title>\n" +
+        "<title>" + ogTitle + "</title>\n" +
+        "<meta name=\"description\" content=\"" + ogDesc + "\">\n" +
+        "<meta property=\"og:title\" content=\"" + ogTitle + "\">\n" +
+        "<meta property=\"og:description\" content=\"" + ogDesc + "\">\n" +
+        "<meta property=\"og:image\" content=\"" + ogImage + "\">\n" +
+        "<meta property=\"og:url\" content=\"" + storeUrl + "\">\n" +
+        "<meta property=\"og:type\" content=\"website\">\n" +
+        "<meta name=\"twitter:card\" content=\"summary_large_image\">\n" +
+        "<meta name=\"twitter:title\" content=\"" + ogTitle + "\">\n" +
+        "<meta name=\"twitter:description\" content=\"" + ogDesc + "\">\n" +
+        "<meta name=\"twitter:image\" content=\"" + ogImage + "\">\n" +
         "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css\">\n" +
         "<link href=\"https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">\n" +
         "<style>\n" +

@@ -312,6 +312,23 @@ public class Boutique {
     @Column(name = "team_enabled")
     private Boolean teamEnabled = false;
 
+    @Builder.Default
+    @Column(name = "store_status", length = 20)
+    private String storeStatus = "ACTIVE";
+
+    @Column(name = "frozen_at")
+    private LocalDateTime frozenAt;
+
+    @Column(name = "freeze_reason", columnDefinition = "TEXT")
+    private String freezeReason;
+
+    @Builder.Default
+    @Column(name = "is_published")
+    private Boolean isPublished = false;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

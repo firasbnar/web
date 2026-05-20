@@ -1,24 +1,37 @@
 package io.makewebsite.controller;
 
+import io.makewebsite.dto.*;
 import io.makewebsite.dto.request.*;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.AuthService;
+import io.makewebsite.service.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -95,5 +108,35 @@ public class AuthController {
             ip = ip.split(",")[0].trim();
         }
         return ip;
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            HttpServletRequest httpRequest) {
+        log.info("forgot-password request for email: {}", request.getEmail());
+        Map<String, Object> result = passwordResetService.forgotPassword(request.getEmail(), httpRequest);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        log.info("reset-password request received (token length: {})", request.getToken().length());
+        passwordResetService.resetPassword(request);
+        log.info("reset-password successful");
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Mot de passe réinitialisé avec succès"
+        ));
+    }
+
+    @GetMapping("/reset-password/redirect")
+    public void redirectResetPassword(@RequestParam String token, HttpServletResponse response) throws IOException {
+        log.info("reset-password redirect for token length={}", token.length());
+        String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
+        String redirectUrl = frontendUrl + "/reset-password?token=" + encodedToken;
+        log.info("reset-password redirecting to {}", redirectUrl);
+        response.sendRedirect(redirectUrl);
     }
 }

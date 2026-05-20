@@ -62,7 +62,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
       final recentContent = results[4]['data']?['content'] as List? ?? [];
       _recentVisits = recentContent.map((e) => RecentVisit.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) { _error = ApiClient.extractErrorMessage(e); }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _refresh() async => _load();
@@ -78,7 +78,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
       final content = res['data']?['content'] as List? ?? [];
       _recentVisits = content.map((e) => RecentVisit.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) { _error = ApiClient.extractErrorMessage(e); }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void _openAnalytics() {

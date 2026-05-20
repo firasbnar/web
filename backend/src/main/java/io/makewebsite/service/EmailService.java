@@ -11,6 +11,7 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.UnsupportedEncodingException;
@@ -22,7 +23,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.public-url:https://scraggly-unmasked-glutinous.ngrok-free.app}")
+    @Value("${app.public-url:http://localhost:8080}")
     private String publicUrl;
 
     @Value("${spring.mail.username:noreply@makewebsite.io}")
@@ -232,6 +233,27 @@ public class EmailService {
         return html;
     }
 
+    @Async
+    public void sendPasswordResetEmail(String to, String token, String resetLink) {
+        try {
+            InternetAddress from = internetAddress(fromAddress, fromName);
+            InternetAddress recipient = internetAddress(to);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(recipient);
+            helper.setSubject("Réinitialisation du mot de passe - MakeWebsite");
+            helper.setText(buildResetPlainText(resetLink), buildResetHtml(resetLink));
+
+            log.info("Sending password reset email to {}", to);
+            mailSender.send(message);
+            log.info("Password reset email sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}", to, e);
+        }
+    }
+
     public void sendCredentialsEmail(String to, String tempPassword) {
         try {
             InternetAddress from = internetAddress(fromAddress, fromName);
@@ -308,6 +330,64 @@ public class EmailService {
             </html>
             """.formatted(email, tempPassword, fromName);
         return html;
+    }
+
+    private String buildResetPlainText(String link) {
+        return """
+            Réinitialisation du mot de passe
+
+            Bonjour,
+
+            Vous avez demandé la réinitialisation de votre mot de passe.
+
+            Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :
+            %s
+
+            Ce lien expire dans 30 minutes.
+
+            Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+
+            ---
+            MakeWebsite
+            """.formatted(link);
+    }
+
+    private String buildResetHtml(String link) {
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+            <body style="margin:0;padding:0;background-color:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+            <table width="100%%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 16px">
+            <tr><td align="center">
+            <table width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+            <tr><td style="padding:36px 32px 22px;text-align:center;background:#2710BF">
+            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700">Réinitialisation du mot de passe</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,0.88);font-size:14px;line-height:1.5">Vous avez demandé la réinitialisation de votre mot de passe.</p>
+            </td></tr>
+            <tr><td style="padding:32px 32px 24px">
+            <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6">Bonjour,</p>
+            <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6">Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe.</p>
+            <table width="100%%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0 24px">
+            <a href="%s" style="display:inline-block;padding:14px 36px;background:#2710BF;color:#ffffff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:600">Réinitialiser mon mot de passe</a>
+            </td></tr></table>
+            <p style="margin:0 0 16px;color:#6b7280;font-size:13px;line-height:1.5">Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :</p>
+            <p style="margin:0 0 16px;padding:12px;background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;word-break:break-all;font-size:12px;color:#6b7280">%s</p>
+            <p style="margin:0 0 8px;color:#6b7280;font-size:12px;line-height:1.5">Ce lien expire dans <strong>30 minutes</strong>.</p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+            <p style="margin:0;color:#9ca3af;font-size:11px;line-height:1.5">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+            <p style="margin:0;color:#9ca3af;font-size:11px;line-height:1.5">Pour toute assistance, contactez notre support.</p>
+            </td></tr>
+            <tr><td style="padding:16px 32px;background-color:#f9fafb;text-align:center">
+            <p style="margin:0;color:#9ca3af;font-size:11px">&copy; 2026 MakeWebsite. All rights reserved.</p>
+            </td></tr>
+            </table>
+            </td></tr>
+            </table>
+            </body>
+            </html>
+            """;
+        return html.formatted(link, link);
     }
 
     private String translateRole(String role) {

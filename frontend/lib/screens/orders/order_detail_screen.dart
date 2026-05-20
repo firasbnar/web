@@ -1,7 +1,7 @@
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
@@ -253,7 +253,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               label: order.invoiceNumber != null ? 'Imprimer' : 'Aperçu',
                               outlined: order.invoiceNumber != null,
                               onPressed: order.invoiceNumber != null && order.boutiqueId != null
-                                  ? () => html.window.open(op.invoicePrintUrl(order.boutiqueId!, widget.orderId), '_blank')
+                                  ? () => launchUrl(Uri.parse(op.invoicePrintUrl(order.boutiqueId!, widget.orderId)), mode: LaunchMode.externalApplication)
                                   : null,
                             ),
                           ),

@@ -9,6 +9,7 @@ import io.makewebsite.repository.StoreViewRepository;
 import io.makewebsite.repository.TrafficRepository;
 import io.makewebsite.repository.TrafficSessionRepository;
 import io.makewebsite.service.GeoLocationService.GeoData;
+import io.makewebsite.util.CsvUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -448,28 +449,20 @@ public class TrafficService {
 
     public String exportCsv(UUID boutiqueId) {
         List<StoreView> views = storeViewRepository.findAllByBoutiqueIdOrderByViewedAtDesc(boutiqueId);
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder("\uFEFF");
         sb.append("ID,IP Hash,Page,Referrer,Browser,Country,City,User Agent,Viewed At\n");
         for (StoreView v : views) {
             sb.append(v.getId()).append(",");
-            sb.append(escapeCsv(v.getIpHash())).append(",");
-            sb.append(escapeCsv(v.getPage())).append(",");
-            sb.append(escapeCsv(v.getReferrer())).append(",");
-            sb.append(escapeCsv(v.getBrowser())).append(",");
-            sb.append(escapeCsv(v.getCountry())).append(",");
-            sb.append(escapeCsv(v.getCity())).append(",");
-            sb.append(escapeCsv(v.getUserAgent())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getIpHash())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getPage())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getReferrer())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getBrowser())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getCountry())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getCity())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getUserAgent())).append(",");
             sb.append(v.getViewedAt()).append("\n");
         }
         return sb.toString();
-    }
-
-    private String escapeCsv(String value) {
-        if (value == null) return "";
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
     }
 
     public void deactivateOldVisitors(int daysInactive) {

@@ -32,6 +32,7 @@ class MainScaffold extends StatelessWidget {
   void _showMoreMenu(BuildContext context) {
     final role = context.read<AuthProvider>().role;
     final isAdmin = role == 'ADMIN';
+    final isSuperAdmin = role == 'SUPER_ADMIN';
     final isOwner = role == 'OWNER';
 
     final List<_MenuItem> allItems = [
@@ -54,6 +55,7 @@ class MainScaffold extends StatelessWidget {
       const _MenuItem(Icons.notifications_outlined, 'Notifications', '/notifications'),
       _MenuItem(Icons.history_outlined, 'Journal d\'activité', '/admin/activities', visible: isAdmin),
       _MenuItem(Icons.admin_panel_settings_outlined, 'Administration', '/admin', visible: isAdmin),
+      _MenuItem(Icons.shield_outlined, 'Super Admin', '/super-admin', visible: isSuperAdmin),
       _MenuItem(Icons.travel_explore_outlined, 'Trafic', '/traffic', visible: isAdmin || isOwner),
       const _MenuItem(Icons.receipt_long_outlined, 'Mes commandes', '/order-history'),
       const _MenuItem(Icons.person_outline, 'Profil', '/profile'),

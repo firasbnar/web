@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,8 @@ class _AiChatWidgetState extends State<AiChatWidget>
   bool _isLoading = false;
   bool _tooltipVisible = true;
   bool _quickRepliesVisible = true;
+  bool _eyesClosed = false;
+  bool _isPressed = false;
   final List<_ChatMessage> _messages = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -33,6 +36,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
   late AnimationController _ringController;
   late Animation<double> _floatAnim;
   late Animation<double> _pulseAnim;
+  Timer? _blinkTimer;
 
   @override
   void initState() {
@@ -42,7 +46,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    _floatAnim = Tween<double>(begin: 0, end: -8).animate(
+    _floatAnim = Tween<double>(begin: 0, end: -4).animate(
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
     );
 
@@ -50,7 +54,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
+    _pulseAnim = Tween<double>(begin: 0.97, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutSine),
     );
 
@@ -58,6 +62,8 @@ class _AiChatWidgetState extends State<AiChatWidget>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat();
+
+    _startBlinking();
 
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) setState(() => _tooltipVisible = false);
@@ -71,7 +77,24 @@ class _AiChatWidgetState extends State<AiChatWidget>
     _ringController.dispose();
     _inputController.dispose();
     _scrollController.dispose();
+    _blinkTimer?.cancel();
     super.dispose();
+  }
+
+  void _startBlinking() {
+    _scheduleBlink();
+  }
+
+  void _scheduleBlink() {
+    _blinkTimer?.cancel();
+    _blinkTimer = Timer(Duration(seconds: 2 + Random().nextInt(4)), () {
+      if (!mounted) return;
+      setState(() => _eyesClosed = true);
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted) setState(() => _eyesClosed = false);
+      });
+      _scheduleBlink();
+    });
   }
 
   void _togglePanel() {
@@ -181,176 +204,52 @@ class _AiChatWidgetState extends State<AiChatWidget>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final panelWidth = size.width > 480 ? 370.0 : size.width - 24;
+    final isMobile = size.width <= 480;
+    final panelWidth = isMobile ? size.width - 24 : 370.0;
     final panelHeight = size.height > 600 ? 540.0 : size.height * 0.7;
 
     return SizedBox(
-      width: _isOpen ? panelWidth : 64,
-      height: _isOpen ? panelHeight + 80 : 64,
+      width: _isOpen ? panelWidth : 56,
+      height: _isOpen ? panelHeight + 84 : 78,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           if (_isOpen) _buildChatPanel(panelWidth, panelHeight),
-          _buildOrbButton(),
+          _buildFloatingRobotAssistant(),
         ],
       ),
     );
   }
 
-  Widget _buildOrbButton() {
+  Widget _buildFloatingRobotAssistant() {
     return Positioned(
       right: 0,
       bottom: 0,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tooltip
-          if (_tooltipVisible)
-            GestureDetector(
-              onTap: _togglePanel,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A2E),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x40000000),
-                      blurRadius: 20,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'Besoin d\'aide ?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
+          if (_tooltipVisible) _buildHelpBubble(),
           GestureDetector(
+            onTapDown: (_) => setState(() => _isPressed = true),
+            onTapUp: (_) => setState(() => _isPressed = false),
+            onTapCancel: () => setState(() => _isPressed = false),
             onTap: _togglePanel,
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_floatController, _pulseController]),
-              builder: (_, child) {
-                return Transform.translate(
-                  offset: Offset(0, _floatAnim.value),
-                  child: child,
-                );
-              },
-              child: SizedBox(
-                width: 64,
-                height: 64,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Ring ripple
-                    AnimatedBuilder(
-                      animation: _ringController,
-                      builder: (_, __) {
-                        final value = _ringController.value;
-                        return Opacity(
-                          opacity: (1 - value) * 0.4,
-                          child: Transform.scale(
-                            scale: 1 + value * 0.7,
-                            child: Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFB464FF).withAlpha(100),
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+            child: AnimatedScale(
+              scale: _isPressed ? 0.93 : 1.0,
+              duration: const Duration(milliseconds: 150),
+              child: AnimatedBuilder(
+                animation: Listenable.merge([_floatController, _pulseController]),
+                builder: (_, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _floatAnim.value),
+                    child: Transform.scale(
+                      scale: _pulseAnim.value,
+                      child: child,
                     ),
-                    // Orb glow
-                    AnimatedBuilder(
-                      animation: _pulseAnim,
-                      builder: (_, __) {
-                        return Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const RadialGradient(
-                              center: Alignment(0.3, -0.3),
-                              colors: [
-                                Color(0x80FFFFFF),
-                                Color(0xB3B464FF),
-                                Color(0xF25A00B4),
-                                Color(0xFF280050),
-                              ],
-                              stops: [0.0, 0.3, 0.65, 1.0],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFB464FF).withAlpha(80),
-                                blurRadius: 20 * _pulseAnim.value,
-                                spreadRadius: 2,
-                              ),
-                              BoxShadow(
-                                color: const Color(0xFF7800FF).withAlpha(60),
-                                blurRadius: 45 * _pulseAnim.value,
-                                spreadRadius: 1,
-                              ),
-                              BoxShadow(
-                                color: const Color(0xFF6400C8).withAlpha(40),
-                                blurRadius: 80 * _pulseAnim.value,
-                              ),
-                              const BoxShadow(
-                                color: Color(0x80000000),
-                                blurRadius: 20,
-                                offset: Offset(0, -8),
-                                blurStyle: BlurStyle.inner,
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Text(
-                              '\u2726',
-                              style: TextStyle(
-                                fontSize: 26,
-                                color: Color(0xEBFFFFFF),
-                                shadows: [
-                                  Shadow(
-                                    color: Color(0x99FFFFFF),
-                                    blurRadius: 12,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    // Shine highlight
-                    Positioned(
-                      top: 10,
-                      left: 14,
-                      child: Container(
-                        width: 22,
-                        height: 14,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [Color(0xB3FFFFFF), Color(0x00FFFFFF)],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Orbiting particles
-                    ...List.generate(3, (i) => _orbParticle(i)),
-                  ],
-                ),
+                  );
+                },
+                child: _buildRobotMascot(),
               ),
             ),
           ),
@@ -359,25 +258,409 @@ class _AiChatWidgetState extends State<AiChatWidget>
     );
   }
 
-  Widget _orbParticle(int index) {
-    return AnimatedBuilder(
-      animation: _ringController,
-      builder: (_, __) {
-        final t = _ringController.value;
-        final angle = t * 2 * pi + [0.0, 2.094, 4.189][index];
-        final radius = [38.0, 42.0, 35.0][index];
-        final x = 32 + radius * cos(angle) - 2.5;
-        final y = 32 + radius * sin(angle) - 2.5;
-        return Positioned(
-          left: x,
-          top: y,
-          child: Container(
-            width: 5,
-            height: 5,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xCCC896FF),
+  Widget _buildHelpBubble() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, left: 16),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x18000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
+            child: const Text(
+              'Besoin d\'aide ?',
+              style: TextStyle(
+                color: Color(0xFF5B21B6),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -4,
+            child: Transform.rotate(
+              angle: 45 * pi / 180,
+              child: Container(
+                width: 9,
+                height: 9,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRobotMascot() {
+    return SizedBox(
+      width: 56,
+      height: 78,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Soft shadow behind
+          Positioned(
+            bottom: 4,
+            left: 10,
+            right: 10,
+            child: AnimatedBuilder(
+              animation: _floatController,
+              builder: (_, __) {
+                final lift = -_floatAnim.value / 4;
+                final opac = 0.18 - lift * 0.08;
+                final scale = 1.0 - lift * 0.25;
+                return Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: const Color(0xFF6D28D9).withAlpha(
+                          (opac * 255).round()),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Rocket glow
+          Positioned(
+            left: 17,
+            right: 17,
+            bottom: 10,
+            child: AnimatedBuilder(
+              animation: _pulseController,
+              builder: (_, __) {
+                final p = _pulseAnim.value;
+                return Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFF38BDF8), Color(0xFF6D28D9)],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF38BDF8)
+                            .withAlpha((40 * p).round()),
+                        blurRadius: 10 * p,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          // Left arm
+          Positioned(
+            left: 2,
+            top: 42,
+            child: Container(
+              width: 7,
+              height: 12,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x10000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Right arm
+          Positioned(
+            right: 2,
+            top: 42,
+            child: Container(
+              width: 7,
+              height: 12,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x10000000),
+                    blurRadius: 3,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Body
+          Positioned(
+            left: 8,
+            right: 8,
+            top: 34,
+            child: Container(
+              height: 22,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFCFCFF),
+                    Color(0xFFF5F3FF),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6D28D9).withAlpha(12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Left ear
+          Positioned(
+            left: -2,
+            top: 12,
+            child: Container(
+              width: 10,
+              height: 16,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6D28D9),
+                borderRadius: BorderRadius.circular(5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x306D28D9),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Right ear
+          Positioned(
+            right: -2,
+            top: 12,
+            child: Container(
+              width: 10,
+              height: 16,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6D28D9),
+                borderRadius: BorderRadius.circular(5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x306D28D9),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Antenna
+          Positioned(
+            top: -1,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 2,
+                    height: 8,
+                    color: const Color(0xFF6D28D9),
+                  ),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF6D28D9),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x556D28D9),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Head
+          Positioned(
+            left: 4,
+            right: 4,
+            top: 3,
+            child: _buildRobotHead(),
+          ),
+          // Close badge
+          if (_isOpen)
+            Positioned(
+              top: 5,
+              right: 6,
+              child: GestureDetector(
+                onTap: _togglePanel,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6D28D9),
+                    shape: BoxShape.circle,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x306D28D9),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text('\u2715',
+                        style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRobotHead() {
+    return Container(
+      height: 32,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFCFCFF),
+            Color(0xFFF8F6FF),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6D28D9).withAlpha(16),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Glossy shine
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
+              child: Container(
+                height: 16,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x40FFFFFF),
+                      Color(0x10FFFFFF),
+                      Color(0x00FFFFFF),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Face screen
+          Positioned(
+            left: 6,
+            right: 6,
+            top: 5,
+            bottom: 5,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF1F2937),
+                  width: 0.5,
+                ),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildEye(),
+                      const SizedBox(width: 12),
+                      _buildEye(),
+                    ],
+                  ),
+                  Positioned(
+                    bottom: 3,
+                    child: Container(
+                      width: 12,
+                      height: 2,
+                      decoration: BoxDecoration(
+                        color: _eyesClosed
+                            ? Colors.transparent
+                            : const Color(0xFF4ADE80),
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEye() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) {
+        final glow = _pulseAnim.value;
+        return Container(
+          width: 6,
+          height: _eyesClosed ? 1 : 6,
+          margin: EdgeInsets.only(top: _eyesClosed ? 9 : 0),
+          decoration: BoxDecoration(
+            shape: _eyesClosed ? BoxShape.rectangle : BoxShape.circle,
+            borderRadius: _eyesClosed ? BorderRadius.circular(0.5) : null,
+            gradient: const RadialGradient(
+              center: Alignment(0.3, -0.3),
+              colors: [Color(0xFF7DD3FC), Color(0xFF38BDF8)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF38BDF8).withAlpha((80 * glow).round()),
+                blurRadius: 5 * glow,
+              ),
+            ],
           ),
         );
       },
@@ -385,30 +668,32 @@ class _AiChatWidgetState extends State<AiChatWidget>
   }
 
   Widget _buildChatPanel(double width, double height) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
     return Positioned(
       right: 0,
-      bottom: 80,
+      bottom: 84 + bottomPadding,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutBack,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: const Color(0xFF0F0F1A),
-          borderRadius: BorderRadius.circular(20),
+          color: Colors.white.withAlpha(248),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: const Color(0xFFB464FF).withAlpha(50),
+            color: Colors.white.withAlpha(200),
+            width: 1.5,
           ),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: const Color(0xFF7800FF).withAlpha(25),
-              blurRadius: 40,
-              spreadRadius: 1,
+              color: Color(0x18000000),
+              blurRadius: 48,
+              offset: Offset(0, 12),
             ),
-            const BoxShadow(
-              color: Color(0x99000000),
-              blurRadius: 60,
-              offset: Offset(0, 20),
+            BoxShadow(
+              color: Color(0x0C000000),
+              blurRadius: 16,
+              offset: Offset(0, 4),
             ),
           ],
         ),
@@ -427,14 +712,14 @@ class _AiChatWidgetState extends State<AiChatWidget>
 
   Widget _buildPanelHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xCC6400C8), Color(0xE63C008C)],
+          colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Row(
         children: [
@@ -443,23 +728,11 @@ class _AiChatWidgetState extends State<AiChatWidget>
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const RadialGradient(
-                center: Alignment(0.3, -0.3),
-                colors: [
-                  Color(0x80FFFFFF),
-                  Color(0xCCA050FF),
-                  Color(0xFF5000A0),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFB464FF).withAlpha(100),
-                  blurRadius: 12,
-                ),
-              ],
+              color: const Color(0x1AFFFFFF),
             ),
             child: const Center(
-              child: Text('\u2726', style: TextStyle(fontSize: 16)),
+              child: Icon(Icons.smart_toy_outlined,
+                  color: Colors.white, size: 20),
             ),
           ),
           const SizedBox(width: 12),
@@ -494,7 +767,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                     ),
                     const SizedBox(width: 5),
                     const Text(
-                      'En ligne \u00B7 Respond instantanement',
+                      'En ligne',
                       style: TextStyle(
                         fontSize: 12,
                         color: Color(0xCCC8B4FF),
@@ -528,11 +801,12 @@ class _AiChatWidgetState extends State<AiChatWidget>
 
   Widget _buildMessagesArea() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      color: const Color(0xFFFAFAFA),
       child: _messages.isEmpty && !_isLoading
           ? const SizedBox.shrink()
           : ListView.builder(
               controller: _scrollController,
+              padding: const EdgeInsets.all(16),
               itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (_, i) {
                 if (_isLoading && i == _messages.length) {
@@ -560,30 +834,18 @@ class _AiChatWidgetState extends State<AiChatWidget>
               height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const RadialGradient(
-                  center: Alignment(0.3, -0.3),
-                  colors: [
-                    Color(0x66FFFFFF),
-                    Color(0xCC8C3CF0),
-                    Color(0xFF46008C),
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFB464FF).withAlpha(65),
-                    blurRadius: 8,
-                  ),
-                ],
+                color: const Color(0xFF7C3AED),
               ),
               child: const Center(
-                  child: Text('\u2726', style: TextStyle(fontSize: 12))),
+                  child: Icon(Icons.smart_toy_outlined,
+                      color: Colors.white, size: 16)),
             ),
             const SizedBox(width: 8),
             Flexible(
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0x12FFFFFF),
+                  color: const Color(0xFFF5F0FF),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(4),
                     topRight: Radius.circular(16),
@@ -591,7 +853,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                     bottomRight: Radius.circular(16),
                   ),
                   border: Border.all(
-                    color: const Color(0xFFB464FF).withAlpha(35),
+                    color: const Color(0xFFE8D8FF),
                   ),
                 ),
                 child: _buildRichText(msg.content),
@@ -645,7 +907,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
         spans.add(TextSpan(
           text: text.substring(lastEnd, match.start),
           style: const TextStyle(
-            color: Color(0xE6FFFFFF),
+            color: Color(0xFF2D2D3A),
             fontSize: 14,
             height: 1.5,
           ),
@@ -654,7 +916,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
       spans.add(TextSpan(
         text: match.group(1),
         style: const TextStyle(
-          color: Colors.white,
+          color: Color(0xFF1A1A2E),
           fontSize: 14,
           fontWeight: FontWeight.w700,
           height: 1.5,
@@ -667,7 +929,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
       spans.add(TextSpan(
         text: text.substring(lastEnd),
         style: const TextStyle(
-          color: Color(0xE6FFFFFF),
+          color: Color(0xFF2D2D3A),
           fontSize: 14,
           height: 1.5,
         ),
@@ -688,29 +950,17 @@ class _AiChatWidgetState extends State<AiChatWidget>
             height: 28,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const RadialGradient(
-                center: Alignment(0.3, -0.3),
-                colors: [
-                  Color(0x66FFFFFF),
-                  Color(0xCC8C3CF0),
-                  Color(0xFF46008C),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFB464FF).withAlpha(65),
-                  blurRadius: 8,
-                ),
-              ],
+              color: const Color(0xFF7C3AED),
             ),
             child: const Center(
-                child: Text('\u2726', style: TextStyle(fontSize: 12))),
+                child: Icon(Icons.smart_toy_outlined,
+                    color: Colors.white, size: 16)),
           ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0x12FFFFFF),
+              color: const Color(0xFFF5F0FF),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4),
                 topRight: Radius.circular(16),
@@ -718,7 +968,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                 bottomRight: Radius.circular(16),
               ),
               border: Border.all(
-                color: const Color(0xFFB464FF).withAlpha(35),
+                color: const Color(0xFFE8D8FF),
               ),
             ),
             child: _buildAnimatedDots(),
@@ -747,7 +997,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFB464FF).withAlpha(180),
+                    color: const Color(0xFF7C3AED).withAlpha(150),
                   ),
                 ),
               ),
@@ -776,17 +1026,17 @@ class _AiChatWidgetState extends State<AiChatWidget>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0x0FFFFFFF),
+                color: const Color(0xFFF5F0FF),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFFB464FF).withAlpha(50),
+                  color: const Color(0xFFE8D8FF),
                 ),
               ),
               child: Text(
                 c.$1,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xCCE6C8FF),
+                  color: Color(0xFF7C3AED),
                 ),
               ),
             ),
@@ -800,9 +1050,9 @@ class _AiChatWidgetState extends State<AiChatWidget>
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: const BoxDecoration(
-        color: Color(0x0AFFFFFF),
+        color: Color(0xFFFAFAFA),
         border: Border(
-          top: BorderSide(color: Color(0x26B464FF)),
+          top: BorderSide(color: Color(0xFFE8E8E8)),
         ),
       ),
       child: Row(
@@ -813,16 +1063,16 @@ class _AiChatWidgetState extends State<AiChatWidget>
               maxLength: 500,
               maxLines: 1,
               style: const TextStyle(
-                color: Colors.white,
+                color: Color(0xFF2D2D3A),
                 fontSize: 14,
               ),
               decoration: InputDecoration(
                 hintText: 'Posez votre question...',
                 hintStyle:
-                    const TextStyle(color: Color(0x4DFFFFFF)),
+                    const TextStyle(color: Color(0xFFB0B0B0)),
                 counterText: '',
                 filled: true,
-                fillColor: const Color(0x14FFFFFF),
+                fillColor: const Color(0xFFF5F5F5),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 border: OutlineInputBorder(
@@ -831,14 +1081,14 @@ class _AiChatWidgetState extends State<AiChatWidget>
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(
-                    color: const Color(0xFFB464FF).withAlpha(35),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFE0E0E0),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(
-                    color: const Color(0xFFB464FF).withAlpha(100),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF7C3AED),
                   ),
                 ),
               ),
@@ -846,39 +1096,47 @@ class _AiChatWidgetState extends State<AiChatWidget>
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _isLoading
-                ? null
-                : () => _sendMessage(_inputController.text),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x667C3AED),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _isLoading
+                    ? null
+                    : () => _sendMessage(_inputController.text),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x667C3AED),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Center(
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white70,
-                        ),
-                      )
-                    : const Text('\u27A4',
-                        style: TextStyle(
-                            fontSize: 16, color: Colors.white)),
+                  child: Center(
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white70,
+                            ),
+                          )
+                        : const Text('\u27A4',
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.white)),
+                  ),
+                ),
               ),
             ),
           ),
@@ -892,7 +1150,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: const BoxDecoration(
         border: Border(
-          top: BorderSide(color: Color(0x0DFFFFFF)),
+          top: BorderSide(color: Color(0xFFE8E8E8)),
         ),
       ),
       child: const Center(
@@ -900,7 +1158,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
           'Propuls\u00E9 par MakeWebsite.io AI',
           style: TextStyle(
             fontSize: 11,
-            color: Color(0x33FFFFFF),
+            color: Color(0xFFB0B0B0),
           ),
         ),
       ),

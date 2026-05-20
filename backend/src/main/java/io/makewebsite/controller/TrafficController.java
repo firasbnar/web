@@ -6,7 +6,9 @@ import io.makewebsite.service.TrafficService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -96,13 +98,12 @@ public class TrafficController {
     }
 
     @GetMapping("/{boutiqueId}/export")
-    public ResponseEntity<byte[]> exportCsv(@PathVariable UUID boutiqueId) {
+    public ResponseEntity<String> exportCsv(@PathVariable UUID boutiqueId) {
         String csv = trafficService.exportCsv(boutiqueId);
-        byte[] bytes = csv.getBytes();
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", "traffic_export.csv");
-        return ResponseEntity.ok().headers(headers).body(bytes);
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename("traffic_export.csv").build());
+        return new ResponseEntity<>(csv, headers, HttpStatus.OK);
     }
 
     @GetMapping("/{boutiqueId}/live")

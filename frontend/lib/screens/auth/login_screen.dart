@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/app_text_field.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -85,23 +86,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
                 Text('MakeWebsite', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
                 const SizedBox(height: 40),
-                TextFormField(
+                AppTextField(
                   controller: _emailCtrl,
+                  label: 'Email',
+                  prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
                   validator: (v) => v == null || v.isEmpty ? 'Email requis' : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AppTextField(
                   controller: _passwordCtrl,
+                  label: 'Mot de passe',
+                  prefixIcon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Mot de passe',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    ),
+                  suffix: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                   validator: (v) => v == null || v.isEmpty ? 'Mot de passe requis' : null,
                 ),
@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () => context.push('/forgot-password'),
                     child: Text('Mot de passe oublié?', style: AppTypography.body2.copyWith(color: AppColors.primary)),
                   ),
                 ),
@@ -148,9 +148,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           minimumSize: const Size(double.infinity, 50),
                         ),
                       ),
-                    ),
                   ),
+                ),
                   const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () => context.go('/register'),
+                    child: Text('Créer un compte', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 4),
                   TextButton(
                     onPressed: () => context.go('/verify-email'),
                     child: Text('Vérifier mon email', style: AppTypography.body2.copyWith(color: AppColors.primary)),

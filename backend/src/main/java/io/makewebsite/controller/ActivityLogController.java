@@ -7,7 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,10 +47,10 @@ public class ActivityLogController {
             @RequestParam(required = false) String endDate) {
         String csv = activityLogService.exportCsv(
                 boutiqueId, search, action, status, startDate, endDate);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=activites.csv")
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(csv);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename("activites.csv").build());
+        return new ResponseEntity<>(csv, headers, HttpStatus.OK);
     }
 
     @GetMapping("/presence")

@@ -7,6 +7,7 @@ import io.makewebsite.dto.request.UpdateStockRequest;
 import io.makewebsite.dto.response.ProductResponse;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ObjectMapper objectMapper;
     private final TenantAccessService tenantAccessService;
+    private final StoreStatusGuard storeStatusGuard;
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProducts(UUID boutiqueId, String search, UUID categoryId, Boolean isActive, Pageable pageable) {
@@ -48,6 +50,7 @@ public class ProductService {
     @Transactional
     public ProductResponse createProduct(CreateProductRequest request) {
         Boutique boutique = tenantAccessService.requireBoutiqueAccess(request.getBoutiqueId());
+        storeStatusGuard.requireActive(boutique);
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId()).orElse(null);
@@ -117,6 +120,9 @@ public class ProductService {
     @Transactional
     public ProductResponse toggleActive(UUID id) {
         Product product = findTenantProduct(id);
+        if (product.getBoutique() != null) {
+            storeStatusGuard.requireActive(product.getBoutique());
+        }
         product.setIsActive(!product.getIsActive());
         product = productRepository.save(product);
         return mapToResponse(product);
@@ -153,6 +159,26 @@ public class ProductService {
                 .seoDescription(p.getSeoDescription())
                 .createdAt(p.getCreatedAt())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public String exportCsv(UUID boutiqueId) {
+        Page<Product> products = productRepository.findByBoutiqueId(boutiqueId, Pageable.unpaged());
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append("Nom,SKU, Prix,Stock,Actif,Featured,Catégorie,Couleurs,Tailles,Créé le\n");
+        for (Product p : products) {
+            sb.append(CsvUtil.escapeCsv(p.getName())).append(",")
+              .append(CsvUtil.escapeCsv(p.getSku())).append(",")
+              .append(p.getPrice()).append(",")
+              .append(p.getStock()).append(",")
+              .append(p.getIsActive()).append(",")
+              .append(p.getIsFeatured()).append(",")
+              .append(CsvUtil.escapeCsv(p.getCategory() != null ? p.getCategory().getName() : "")).append(",")
+              .append(CsvUtil.escapeCsv(p.getColors())).append(",")
+              .append(CsvUtil.escapeCsv(p.getSizes())).append(",")
+              .append(p.getCreatedAt()).append("\n");
+        }
+        return sb.toString();
     }
 
     private Product findTenantProduct(UUID id) {

@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
+import '../../services/csv_export_service.dart';
 import '../../theme/app_colors.dart';
 import '../../providers/customers_provider.dart';
 import '../../providers/boutique_provider.dart';
@@ -66,10 +69,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final bp = context.read<BoutiqueProvider>();
     if (bp.activeBoutique == null) return;
     try {
-      await _api.get('/customers/export', queryParameters: {'boutiqueId': bp.activeBoutique!.id});
+      final response = await _api.dio.get('/customers/export',
+          queryParameters: {'boutiqueId': bp.activeBoutique!.id},
+          options: Options(responseType: ResponseType.bytes));
+      final csv = utf8.decode(response.data as List<int>);
+      CsvExportService.download(csv, 'clients.csv');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Export démarré')),
+          const SnackBar(content: Text('Export terminé'), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {

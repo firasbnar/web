@@ -12,4 +12,6 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
 
     List<Category> findByBoutiqueIdOrderBySortOrder(UUID boutiqueId);
     List<Category> findByBoutiqueIdOrderBySortOrderAsc(UUID boutiqueId);
+
+    long countByBoutiqueIdAndId(UUID boutiqueId, UUID id);
 }

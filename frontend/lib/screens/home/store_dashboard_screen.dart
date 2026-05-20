@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../providers/reviews_provider.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/section_header.dart';
 import '../../widgets/loading_skeleton.dart';
+import '../../widgets/empty_state.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/ai_chat_widget.dart';
 
@@ -102,6 +107,43 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Consumer<BoutiqueProvider>(
+                          builder: (_, bp, __) {
+                            if (bp.activeBoutique?.publicationStatus != 'FROZEN') return const SizedBox.shrink();
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 24),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Boutique gelée',
+                                          style: AppTypography.body2.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.orange.shade900)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Votre boutique est gelée. Vous pouvez consulter vos données, mais les ventes sont désactivées.',
+                                          style: AppTypography.caption.copyWith(color: Colors.orange.shade800)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        _buildPublicUrlCard(),
                         _buildStoreHeader(),
                         _buildStatsRow(),
                         const SizedBox(height: 16),
@@ -122,8 +164,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         ),
         // Floating AI chatbot
         Positioned(
-          bottom: 28,
-          right: 28,
+          bottom: (MediaQuery.of(context).size.width <= 480 ? 88 : 20) + MediaQuery.of(context).padding.bottom,
+          right: MediaQuery.of(context).size.width <= 480 ? 32 : 20,
           child: Consumer<BoutiqueProvider>(
             builder: (_, bp, __) {
               if (bp.activeBoutique == null) return const SizedBox.shrink();
@@ -135,6 +177,156 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPublicUrlCard() {
+    final bp = context.watch<BoutiqueProvider>();
+    final boutique = bp.activeBoutique;
+    if (boutique == null) return const SizedBox.shrink();
+    final url = boutique.publicUrl;
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    final absUrl = Uri.base.origin + url;
+    final pubStatus = boutique.publicationStatus ?? (boutique.isPublished ? 'PUBLISHED' : 'DRAFT');
+
+    Color statusColor;
+    String statusLabel;
+    IconData statusIcon;
+    switch (pubStatus) {
+      case 'FROZEN':
+        statusColor = Colors.lightBlue;
+        statusLabel = 'GELÉE';
+        statusIcon = Icons.ac_unit;
+      case 'SUSPENDED':
+        statusColor = AppColors.danger;
+        statusLabel = 'SUSPENDUE';
+        statusIcon = Icons.block;
+      case 'DRAFT':
+        statusColor = Colors.orange;
+        statusLabel = 'BROUILLON';
+        statusIcon = Icons.edit_note;
+      default:
+        statusColor = AppColors.success;
+        statusLabel = 'PUBLIÉE';
+        statusIcon = Icons.check_circle;
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.public, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Lien public de votre boutique', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withAlpha(25),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, size: 12, color: statusColor),
+                    const SizedBox(width: 4),
+                    Text(statusLabel, style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: absUrl));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('URL copiée !'), behavior: SnackBarBehavior.floating));
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(url, style: AppTypography.caption.copyWith(color: AppColors.primary)),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.copy, size: 16, color: AppColors.textHint),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (pubStatus == 'DRAFT')
+                _smallBtn(Icons.publish, 'Publier', AppColors.primary, () async {
+                  final ok = await context.read<BoutiqueProvider>().publishBoutique();
+                  if (mounted && ok) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Boutique publiée !'), behavior: SnackBarBehavior.floating));
+                  }
+                })
+              else if (pubStatus == 'PUBLISHED')
+                _smallBtn(Icons.unpublished, 'Dépublier', Colors.orange, () async {
+                  final ok = await context.read<BoutiqueProvider>().unpublishBoutique();
+                  if (mounted && ok) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Boutique dépubliée'), behavior: SnackBarBehavior.floating));
+                  }
+                }),
+              const SizedBox(width: 8),
+              _smallBtn(Icons.open_in_new, 'Ouvrir', AppColors.primary, () async {
+                await launchUrl(Uri.parse(absUrl), mode: LaunchMode.externalApplication);
+              }),
+              const SizedBox(width: 8),
+              _smallBtn(Icons.share, 'Partager', AppColors.primary, () {
+                Clipboard.setData(ClipboardData(text: absUrl));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Lien copié: $absUrl'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _smallBtn(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withAlpha(15),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: color.withAlpha(60)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -168,8 +360,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               children: [
                 Text(boutique?.name ?? '', style: AppTypography.heading2),
                 const SizedBox(height: 2),
-                Text('${boutique?.slug ?? ''}.makewebsite.io',
-                    style: AppTypography.caption.copyWith(color: AppColors.textHint)),
+                Text('/store/${boutique?.slug ?? ''}',
+                    style: AppTypography.caption.copyWith(color: AppColors.primary)),
                 const SizedBox(height: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -240,7 +432,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         children: [
           _actionChip(Icons.open_in_new, 'Voir la boutique', true, () {
             final b = bp.activeBoutique;
-            if (b != null) context.push('/store/${b.id}', extra: {'name': b.name, 'slug': b.slug});
+            if (b != null) context.push('/catalog/${b.id}', extra: {'name': b.name, 'slug': b.slug});
           }),
           const SizedBox(width: 8),
           _actionChip(Icons.settings, 'Paramètres', false, () => context.go('/boutique-settings')),
@@ -425,49 +617,29 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Commandes récentes', style: AppTypography.heading3),
-                  TextButton(
-                    onPressed: () => context.go('/orders'),
-                    child: const Text('Voir tout', style: TextStyle(color: AppColors.primary)),
-                  ),
-                ],
+              SectionHeader(
+                title: 'Commandes récentes',
+                actionLabel: 'Voir tout',
+                onAction: () => context.go('/orders'),
               ),
               const SizedBox(height: 8),
               if (op.loading)
                 const LoadingSkeleton(itemCount: 3)
-              else if (op.orders.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.receipt_long_outlined, size: 40, color: AppColors.textHint.withAlpha(80)),
-                        const SizedBox(height: 8),
-                        Text('Aucune commande', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
-                      ],
-                    ),
+              else               if (op.orders.isEmpty)
+                const AppCard(
+                  padding: EdgeInsets.zero,
+                  child: EmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Aucune commande',
+                    subtitle: 'Les commandes apparaîtront ici',
                   ),
                 )
               else
-                ...op.orders.take(5).map((order) => GestureDetector(
-                  onTap: () => context.go('/orders/${order.id}'),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                ...op.orders.take(5).map((order) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
+                    onTap: () => context.go('/orders/${order.id}'),
                     child: Row(
                       children: [
                         Expanded(
@@ -502,13 +674,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.danger),
-              const SizedBox(width: 6),
-              Text('Stock faible', style: AppTypography.heading3),
-            ],
-          ),
+          SectionHeader(title: 'Stock faible'),
           const SizedBox(height: 8),
           SizedBox(
             height: 100,

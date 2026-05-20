@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:web/web.dart' as web;
+import 'package:dio/dio.dart';
 import '../core/api_client.dart';
+import '../services/csv_export_service.dart';
 import '../models/traffic_stats.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -68,15 +69,14 @@ class _VisitTableState extends State<VisitTable> {
   Future<void> _exportCsv() async {
     if (widget.boutiqueId == null) return;
     try {
-      final url = '${ApiClient.baseUrl}/traffic/${widget.boutiqueId}/export';
-      if (kIsWeb) {
-        web.window.open(url, '_blank');
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Export lancé: $url')),
-          );
-        }
+      final response = await ApiClient().dio.get('/traffic/${widget.boutiqueId}/export',
+          options: Options(responseType: ResponseType.bytes));
+      final csv = utf8.decode(response.data as List<int>);
+      CsvExportService.download(csv, 'traffic_export.csv');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Export terminé')),
+        );
       }
     } catch (e) {
       if (mounted) {

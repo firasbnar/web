@@ -133,7 +133,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
               color: Colors.white,
               border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
             ),
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
             child: SafeArea(
               top: false,
               child: Row(

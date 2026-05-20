@@ -74,13 +74,16 @@ class ProductCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       if (onToggleActive != null)
-                        GestureDetector(
-                          onTap: onToggleActive,
-                          child: Icon(
+                        IconButton(
+                          onPressed: onToggleActive,
+                          icon: Icon(
                             product.isActive ? Icons.visibility : Icons.visibility_off,
                             size: 18,
                             color: product.isActive ? AppColors.primary : AppColors.textHint,
                           ),
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          padding: EdgeInsets.zero,
+                          splashRadius: 18,
                         ),
                     ],
                   ),

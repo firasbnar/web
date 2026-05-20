@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
+import '../../core/api_client.dart';
+import '../../services/csv_export_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/loading_skeleton.dart';
@@ -28,6 +32,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       if (bp.activeBoutique == null && bp.boutiques.isEmpty) {
         await bp.loadBoutiques();
       }
+      if (!mounted) return;
       if (bp.activeBoutique != null) {
         context.read<ProductsProvider>().loadProducts(bp.activeBoutique!.id, refresh: true);
         context.read<ProductsProvider>().loadCategories(bp.activeBoutique!.id);
@@ -67,6 +72,32 @@ class _ProductsScreenState extends State<ProductsScreen> {
             onPressed: () => context.push('/products/bulk-add'),
           ),
           IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Exporter CSV',
+            onPressed: () async {
+              final bp = context.read<BoutiqueProvider>();
+              if (bp.activeBoutique == null) return;
+              try {
+                final response = await ApiClient().dio.get('/products/export',
+                    queryParameters: {'boutiqueId': bp.activeBoutique!.id},
+                    options: Options(responseType: ResponseType.bytes));
+                final csv = utf8.decode(response.data as List<int>);
+                CsvExportService.download(csv, 'produits.csv');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Export terminé'), backgroundColor: AppColors.success),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
+                  );
+                }
+              }
+            },
+          ),
         ],
       ),
       body: LayoutBuilder(

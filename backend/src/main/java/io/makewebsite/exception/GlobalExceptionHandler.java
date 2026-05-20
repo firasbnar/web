@@ -45,6 +45,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(e.getMessage()));
     }
 
+    @ExceptionHandler(StoreFrozenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStoreFrozen(StoreFrozenException e) {
+        log.warn("Store frozen: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.LOCKED)
+                .body(ApiResponse.error(e.getMessage()));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException e) {
         log.warn("Access denied: {}", e.getMessage());

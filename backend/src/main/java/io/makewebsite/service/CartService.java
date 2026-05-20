@@ -23,6 +23,7 @@ public class CartService {
     private final UserRepository userRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final ProductRepository productRepository;
+    private final StoreStatusGuard storeStatusGuard;
 
     @Transactional(readOnly = true)
     public CartResponse getCart(UUID userId, UUID boutiqueId) {
@@ -43,6 +44,7 @@ public class CartService {
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         Boutique boutique = boutiqueRepository.findById(request.getBoutiqueId())
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        storeStatusGuard.requireActive(boutique);
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
 

@@ -104,6 +104,34 @@ class BoutiqueProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> publishBoutique() async {
+    if (_activeBoutique == null) return false;
+    try {
+      final res = await _api.put('/boutiques/${_activeBoutique!.id}/publish');
+      _activeBoutique = Boutique.fromJson(res['data']);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> unpublishBoutique() async {
+    if (_activeBoutique == null) return false;
+    try {
+      final res = await _api.put('/boutiques/${_activeBoutique!.id}/unpublish');
+      _activeBoutique = Boutique.fromJson(res['data']);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> updateTheme(Map<String, dynamic> data) async {
     if (_activeBoutique == null) return false;
     try {

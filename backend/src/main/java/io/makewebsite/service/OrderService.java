@@ -4,6 +4,7 @@ import io.makewebsite.dto.request.*;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +36,7 @@ public class OrderService {
     private final TelegramService telegramService;
     private final InvoiceService invoiceService;
     private final CaisseService caisseService;
+    private final StoreStatusGuard storeStatusGuard;
 
     @Transactional(readOnly = true)
     public Page<OrderResponse> getOrders(UUID boutiqueId, String status, String search,
@@ -94,6 +96,7 @@ public class OrderService {
     public OrderResponse createOrder(CreateOrderRequest request, UUID userId) {
         Boutique boutique = boutiqueRepository.findById(request.getBoutiqueId())
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        storeStatusGuard.requireActive(boutique);
 
         User user = userId != null ? userRepository.findById(userId).orElse(null) : null;
 
@@ -255,13 +258,14 @@ public class OrderService {
     @Transactional(readOnly = true)
     public String exportCsv(UUID boutiqueId) {
         List<Order> orders = orderRepository.findByBoutiqueId(boutiqueId, Pageable.unpaged()).getContent();
-        StringBuilder sb = new StringBuilder("Numéro,Client,Total,Statut,Paiement,Date\n");
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append("Numéro,Client,Total,Statut,Paiement,Date\n");
         for (Order o : orders) {
-            sb.append(o.getOrderNumber()).append(",")
-                    .append(o.getCustomer() != null ? o.getCustomer().getFullName() : "").append(",")
+            sb.append(CsvUtil.escapeCsv(o.getOrderNumber())).append(",")
+                    .append(CsvUtil.escapeCsv(o.getCustomer() != null ? o.getCustomer().getFullName() : "")).append(",")
                     .append(o.getTotal()).append(",")
-                    .append(o.getStatus()).append(",")
-                    .append(o.getPaymentStatus()).append(",")
+                    .append(CsvUtil.escapeCsv(o.getStatus())).append(",")
+                    .append(CsvUtil.escapeCsv(o.getPaymentStatus())).append(",")
                     .append(o.getCreatedAt()).append("\n");
         }
         return sb.toString();

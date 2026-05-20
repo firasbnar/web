@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
+import 'app_button.dart';
 
 class ErrorState extends StatelessWidget {
   final String message;
@@ -22,7 +23,7 @@ class ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 80, color: AppColors.danger),
+            const Icon(Icons.error_outline, size: 72, color: AppColors.danger),
             const SizedBox(height: 20),
             Text('Une erreur est survenue', style: AppTypography.heading3, textAlign: TextAlign.center),
             const SizedBox(height: 8),
@@ -45,16 +46,7 @@ class ErrorState extends StatelessWidget {
             ],
             if (onRetry != null) ...[
               const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Réessayer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                ),
-              ),
+              AppButton(label: 'Réessayer', onPressed: onRetry, icon: Icons.refresh),
             ],
           ],
         ),

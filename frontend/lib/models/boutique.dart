@@ -74,6 +74,14 @@ class Boutique {
   final String? telegramChatId;
   final bool telegramEnabled;
 
+  final String? storeStatus;
+  final String? publicationStatus;
+  final String? frozenAt;
+  final String? freezeReason;
+  final bool isPublished;
+  final String? publishedAt;
+  final String? publicUrl;
+
   Boutique({
     required this.id,
     required this.name,
@@ -145,6 +153,13 @@ class Boutique {
     this.enableOrderAlerts = true,
     this.telegramChatId,
     this.telegramEnabled = false,
+    this.storeStatus,
+    this.publicationStatus,
+    this.frozenAt,
+    this.freezeReason,
+    this.isPublished = false,
+    this.publishedAt,
+    this.publicUrl,
   });
 
   factory Boutique.fromJson(Map<String, dynamic> json) => Boutique(
@@ -218,6 +233,13 @@ class Boutique {
     enableOrderAlerts: json['enableOrderAlerts'] ?? true,
     telegramChatId: json['telegramChatId'],
     telegramEnabled: json['telegramEnabled'] ?? false,
+    storeStatus: json['storeStatus'],
+    publicationStatus: json['publicationStatus'],
+    frozenAt: json['frozenAt'],
+    freezeReason: json['freezeReason'],
+    isPublished: json['isPublished'] ?? false,
+    publishedAt: json['publishedAt'],
+    publicUrl: json['publicUrl'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -290,6 +312,13 @@ class Boutique {
     'enableOrderAlerts': enableOrderAlerts,
     'telegramChatId': telegramChatId,
     'telegramEnabled': telegramEnabled,
+    'storeStatus': storeStatus,
+    'publicationStatus': publicationStatus,
+    'frozenAt': frozenAt,
+    'freezeReason': freezeReason,
+    'isPublished': isPublished,
+    'publishedAt': publishedAt,
+    'publicUrl': publicUrl,
   };
 }
 

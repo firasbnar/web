@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -75,5 +75,14 @@ public class ProductController {
     @PutMapping("/{id}/stock")
     public ResponseEntity<ApiResponse<ProductResponse>> updateStock(@PathVariable UUID id, @Valid @RequestBody UpdateStockRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("Stock mis à jour", productService.updateStock(id, request)));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<String> exportCsv(@RequestParam UUID boutiqueId) {
+        String csv = productService.exportCsv(boutiqueId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename("produits.csv").build());
+        return new ResponseEntity<>(csv, headers, HttpStatus.OK);
     }
 }

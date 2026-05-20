@@ -37,11 +37,13 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UserRepository userRepository;
     private final VisitorTrackingFilter visitorTrackingFilter;
+    private final StoreSlugFilter storeSlugFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, UserRepository userRepository, VisitorTrackingFilter visitorTrackingFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, UserRepository userRepository, VisitorTrackingFilter visitorTrackingFilter, StoreSlugFilter storeSlugFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userRepository = userRepository;
         this.visitorTrackingFilter = visitorTrackingFilter;
+        this.storeSlugFilter = storeSlugFilter;
     }
 
     @Bean
@@ -64,6 +66,8 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
+                // === CORS preflight: always allow ===
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // === PUBLIC: no authentication required ===
                 .requestMatchers(
                     // SPA root — serve Flutter web app without auth
@@ -106,6 +110,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/orders/*/invoice").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/boutiques/*/orders/*/invoice/print").permitAll()
                 // === AUTHENTICATED: role-restricted ===
+                .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                 .requestMatchers("/api/boutiques/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
                 .requestMatchers("/api/stores/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
@@ -114,18 +119,38 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(storeSlugFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(visitorTrackingFilter, UsernamePasswordAuthenticationFilter.class)
-             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Arrays.asList("*"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("*"));
+        config.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "https://*.ngrok-free.dev",
+            "https://scraggly-unmasked-glutinous.ngrok-free.dev"
+        ));
+        config.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+        config.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "Origin",
+            "X-Requested-With",
+            "ngrok-skip-browser-warning"
+        ));
+        config.setExposedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Disposition"
+        ));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

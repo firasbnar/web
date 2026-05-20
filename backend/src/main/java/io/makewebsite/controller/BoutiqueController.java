@@ -82,4 +82,20 @@ public class BoutiqueController {
         BoutiqueResponse response = boutiqueService.updateTelegramSettings(id, request, principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok("Paramètres Telegram mis à jour", response));
     }
+
+    @PutMapping("/{id}/publish")
+    public ResponseEntity<ApiResponse<BoutiqueResponse>> publishBoutique(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        BoutiqueResponse response = boutiqueService.publishBoutique(id, principal.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok("Boutique publiée", response));
+    }
+
+    @PutMapping("/{id}/unpublish")
+    public ResponseEntity<ApiResponse<BoutiqueResponse>> unpublishBoutique(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        BoutiqueResponse response = boutiqueService.unpublishBoutique(id, principal.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok("Boutique dépubliée", response));
+    }
 }

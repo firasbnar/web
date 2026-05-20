@@ -1,7 +1,7 @@
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../providers/cart_provider.dart';
 import '../../theme/app_colors.dart';
@@ -93,7 +93,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } catch (e) {
       _couponMsg = ApiClient.extractErrorMessage(e);
     }
-    setState(() => _couponLoading = false);
+    if (mounted) setState(() => _couponLoading = false);
   }
 
   Future<void> _placeOrder() async {
@@ -158,8 +158,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final sessionUrl = stripeRes['data']?['sessionUrl']?.toString();
         if (sessionUrl != null && sessionUrl.isNotEmpty) {
           await cart.clearCart(widget.boutiqueId);
-          // ignore: avoid_web_libraries_in_flutter
-          html.window.location.href = sessionUrl;
+          await launchUrl(Uri.parse(sessionUrl), mode: LaunchMode.externalApplication);
           return;
         }
         throw Exception('Échec de création de la session de paiement');
@@ -300,7 +299,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Text('Numéro de commande: $_orderNumber', style: AppTypography.body2),
                   const SizedBox(height: 24),
                   AppButton(label: 'Retour à la boutique', onPressed: () {
-                    if (mounted) context.go('/store/${widget.boutiqueId}');
+                    if (mounted) context.go('/catalog/${widget.boutiqueId}');
                   }),
                 ],
               )
@@ -339,7 +338,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Text('Numéro de commande: $_orderNumber', style: AppTypography.body2),
             const SizedBox(height: 24),
             AppButton(label: 'Retour à la boutique', onPressed: () {
-              if (mounted) context.go('/store/${widget.boutiqueId}');
+              if (mounted) context.go('/catalog/${widget.boutiqueId}');
             }),
           ],
         ),

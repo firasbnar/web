@@ -32,6 +32,22 @@ public class StorefrontController {
         Boutique boutique = lookupBoutique(identifier);
         if (boutique == null) return ResponseEntity.notFound().build();
 
+        // Unpublished/DRAFT stores – show placeholder
+        if (Boolean.FALSE.equals(boutique.getIsPublished())) {
+            String placeholder = "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\">" +
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">" +
+                "<title>" + esc(boutique.getName()) + "</title>" +
+                "<style>body{font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f9f9f9;color:#333}" +
+                ".card{text-align:center;padding:48px;max-width:420px}.card h1{font-size:1.5rem;margin-bottom:8px}.card p{color:#666;line-height:1.6}" +
+                "</style></head><body><div class=\"card\">" +
+                "<h1>" + esc(boutique.getName()) + "</h1>" +
+                "<p>Cette boutique est en cours de configuration et sera bientôt disponible.</p>" +
+                "</div></body></html>";
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
+                    .body(placeholder);
+        }
+
         String html = storeGeneratorService.loadHtml(boutique.getSlug());
         if (html == null) {
             storeGeneratorService.regenerate(boutique.getId());
@@ -45,6 +61,12 @@ public class StorefrontController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
                 .body(html);
+    }
+
+    private String esc(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private Boutique lookupBoutique(String identifier) {

@@ -182,17 +182,21 @@ public class AuthService {
         user.setVerificationToken(null);
         user.setVerificationTokenExpiry(null);
 
-        // Generate temporary password, hash it, and send credentials email
-        String tempPassword = generateTemporaryPassword();
-        user.setPasswordHash(passwordEncoder.encode(tempPassword));
-        user.setMustChangePassword(true);
-        userRepository.save(user);
+        // Invited users (mustChangePassword=true) need a temp password + credentials email.
+        // Normal signup users keep the password they registered with.
+        if (Boolean.TRUE.equals(user.getMustChangePassword())) {
+            String tempPassword = generateTemporaryPassword();
+            user.setPasswordHash(passwordEncoder.encode(tempPassword));
+            userRepository.save(user);
 
-        try {
-            emailService.sendCredentialsEmail(user.getEmail(), tempPassword);
-            log.info("Credentials email sent for user {}", user.getId());
-        } catch (Exception e) {
-            log.warn("Failed to send credentials email for user {}: {}", user.getId(), e.getMessage());
+            try {
+                emailService.sendCredentialsEmail(user.getEmail(), tempPassword);
+                log.info("Credentials email sent for user {}", user.getId());
+            } catch (Exception e) {
+                log.warn("Failed to send credentials email for user {}: {}", user.getId(), e.getMessage());
+            }
+        } else {
+            userRepository.save(user);
         }
     }
 

@@ -23,6 +23,7 @@ public class PosService {
     private final OrderService orderService;
     private final UserRepository userRepository;
     private final CaisseService caisseService;
+    private final StoreStatusGuard storeStatusGuard;
 
     @Transactional
     public PosSessionResponse openSession(OpenPosSessionRequest request, UUID userId) {
@@ -31,6 +32,7 @@ public class PosService {
 
         Boutique boutique = boutiqueRepository.findById(request.getBoutiqueId())
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        storeStatusGuard.requireActive(boutique);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
@@ -89,6 +91,8 @@ public class PosService {
     public PosTransactionResponse createTransaction(CreatePosTransactionRequest request) {
         PosSession session = posSessionRepository.findById(request.getSessionId())
                 .orElseThrow(() -> new RuntimeException("Session non trouvée"));
+
+        storeStatusGuard.requireActive(session.getBoutique());
 
         CreateOrderRequest orderReq = CreateOrderRequest.builder()
                 .boutiqueId(session.getBoutique().getId())

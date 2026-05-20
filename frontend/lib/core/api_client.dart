@@ -212,11 +212,11 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> post(String path,
-      {dynamic data, Map<String, dynamic>? queryParameters}) async {
+      {dynamic data, Map<String, dynamic>? queryParameters, Options? options}) async {
     _guardPath(path);
     _validateRequestData('POST', path, data);
     final response =
-        await _dio.post(path, data: data, queryParameters: queryParameters);
+        await _dio.post(path, data: data, queryParameters: queryParameters, options: options);
     return response.data as Map<String, dynamic>;
   }
 
@@ -244,6 +244,23 @@ class ApiClient {
     // Backend expects: @RequestParam("file") MultipartFile file
     final response = await _dio.post(path, data: formData);
     return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final fullUrl = '$baseUrl/auth/forgot-password';
+    // ignore: avoid_print
+    print('[ForgotPassword] URL=$fullUrl timeout: connect=15s receive=30s');
+    return post('/auth/forgot-password',
+        data: {'email': email},
+        options: Options(receiveTimeout: const Duration(seconds: 30)));
+  }
+
+  Future<Map<String, dynamic>> resetPassword(String token, String newPassword, String confirmPassword) async {
+    return post('/auth/reset-password', data: {
+      'token': token,
+      'newPassword': newPassword,
+      'confirmPassword': confirmPassword,
+    });
   }
 
   static Future<String> uploadImage(XFile image) async {

@@ -15,12 +15,25 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class BoutiqueService {
+
+    private static final Set<String> RESERVED_SLUGS = Set.of(
+        "login", "register", "signup", "error", "api", "store", "stores",
+        "checkout", "flutter", "assets", "uploads", "ws", "favicon",
+        "admin", "super-admin", "superadmin", "dashboard", "plans",
+        "home", "settings", "profile", "notifications", "messages",
+        "orders", "products", "categories", "customers", "team",
+        "analytics", "traffic", "pos", "reviews", "coupons",
+        "delivery", "subscription", "billing", "payment",
+        "index", "health", "status", "about", "contact",
+        "privacy", "terms", "legal", "help", "support"
+    );
     private final BoutiqueRepository boutiqueRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
@@ -60,11 +73,29 @@ public class BoutiqueService {
             user.setTenant(tenant);
             userRepository.save(user);
         }
+
+        // Auto-generate slug from name if not provided
+        String slug = request.getSlug();
+        if (slug == null || slug.isBlank()) {
+            slug = generateSlug(request.getName());
+        } else {
+            slug = slug.toLowerCase().trim().replaceAll("\\s+", "-").replaceAll("[^a-z0-9-]", "");
+        }
+        if (slug.isEmpty()) throw new RuntimeException("Impossible de générer un slug valide");
+        if (RESERVED_SLUGS.contains(slug)) throw new RuntimeException("Ce slug est réservé et ne peut pas être utilisé");
+
+        // Ensure uniqueness
+        String finalSlug = slug;
+        int counter = 1;
+        while (boutiqueRepository.existsBySlug(finalSlug)) {
+            finalSlug = slug + "-" + (++counter);
+        }
+
         Boutique boutique = Boutique.builder()
                 .user(user)
                 .tenant(tenant)
                 .name(request.getName())
-                .slug(request.getSlug())
+                .slug(finalSlug)
                 .description(request.getDescription())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "TND")
                 .language(request.getLanguage() != null ? request.getLanguage() : "fr")
@@ -73,6 +104,14 @@ public class BoutiqueService {
                 .build();
         boutique = boutiqueRepository.save(boutique);
         return mapToResponse(boutique);
+    }
+
+    private String generateSlug(String name) {
+        return name.toLowerCase().trim()
+                .replaceAll("\\s+", "-")
+                .replaceAll("[^a-z0-9-]", "")
+                .replaceAll("-{2,}", "-")
+                .replaceAll("^-|-$", "");
     }
 
     @Transactional
@@ -88,6 +127,35 @@ public class BoutiqueService {
         if (request.getLanguage() != null) boutique.setLanguage(request.getLanguage());
         if (request.getTimezone() != null) boutique.setTimezone(request.getTimezone());
         if (request.getCustomDomain() != null) boutique.setCustomDomain(request.getCustomDomain());
+        if (request.getSlug() != null) {
+            String newSlug = request.getSlug().toLowerCase().trim().replaceAll("\\s+", "-").replaceAll("[^a-z0-9-]", "");
+            if (newSlug.isEmpty()) throw new RuntimeException("Le slug ne peut pas être vide");
+            if (RESERVED_SLUGS.contains(newSlug)) throw new RuntimeException("Ce slug est réservé");
+            if (!newSlug.equals(boutique.getSlug()) && boutiqueRepository.existsBySlug(newSlug)) {
+                throw new RuntimeException("Ce slug est déjà utilisé par une autre boutique");
+            }
+            boutique.setSlug(newSlug);
+        }
+        boutique = boutiqueRepository.save(boutique);
+        return mapToResponse(boutique);
+    }
+
+    @Transactional
+    public BoutiqueResponse publishBoutique(UUID id, UUID userId) {
+        Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
+                .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        boutique.setIsPublished(true);
+        boutique.setPublishedAt(LocalDateTime.now());
+        boutique = boutiqueRepository.save(boutique);
+        return mapToResponse(boutique);
+    }
+
+    @Transactional
+    public BoutiqueResponse unpublishBoutique(UUID id, UUID userId) {
+        Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
+                .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        boutique.setIsPublished(false);
+        boutique.setPublishedAt(null);
         boutique = boutiqueRepository.save(boutique);
         return mapToResponse(boutique);
     }
@@ -292,6 +360,12 @@ public class BoutiqueService {
     }
 
     private BoutiqueResponse mapToResponse(Boutique b) {
+        String publicUrl = "/store/" + b.getSlug();
+        String publicationStatus;
+        if ("FROZEN".equals(b.getStoreStatus())) publicationStatus = "FROZEN";
+        else if ("SUSPENDED".equals(b.getStoreStatus())) publicationStatus = "SUSPENDED";
+        else if (Boolean.FALSE.equals(b.getIsPublished())) publicationStatus = "DRAFT";
+        else publicationStatus = "PUBLISHED";
         return BoutiqueResponse.builder()
                 .id(b.getId()).name(b.getName()).slug(b.getSlug())
                 .logoUrl(b.getLogoUrl()).description(b.getDescription())
@@ -330,6 +404,13 @@ public class BoutiqueService {
                 .teamEnabled(b.getTeamEnabled()).clientMessagingEnabled(b.getClientMessagingEnabled())
                 .telegramChatId(b.getUser().getTelegramChatId())
                 .telegramEnabled(b.getUser().getTelegramEnabled())
+                .storeStatus(b.getStoreStatus())
+                .publicationStatus(publicationStatus)
+                .frozenAt(b.getFrozenAt() != null ? b.getFrozenAt().toString() : null)
+                .freezeReason(b.getFreezeReason())
+                .isPublished(b.getIsPublished())
+                .publishedAt(b.getPublishedAt() != null ? b.getPublishedAt().toString() : null)
+                .publicUrl(publicUrl)
                 .createdAt(b.getCreatedAt())
                 .build();
     }

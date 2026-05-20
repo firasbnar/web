@@ -3,6 +3,7 @@ package io.makewebsite.service;
 import io.makewebsite.dto.response.ActivityLogResponse;
 import io.makewebsite.entity.ActivityLog;
 import io.makewebsite.repository.ActivityLogRepository;
+import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -105,27 +106,20 @@ public class ActivityLogService {
 
     @Transactional(readOnly = true)
     public String exportCsv(UUID boutiqueId, String search, String action,
-                            String status, String startDate, String endDate) {
+                             String status, String startDate, String endDate) {
         Page<ActivityLogResponse> page = getActivities(boutiqueId, search, action, status, startDate, endDate, Pageable.unpaged());
-        StringBuilder sb = new StringBuilder("Utilisateur,Action,Statut,IP,Appareil,Détails,Date\n");
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append("Utilisateur,Action,Statut,IP,Appareil,Détails,Date\n");
         for (ActivityLogResponse a : page.getContent()) {
-            sb.append(escapeCsv(a.getUserName())).append(",")
-              .append(escapeCsv(a.getAction())).append(",")
-              .append(escapeCsv(a.getStatus())).append(",")
-              .append(escapeCsv(a.getIpAddress())).append(",")
-              .append(escapeCsv(a.getDeviceInfo())).append(",")
-              .append(escapeCsv(a.getDetails())).append(",")
+            sb.append(CsvUtil.escapeCsv(a.getUserName())).append(",")
+              .append(CsvUtil.escapeCsv(a.getAction())).append(",")
+              .append(CsvUtil.escapeCsv(a.getStatus())).append(",")
+              .append(CsvUtil.escapeCsv(a.getIpAddress())).append(",")
+              .append(CsvUtil.escapeCsv(a.getDeviceInfo())).append(",")
+              .append(CsvUtil.escapeCsv(a.getDetails())).append(",")
               .append(a.getCreatedAt()).append("\n");
         }
         return sb.toString();
-    }
-
-    private String escapeCsv(String value) {
-        if (value == null) return "";
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
     }
 
     public ActivityLogResponse mapToResponse(ActivityLog log) {

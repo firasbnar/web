@@ -4,6 +4,7 @@ import io.makewebsite.dto.request.CreateCustomerRequest;
 import io.makewebsite.dto.response.CustomerResponse;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -129,32 +130,25 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public String exportCsv(UUID boutiqueId) {
         Page<Customer> customers = customerRepository.findByBoutiqueId(boutiqueId, Pageable.unpaged());
-        StringBuilder sb = new StringBuilder(
+        StringBuilder sb = new StringBuilder("\uFEFF");
+        sb.append(
             "Nom,Email,T\u00e9l\u00e9phone,Adresse,Ville,Gouvernorat,Code Postal,Pays,Commandes,Total D\u00e9pens\u00e9,Derni\u00e8re Commande,Date Cr\u00e9ation\n"
         );
         for (Customer c : customers) {
-            sb.append(escapeCsv(c.getFullName())).append(",")
-              .append(escapeCsv(c.getEmail())).append(",")
-              .append(escapeCsv(c.getPhone())).append(",")
-              .append(escapeCsv(c.getAddress())).append(",")
-              .append(escapeCsv(c.getCity())).append(",")
-              .append(escapeCsv(c.getGovernorate())).append(",")
-              .append(escapeCsv(c.getPostalCode())).append(",")
-              .append(escapeCsv(c.getCountry())).append(",")
+            sb.append(CsvUtil.escapeCsv(c.getFullName())).append(",")
+              .append(CsvUtil.escapeCsv(c.getEmail())).append(",")
+              .append(CsvUtil.escapeCsv(c.getPhone())).append(",")
+              .append(CsvUtil.escapeCsv(c.getAddress())).append(",")
+              .append(CsvUtil.escapeCsv(c.getCity())).append(",")
+              .append(CsvUtil.escapeCsv(c.getGovernorate())).append(",")
+              .append(CsvUtil.escapeCsv(c.getPostalCode())).append(",")
+              .append(CsvUtil.escapeCsv(c.getCountry())).append(",")
               .append(c.getTotalOrders()).append(",")
               .append(c.getTotalSpent() != null ? c.getTotalSpent() : "0").append(",")
               .append(c.getLastOrderDate() != null ? c.getLastOrderDate().toString() : "").append(",")
               .append(c.getCreatedAt() != null ? c.getCreatedAt().toString() : "").append("\n");
         }
         return sb.toString();
-    }
-
-    private String escapeCsv(String value) {
-        if (value == null) return "";
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
     }
 
     private CustomerResponse mapToResponse(Customer c) {

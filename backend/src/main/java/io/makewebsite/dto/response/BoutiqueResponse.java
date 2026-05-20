@@ -85,5 +85,12 @@ public class BoutiqueResponse {
     private Boolean clientMessagingEnabled;
     private String telegramChatId;
     private Boolean telegramEnabled;
+    private String storeStatus;
+    private String publicationStatus;
+    private String frozenAt;
+    private String freezeReason;
+    private Boolean isPublished;
+    private String publishedAt;
+    private String publicUrl;
     private LocalDateTime createdAt;
 }

@@ -117,7 +117,7 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
     TrafficTracker.trackStoreVisit(
       boutiqueId: widget.boutiqueId,
       slug: widget.boutiqueSlug ?? widget.boutiqueId,
-      route: '/store/${widget.boutiqueId}',
+      route: '/catalog/${widget.boutiqueId}',
     );
     _loadData();
   }
