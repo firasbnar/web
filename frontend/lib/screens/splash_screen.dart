@@ -1,6 +1,7 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../core/storage.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -14,23 +15,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAuth());
-  }
-
-  Future<void> _checkAuth() async {
-    await Future.delayed(const Duration(seconds: 2));
-    final storage = AppStorage();
-    final loggedIn = await storage.isLoggedIn();
-    if (!loggedIn) {
-      if (mounted) context.go('/login');
-      return;
-    }
-    final role = await storage.getUserRole();
-    if (role == 'ADMIN') {
-      if (mounted) context.go('/admin');
-    } else {
-      if (mounted) context.go('/home');
-    }
+    // Initialize auth state from persistent storage.
+    // After init() completes, the router's redirect will navigate to the correct page.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      developer.log('[SPLASH] Initializing auth...');
+      context.read<AuthProvider>().init();
+    });
   }
 
   @override

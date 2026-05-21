@@ -86,6 +86,7 @@ ALTER TABLE store_views ADD COLUMN IF NOT EXISTS browser VARCHAR(50);
 ALTER TABLE store_views ADD COLUMN IF NOT EXISTS country VARCHAR(100);
 ALTER TABLE store_views ADD COLUMN IF NOT EXISTS city VARCHAR(100);
 ALTER TABLE store_views ADD COLUMN IF NOT EXISTS user_agent TEXT;
+ALTER TABLE store_views ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64);
 ALTER TABLE store_views ALTER COLUMN source TYPE VARCHAR(50) USING source::varchar(50);
 
 -- Super admin audit log

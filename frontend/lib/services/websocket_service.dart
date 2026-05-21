@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
+import '../core/env_config.dart';
 import '../core/storage.dart';
 
 class WebSocketService {
@@ -31,7 +32,7 @@ class WebSocketService {
 
     _client = StompClient(
       config: StompConfig(
-        url: 'http://localhost:8080/ws',
+        url: EnvConfig.wsUrl,
         onConnect: (frame) {
           _connected = true;
           _client!.subscribe(

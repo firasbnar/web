@@ -5,6 +5,7 @@ import io.makewebsite.dto.response.*;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BoutiqueService {
@@ -39,6 +41,8 @@ public class BoutiqueService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
+    private final TrafficService trafficService;
+    private final SubscriptionRepository subscriptionRepository;
 
     @Transactional
     public List<BoutiqueResponse> getMyBoutiques(UUID userId) {
@@ -299,10 +303,45 @@ public class BoutiqueService {
         List<BoutiqueResponse> allBoutiques = boutiqueRepository.findByUserId(userId).stream()
                 .map(this::mapToResponse).collect(Collectors.toList());
 
+        // --- Real views from TrafficService ---
+        long views = 0;
+        try {
+            views = trafficService.getStats(boutiqueId).getTotalVisits();
+        } catch (Exception e) {
+            log.warn("Failed to load traffic stats for boutique {}: {}", boutiqueId, e.getMessage());
+        }
+
+        // --- Real subscription data ---
+        long subscriptionDaysLeft = 0;
+        String subscriptionPlan = "Free";
+        String subscriptionStatus = "FREE";
+        try {
+            java.util.Optional<Subscription> subOpt = subscriptionRepository.findByUserIdAndStatus(
+                    boutique.getUser().getId(), "ACTIVE");
+            if (subOpt.isPresent()) {
+                Subscription sub = subOpt.get();
+                Plan plan = sub.getPlan();
+                subscriptionPlan = plan.getName();
+                subscriptionStatus = "ACTIVE";
+                LocalDate expiresDate = sub.getExpiresAt().toLocalDate();
+                long days = java.time.temporal.ChronoUnit.DAYS.between(today, expiresDate);
+                if (days > 36500) {
+                    subscriptionDaysLeft = -1; // signal unlimited
+                } else if (days < 0) {
+                    subscriptionDaysLeft = 0;
+                    subscriptionStatus = "EXPIRED";
+                } else {
+                    subscriptionDaysLeft = days;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to load subscription for user {}: {}", boutique.getUser().getId(), e.getMessage());
+        }
+
         DashboardResponse.BoutiqueInfo boutiqueInfo = DashboardResponse.BoutiqueInfo.builder()
                 .id(boutique.getId()).name(boutique.getName()).slug(boutique.getSlug())
                 .logoUrl(boutique.getLogoUrl()).customDomain(boutique.getCustomDomain())
-                .planName("Free").build();
+                .planName(subscriptionPlan).build();
 
         DashboardResponse.DailyStats dailyStats = DashboardResponse.DailyStats.builder()
                 .ordersToday(todayOrders)
@@ -319,10 +358,11 @@ public class BoutiqueService {
 
         return DashboardResponse.builder()
                 .boutique(boutiqueInfo)
-                .views(0)
+                .views(views)
                 .productCount(productCount)
-                .subscriptionDaysLeft(0)
-                .subscriptionPlan("Free")
+                .subscriptionDaysLeft(subscriptionDaysLeft)
+                .subscriptionPlan(subscriptionPlan)
+                .subscriptionStatus(subscriptionStatus)
                 .quickActions(quickActions)
                 .recentOrders(recentOrders)
                 .lowStockProducts(lowStockProducts)

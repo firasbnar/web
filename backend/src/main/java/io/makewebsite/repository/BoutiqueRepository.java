@@ -38,4 +38,7 @@ public interface BoutiqueRepository extends JpaRepository<Boutique, UUID> {
     Optional<Boutique> findByIdWithUser(@Param("id") UUID id);
 
     boolean existsBySlug(String slug);
+
+    @Query("SELECT b.user.id FROM Boutique b WHERE b.id = :boutiqueId")
+    UUID findOwnerIdByBoutiqueId(@Param("boutiqueId") UUID boutiqueId);
 }

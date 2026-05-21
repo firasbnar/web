@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Invitation</title>
+<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f4f6f9;padding:20px}
+.card{background:#fff;border-radius:12px;padding:36px;max-width:440px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,0.08)}
+h1{color:#dc2626;font-size:20px;margin-bottom:8px}p{color:#6b7280;font-size:14px}</style></head>
+<body><div class="card"><h1>Invitation invalide</h1><p>Conversion = ';'</p></div></body></html>

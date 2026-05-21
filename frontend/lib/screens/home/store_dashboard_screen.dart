@@ -11,6 +11,7 @@ import '../../providers/notifications_provider.dart';
 import '../../providers/reviews_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/status_chip.dart';
@@ -25,6 +26,7 @@ class StoreDashboardScreen extends StatefulWidget {
 
 class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   Map<String, dynamic>? _dashboardData;
+  Map<String, dynamic>? _boutiqueSummary;
   bool _loadingDashboard = true;
 
   @override
@@ -40,6 +42,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
     if (bp.activeBoutique != null) {
       _dashboardData = await bp.loadDashboard();
+      _boutiqueSummary = await bp.loadBoutiqueSummary();
       context.read<OrdersProvider>().loadOrders(bp.activeBoutique!.id, refresh: true);
       context.read<NotificationsProvider>().loadUnreadCount();
       context.read<ReviewsProvider>().loadPendingCount(bp.activeBoutique!.id);
@@ -381,11 +384,78 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   }
 
   Widget _buildStatsRow() {
-    final data = _dashboardData;
-    final views = data != null ? '${data['views'] ?? 0}' : '0';
-    final products = data != null ? '${data['productCount'] ?? 0}' : '0';
-    final daysLeft = data != null ? '${data['subscriptionDaysLeft'] ?? 0}' : '0';
-    final plan = data != null ? '${data['subscriptionPlan'] ?? 'Free'}' : '';
+    if (_loadingDashboard) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: Shimmer.fromColors(
+          baseColor: AppColors.border,
+          highlightColor: AppColors.surfaceAlt,
+          child: Container(
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_boutiqueSummary == null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.danger.withAlpha(80)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 18, color: AppColors.danger),
+            const SizedBox(width: 8),
+            Text('Impossible de charger les statistiques',
+                style: AppTypography.caption.copyWith(color: AppColors.danger)),
+          ],
+        ),
+      );
+    }
+
+    final data = _boutiqueSummary!;
+    // ignore: avoid_print
+    print('[Dashboard] boutique-summary data=$data');
+    final views = '${data['views'] ?? 0}';
+    final products = '${data['products'] ?? 0}';
+
+    final daysRaw = data['remainingDays'];
+    final subStatus = data['subscriptionStatus'] as String? ?? 'FREE';
+    final plan = data['planName'] as String? ?? 'Free';
+
+    final bool isExpired = subStatus == 'EXPIRED';
+    final bool isUnlimited = daysRaw is int && daysRaw == -1;
+    final bool isError = subStatus == 'ERROR';
+
+    String daysValue;
+    String planLabel;
+    Color daysColor = AppColors.textPrimary;
+
+    if (isError) {
+      daysValue = '--';
+      planLabel = 'Erreur';
+      daysColor = AppColors.danger;
+    } else if (isUnlimited) {
+      daysValue = '∞';
+      planLabel = 'Illimité';
+    } else if (isExpired) {
+      daysValue = '0';
+      planLabel = 'Expiré';
+      daysColor = AppColors.danger;
+    } else {
+      daysValue = '${daysRaw ?? 0}';
+      planLabel = plan;
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -401,20 +471,27 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             const VerticalDivider(color: AppColors.border, width: 1),
             Expanded(child: _statColumn(products, 'Products')),
             const VerticalDivider(color: AppColors.border, width: 1),
-            Expanded(child: _statColumn('$daysLeft\njours', plan)),
+            Expanded(
+              child: _statColumn(
+                daysValue == '∞' ? '∞' : '$daysValue\njours',
+                planLabel,
+                valueColor: daysColor,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _statColumn(String value, String label) {
+  Widget _statColumn(String value, String label, {Color? valueColor}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(value, textAlign: TextAlign.center,
-            style: TextStyle(fontSize: value.length > 6 ? 20 : 28,
-                fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+            style: TextStyle(fontSize: value.length > 8 ? 18 : 26,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? AppColors.textPrimary,
                 height: 1.1)),
         const SizedBox(height: 4),
         Text(label, style: AppTypography.caption.copyWith(color: AppColors.textHint)),

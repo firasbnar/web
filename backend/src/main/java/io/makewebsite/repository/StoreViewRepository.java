@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -17,6 +18,9 @@ public interface StoreViewRepository extends JpaRepository<StoreView, UUID> {
     long countByBoutiqueId(UUID boutiqueId);
     long countByBoutiqueIdAndViewedAtBetween(UUID boutiqueId, LocalDateTime from, LocalDateTime to);
     Page<StoreView> findByBoutiqueId(UUID boutiqueId, Pageable pageable);
+
+    Optional<StoreView> findFirstByBoutiqueIdAndVisitorIdAndViewedAtAfter(UUID boutiqueId, String visitorId, LocalDateTime after);
+    Optional<StoreView> findFirstByBoutiqueIdAndIpHashAndViewedAtAfter(UUID boutiqueId, String ipHash, LocalDateTime after);
 
     @Query("SELECT s.country, COUNT(s) FROM StoreView s WHERE s.boutiqueId = :boutiqueId AND s.country IS NOT NULL GROUP BY s.country ORDER BY COUNT(s) DESC")
     List<Object[]> countByBoutiqueIdGroupByCountry(@Param("boutiqueId") UUID boutiqueId);

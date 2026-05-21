@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   bool _isAuthenticated = false;
+  bool _initialized = false;
   String? _role;
   bool _emailVerificationRequired = false;
   bool _mustChangePassword = false;
@@ -18,6 +21,7 @@ class AuthProvider extends ChangeNotifier {
   User? get user => _user;
   String? get role => _role;
   bool get loading => _loading;
+  bool get isInitialized => _initialized;
   String? get error => _error;
   bool get isAuthenticated => _isAuthenticated;
   bool get emailVerificationRequired => _emailVerificationRequired;
@@ -33,10 +37,12 @@ class AuthProvider extends ChangeNotifier {
       _role = data['user']['role'] ?? 'OWNER';
       _mustChangePassword = data['mustChangePassword'] == true;
       await _api.storage.saveUserRole(_role!);
+      await _api.storage.saveUserData(jsonEncode(_user!.toJson()));
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
       _loading = false; notifyListeners();
+      developer.log('[AUTH] Login success: role=$_role userId=${_user!.id}');
       return true;
     } catch (e) {
       _error = _extractError(e);
@@ -59,10 +65,12 @@ class AuthProvider extends ChangeNotifier {
       _role = data['user']['role'] ?? 'OWNER';
       _mustChangePassword = data['mustChangePassword'] == true;
       await _api.storage.saveUserRole(_role!);
+      await _api.storage.saveUserData(jsonEncode(_user!.toJson()));
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
       _loading = false; notifyListeners();
+      developer.log('[AUTH] Google login success: role=$_role userId=${_user!.id}');
       return true;
     } catch (e) {
       _error = _extractError(e);
@@ -84,15 +92,18 @@ class AuthProvider extends ChangeNotifier {
         _pendingEmail = email;
         _emailVerificationRequired = true;
         _loading = false; notifyListeners();
+        developer.log('[AUTH] Register requires email verification: $email');
         return true;
       }
       _user = User.fromJson(data['user']);
       _role = data['user']['role'] ?? 'OWNER';
       await _api.storage.saveUserRole(_role!);
+      await _api.storage.saveUserData(jsonEncode(_user!.toJson()));
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
       _loading = false; notifyListeners();
+      developer.log('[AUTH] Register success: role=$_role userId=${_user!.id}');
       return true;
     } catch (e) {
       _error = _extractError(e);
@@ -152,6 +163,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    developer.log('[AUTH] Logout');
     await _api.storage.clearTokens();
     await _api.storage.saveUserRole('');
     _user = null;
@@ -161,17 +173,60 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkAuth() async {
-    final token = await _api.storage.getAccessToken();
-    _isAuthenticated = token != null && token.isNotEmpty;
-    if (_isAuthenticated) {
-      final uid = await _api.storage.getUserId();
-      if (uid != null) {
-        _user = User(id: uid, fullName: '', email: '');
-      }
-      _role = await _api.storage.getUserRole();
-    }
+  /// Called by ApiClient interceptor when token refresh fails.
+  void _onSessionExpired() {
+    developer.log('[AUTH] Session expired (refresh failed), clearing auth state');
+    _user = null;
+    _isAuthenticated = false;
     notifyListeners();
+  }
+
+  /// Initialize auth state from persistent storage.
+  /// Called once on app startup (from SplashScreen).
+  /// Always completes with _initialized=true in finally block.
+  Future<void> init() async {
+    developer.log('[AUTH INIT] === START ===');
+    _api.onSessionExpired = _onSessionExpired;
+    try {
+      final token = await _api.storage.getAccessToken();
+      developer.log('[AUTH INIT] Access token found: ${token != null && token.isNotEmpty}');
+
+      if (token != null && token.isNotEmpty) {
+        _isAuthenticated = true;
+        final uid = await _api.storage.getUserId();
+        final userDataStr = await _api.storage.getUserData();
+
+        if (userDataStr != null) {
+          try {
+            final userMap = jsonDecode(userDataStr) as Map<String, dynamic>;
+            _user = User.fromJson(userMap);
+            developer.log('[AUTH INIT] User data restored: id=${_user!.id} email=${_user!.email}');
+          } catch (e) {
+            developer.log('[AUTH INIT] Failed to parse user data: $e');
+            if (uid != null) {
+              _user = User(id: uid, fullName: '', email: '');
+            }
+          }
+        } else if (uid != null) {
+          _user = User(id: uid, fullName: '', email: '');
+        }
+
+        _role = await _api.storage.getUserRole();
+        developer.log('[AUTH INIT] State restored: isAuthenticated=true role=$_role userId=$uid');
+      } else {
+        _isAuthenticated = false;
+        developer.log('[AUTH INIT] No valid token, user not authenticated');
+      }
+    } catch (e) {
+      developer.log('[AUTH INIT] Error during init: $e');
+      _isAuthenticated = false;
+      _user = null;
+      _role = null;
+    } finally {
+      _initialized = true;
+      notifyListeners();
+      developer.log('[AUTH INIT] === END === initialized=true isAuthenticated=$_isAuthenticated role=$_role');
+    }
   }
 
   String _extractError(dynamic e) {

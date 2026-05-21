@@ -5,16 +5,17 @@ class EnvConfig {
   static const String env = String.fromEnvironment('ENV', defaultValue: 'local');
 
   /// Override at build time: --dart-define=API_BASE_URL=https://my-ngrok.ngrok-free.dev/api
-  /// Default is localhost:8080/api — stable for local development.
+  /// Default targets Android emulator (10.0.2.2); override for web (localhost) or physical device (your IP).
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue:'http://localhost:8080/api',
   );
 
   /// Override at build time: --dart-define=WS_URL=wss://my-ngrok.ngrok-free.dev/ws
+  /// Default targets Android emulator (10.0.2.2); override for other environments.
   static const String wsUrl = String.fromEnvironment(
     'WS_URL',
-    defaultValue: 'http://localhost:8080/ws',
+    defaultValue: 'http://10.0.2.2:8080/ws',
   );
 
   /// Override at build time: --dart-define=FRONTEND_PUBLIC_URL=https://my-ngrok.ngrok-free.dev

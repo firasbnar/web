@@ -15,6 +15,7 @@ public class DashboardResponse {
     private long productCount;
     private long subscriptionDaysLeft;
     private String subscriptionPlan;
+    private String subscriptionStatus;
     private List<QuickAction> quickActions;
     private List<OrderResponse> recentOrders;
     private List<ProductResponse> lowStockProducts;

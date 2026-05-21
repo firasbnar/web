@@ -220,6 +220,22 @@ class BoutiqueProvider extends ChangeNotifier {
     }
   }
 
+  /// Fetches the boutique KPI summary from GET /api/dashboard/boutique-summary.
+  /// Returns the inner [data] map (fields: boutiqueId, boutiqueName, publicUrl,
+  /// views, products, remainingDays, planName, subscriptionStatus, publicationStatus).
+  Future<Map<String, dynamic>?> loadBoutiqueSummary() async {
+    try {
+      final res = await _api.get('/dashboard/boutique-summary');
+      // ignore: avoid_print
+      print('[BoutiqueSummary] response=$res');
+      return res['data'] as Map<String, dynamic>?;
+    } catch (e) {
+      // ignore: avoid_print
+      print('[BoutiqueSummary] error=$e');
+      return null;
+    }
+  }
+
   // ========== BOUTIQUE SETTINGS CONTROLLER METHODS ==========
 
   Future<bool> saveConfig(Map<String, dynamic> data) async {

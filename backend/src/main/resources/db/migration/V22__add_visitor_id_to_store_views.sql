@@ -1,0 +1,2 @@
+ALTER TABLE store_views
+    ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64);

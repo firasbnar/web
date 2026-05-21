@@ -1,12 +1,17 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import './storage.dart';
+import 'env_config.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8080/api';
+  static String get baseUrl => EnvConfig.apiBaseUrl;
   late final Dio _dio;
   final AppStorage _storage = AppStorage();
   AppStorage get storage => _storage;
+
+  /// Called when token refresh fails and session is expired.
+  /// Set by AuthProvider to clear auth state globally.
+  void Function()? onSessionExpired;
 
   /// Extracts a user-friendly error message from a DioException.
   /// For 400 responses, it parses Spring Boot validation errors
@@ -163,7 +168,10 @@ class ApiClient {
               return handler.resolve(retryResponse);
             } catch (_) {
               await _storage.clearTokens();
+              onSessionExpired?.call();
             }
+          } else {
+            onSessionExpired?.call();
           }
         }
         return handler.next(error);

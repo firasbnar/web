@@ -47,6 +47,9 @@ public class StoreView {
     @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
+    @Column(name = "visitor_id", length = 64)
+    private String visitorId;
+
     @Column(name = "viewed_at")
     private LocalDateTime viewedAt;
 }

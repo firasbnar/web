@@ -46,7 +46,7 @@ class PublicCartItem {
 }
 
 class PublicCartProvider extends ChangeNotifier {
-  Map<String, List<PublicCartItem>> _carts = {};
+  final Map<String, List<PublicCartItem>> _carts = {};
 
   List<PublicCartItem> _getOrCreate(String slug) {
     return _carts.putIfAbsent(slug, () => []);

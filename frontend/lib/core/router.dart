@@ -68,71 +68,93 @@ GoRouter createRouter(AuthProvider auth) {
     refreshListenable: auth,
     redirect: (context, state) {
       final location = state.uri.toString();
+      final path = state.uri.path;
       final isLoggedIn = auth.isAuthenticated;
       final role = auth.role;
 
-      // ignore: avoid_print
-      developer.log('[ROUTER] redirect: location="$location" isLoggedIn=$isLoggedIn role=$role');
-      // ignore: avoid_print
-      print('ROUTER PATH: ${state.uri.path}');
+      developer.log('[ROUTER] redirect: path="$path" isLoggedIn=$isLoggedIn role=$role initialized=${auth.isInitialized}');
 
-      // Public store routes — no auth required, never redirect to landing/login
-      if (state.uri.path.startsWith('/store/')) {
-        return null;
+      // Public store routes — no auth required, never redirect to splash/landing/login
+      // This check must come BEFORE the auth init check so the route resolves immediately
+      // even while auth state is still being restored from storage.
+      if (path.startsWith('/store/') || path.startsWith('/public-store/')) return null;
+
+      // --- AUTH INIT CHECK — show splash until auth state is restored from storage ---
+      if (!auth.isInitialized) {
+        if (path == '/splash') return null;
+        developer.log('[ROUTER] Auth not initialized, redirecting to /splash');
+        return '/splash';
+      }
+
+      // After init: if still on splash, always leave it
+      if (path == '/splash') {
+        if (isLoggedIn) {
+          final target = role == 'SUPER_ADMIN' ? '/super-admin' : (role == 'ADMIN' ? '/admin' : '/home');
+          developer.log('[ROUTER] Leaving splash: logged in, going to $target');
+          return target;
+        }
+        developer.log('[ROUTER] Leaving splash: not logged in, going to /landing');
+        return '/landing';
       }
 
       // Root path → landing
       if (location == '/' || location.isEmpty) return '/landing';
 
-      final publicRoutes = ['/landing', '/splash', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store'];
+      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store'];
       final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
 
       // --- SUPER_ADMIN is platform-level only, no access to owner/merchant routes ---
       if (isLoggedIn && role == 'SUPER_ADMIN') {
-        // Allow super admin routes and public routes
-        if (location.startsWith('/super-admin')) return null;
-        if (isPublic) return '/super-admin'; // redirect from public to super admin
-        if (location == '/change-password') return null;
-        // Everything else → super admin dashboard
+        if (path.startsWith('/super-admin')) return null;
+        if (isPublic) return '/super-admin';
+        if (path == '/change-password') return null;
+        developer.log('[ROUTER] SUPER_ADMIN redirecting to /super-admin');
         return '/super-admin';
       }
 
       // Not logged in → allow public routes, otherwise redirect to login
       if (!isLoggedIn) {
         if (isPublic) return null;
+        developer.log('[ROUTER] Not logged in, redirecting to /login');
         return '/login';
       }
 
       // --- LOGGED IN (non-SUPER_ADMIN) ---
       // Redirect away from auth pages to appropriate dashboard
-      if (location == '/login' || location.startsWith('/login?') ||
-          location == '/register' || location == '/signup' ||
-          location == '/landing' || location == '/splash') {
-        return role == 'ADMIN' ? '/admin' : '/home';
+      if (path == '/login' || path.startsWith('/login?') ||
+          path == '/register' || path == '/signup' ||
+          path == '/landing') {
+        final target = role == 'ADMIN' ? '/admin' : '/home';
+        developer.log('[ROUTER] Logged in on auth page, redirecting to $target');
+        return target;
       }
 
-      // Allow public routes for logged-in users
       if (isPublic) return null;
 
-      // Allow change-password when authenticated
-      if (location == '/change-password') return null;
+      if (path == '/change-password') return null;
 
-      // Must change password → force to change-password
-      if (auth.mustChangePassword && location != '/change-password') return '/change-password';
+      if (auth.mustChangePassword && path != '/change-password') {
+        developer.log('[ROUTER] Must change password, redirecting');
+        return '/change-password';
+      }
 
-      // Super admin routes — non-SUPER_ADMIN blocked
-      if (location.startsWith('/super-admin')) return '/home';
-
-      // Admin routes
-      if ((location == '/admin' || location == '/admin/activities') && role != 'ADMIN') {
+      if (path.startsWith('/super-admin')) {
+        developer.log('[ROUTER] Non-SUPER_ADMIN blocked from /super-admin');
         return '/home';
       }
-      // Team management (owner or admin only)
-      if (location == '/team' && role != 'OWNER' && role != 'ADMIN') {
+
+      if ((path == '/admin' || path == '/admin/activities') && role != 'ADMIN') {
+        developer.log('[ROUTER] Non-ADMIN blocked from /admin');
         return '/home';
       }
-      // Caisse admin routes (admin or boutique owner)
-      if (location.startsWith('/pos/admin') && role != 'ADMIN' && role != 'OWNER') {
+
+      if (path == '/team' && role != 'OWNER' && role != 'ADMIN') {
+        developer.log('[ROUTER] Non-OWNER/ADMIN blocked from /team');
+        return '/home';
+      }
+
+      if (path.startsWith('/pos/admin') && role != 'ADMIN' && role != 'OWNER') {
+        developer.log('[ROUTER] Non-ADMIN/OWNER blocked from /pos/admin');
         return '/home';
       }
 

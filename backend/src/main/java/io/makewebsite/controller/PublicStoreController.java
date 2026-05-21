@@ -2,27 +2,30 @@ package io.makewebsite.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.makewebsite.dto.request.TrackVisitRequest;
 import io.makewebsite.dto.response.PublicCategoryResponse;
 import io.makewebsite.dto.response.PublicProductResponse;
 import io.makewebsite.dto.response.PublicStoreResponse;
 import io.makewebsite.entity.*;
 import io.makewebsite.exception.StoreFrozenException;
 import io.makewebsite.repository.*;
+import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.BoutiqueVisitService;
 import io.makewebsite.service.PaymentService;
 import io.makewebsite.service.StoreGeneratorService;
 import io.makewebsite.service.StoreStatusGuard;
-import io.makewebsite.service.TrafficService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/public")
 @RequiredArgsConstructor
@@ -46,7 +49,8 @@ public class PublicStoreController {
     private final OrderRepository orderRepository;
     private final StoreGeneratorService storeGeneratorService;
     private final StoreStatusGuard storeStatusGuard;
-    private final TrafficService trafficService;
+    private final BoutiqueVisitService boutiqueVisitService;
+    private final StoreViewRepository storeViewRepository;
     private final PaymentService paymentService;
     private final ObjectMapper objectMapper;
 
@@ -70,9 +74,33 @@ public class PublicStoreController {
     // ---- Clean JSON API (plural /stores/) ----
 
     @GetMapping("/stores/{slug}")
-    public ResponseEntity<PublicStoreResponse> getStoreJson(@PathVariable String slug) {
+    public ResponseEntity<PublicStoreResponse> getStoreJson(
+            @PathVariable String slug,
+            HttpServletRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = "X-Visitor-Id", required = false) String visitorId) {
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.notFound().build();
+
+        // Skip counting if the authenticated user is the boutique owner
+        if (principal != null) {
+            try {
+                UUID ownerId = boutiqueRepository.findOwnerIdByBoutiqueId(b.getId());
+                if (ownerId != null && ownerId.equals(principal.getUserId())) {
+                    log.debug("Owner visit, skipping view count for slug={}", slug);
+                } else {
+                    boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), visitorId);
+                }
+            } catch (Exception e) {
+                log.warn("Owner check failed for slug={}, recording visit: {}", slug, e.getMessage());
+                boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), visitorId);
+            }
+        } else {
+            boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), visitorId);
+        }
+
+        long totalViews = storeViewRepository.countByBoutiqueId(b.getId());
+        log.info("Total views for slug={}: {} (after recording visit)", slug, totalViews);
         return ResponseEntity.ok(toPublicStoreResponse(b));
     }
 
@@ -379,18 +407,6 @@ public class PublicStoreController {
     }
 
     private void trackStoreVisit(Boutique boutique, HttpServletRequest request) {
-        try {
-            TrackVisitRequest req = new TrackVisitRequest();
-            req.setBoutiqueId(boutique.getId());
-            req.setBoutiqueSlug(boutique.getSlug());
-            req.setPage("/store/" + boutique.getSlug());
-            req.setIpAddress(request.getRemoteAddr());
-            req.setUserAgent(request.getHeader("User-Agent"));
-            req.setReferrer(request.getHeader("Referer"));
-            req.setPlatform("WEB");
-            trafficService.trackVisit(req);
-        } catch (Exception e) {
-            // Don't let tracking break the store page
-        }
+        boutiqueVisitService.recordVisit(boutique.getId(), boutique.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), null);
     }
 }
