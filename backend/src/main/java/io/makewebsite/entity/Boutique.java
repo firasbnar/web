@@ -71,6 +71,15 @@ public class Boutique {
     @Size(max = 10)
     private String language = "fr";
 
+    @Size(max = 100)
+    private String category;
+
+    @Size(max = 100)
+    private String country;
+
+    @Size(max = 100)
+    private String city;
+
     @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;

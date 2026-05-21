@@ -25,6 +25,9 @@ public class BoutiqueResponse {
     private String secondaryColor;
     private String currency;
     private String language;
+    private String category;
+    private String country;
+    private String city;
     private String timezone;
     private String storeConfig;
     private String headerColor;

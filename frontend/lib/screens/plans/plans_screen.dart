@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../core/api_client.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/boutique_provider.dart';
 
 class PlansScreen extends StatefulWidget {
   const PlansScreen({super.key});
@@ -42,8 +46,19 @@ class _PlansScreenState extends State<PlansScreen> {
   Future<void> _subscribe(int planId) async {
     try {
       await _api.post('/subscriptions/subscribe', data: {'planId': planId, 'paymentMethod': 'BANK'});
-      _loadData();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abonnement activé!')));
+      if (mounted) {
+        context.read<AuthProvider>().setSubscriptionActive(true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abonnement activé!')));
+        final bp = context.read<BoutiqueProvider>();
+        await bp.loadBoutiques();
+        if (mounted) {
+          if (bp.boutiques.isEmpty) {
+            context.go('/create-store');
+          } else {
+            context.go('/dashboard');
+          }
+        }
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
     }

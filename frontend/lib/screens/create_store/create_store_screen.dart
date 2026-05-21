@@ -21,6 +21,9 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
   final _descCtrl = TextEditingController();
   String _currency = 'TND';
   String _language = 'fr';
+  String _category = '';
+  final _countryCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
   bool _saving = false;
 
   @override
@@ -28,6 +31,8 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
     _nameCtrl.dispose();
     _slugCtrl.dispose();
     _descCtrl.dispose();
+    _countryCtrl.dispose();
+    _cityCtrl.dispose();
     super.dispose();
   }
 
@@ -46,13 +51,16 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
         'description': _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
         'currency': _currency,
         'language': _language,
+        'category': _category.isNotEmpty ? _category : null,
+        'country': _countryCtrl.text.trim().isNotEmpty ? _countryCtrl.text.trim() : null,
+        'city': _cityCtrl.text.trim().isNotEmpty ? _cityCtrl.text.trim() : null,
       });
       if (!mounted) return;
       await context.read<BoutiqueProvider>().loadBoutiques();
-      if (!context.mounted) return;
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Boutique créée'), backgroundColor: AppColors.success));
-      if (!context.mounted) return;
-      context.pop();
+      if (!mounted) return;
+      context.go('/dashboard');
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -98,6 +106,21 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
+              items: const [
+                DropdownMenuItem(value: '', child: Text('Sélectionnez une catégorie')),
+                DropdownMenuItem(value: 'Mode', child: Text('Mode')),
+                DropdownMenuItem(value: 'Alimentation', child: Text('Alimentation')),
+                DropdownMenuItem(value: 'Électronique', child: Text('Électronique')),
+                DropdownMenuItem(value: 'Maison', child: Text('Maison')),
+                DropdownMenuItem(value: 'Beauté', child: Text('Beauté')),
+                DropdownMenuItem(value: 'Sports', child: Text('Sports')),
+                DropdownMenuItem(value: 'Autre', child: Text('Autre')),
+              ],
+              onChanged: (v) => setState(() => _category = v ?? ''),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
               initialValue: _currency,
               decoration: const InputDecoration(labelText: 'Devise', border: OutlineInputBorder()),
               items: const [
@@ -117,6 +140,16 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
                 DropdownMenuItem(value: 'ar', child: Text('العربية')),
               ],
               onChanged: (v) => setState(() => _language = v ?? 'fr'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _countryCtrl,
+              decoration: const InputDecoration(labelText: 'Pays (optionnel)', border: OutlineInputBorder(), hintText: 'Tunisie'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _cityCtrl,
+              decoration: const InputDecoration(labelText: 'Ville (optionnel)', border: OutlineInputBorder(), hintText: 'Tunis'),
             ),
             const SizedBox(height: 32),
             AppButton(label: 'Créer la boutique', onPressed: _saving ? null : _create, loading: _saving),

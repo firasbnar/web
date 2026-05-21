@@ -21,6 +21,20 @@ class BoutiqueProvider extends ChangeNotifier {
   bool _savingCountries = false;
   Map<String, String> _language = {};
 
+  void clear() {
+    _boutiques = [];
+    _activeBoutique = null;
+    _activeBoutiqueId = null;
+    _stats = null;
+    _sliders = [];
+    _videos = [];
+    _countries = [];
+    _language = {};
+    _loading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   List<Boutique> get boutiques => _boutiques;
   Boutique? get activeBoutique => _activeBoutique;
   Boutique? get currentBoutique => _activeBoutique;
@@ -48,12 +62,18 @@ class BoutiqueProvider extends ChangeNotifier {
       final List data = res['data'];
       _boutiques = data.map((e) => Boutique.fromJson(e)).toList();
 
+      // Only restore saved boutique if it belongs to current user's list
       final savedId = await AppStorage.getActiveBoutiqueId();
       if (savedId != null && _boutiques.any((b) => b.id == savedId)) {
         _activeBoutique = _boutiques.firstWhere((b) => b.id == savedId);
       } else if (_boutiques.isNotEmpty) {
         _activeBoutique = _boutiques.first;
         await AppStorage.saveActiveBoutiqueId(_activeBoutique!.id);
+      } else {
+        // No boutiques at all — user needs to create one
+        _activeBoutique = null;
+        _activeBoutiqueId = null;
+        await AppStorage.clearActiveBoutiqueId();
       }
       _activeBoutiqueId = _activeBoutique?.id;
       if (_activeBoutique != null) {

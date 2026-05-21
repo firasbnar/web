@@ -30,6 +30,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     List<Product> findByBoutiqueIdAndIsActiveTrue(UUID boutiqueId);
 
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.boutique.id = :boutiqueId AND (p.isActive = true OR p.isActive IS NULL)")
+    List<Product> findPublicProductsWithCategory(@Param("boutiqueId") UUID boutiqueId);
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id")
+    Optional<Product> findByIdWithCategory(@Param("id") UUID id);
+
     List<Product> findByCategoryId(UUID categoryId);
 
     long countByBoutiqueId(UUID boutiqueId);

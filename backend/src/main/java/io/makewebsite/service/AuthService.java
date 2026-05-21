@@ -25,6 +25,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final BoutiqueRepository boutiqueRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -61,19 +62,6 @@ public class AuthService {
             user = userRepository.save(user);
             log.debug("User created: id={}, email={}, enabled=false, verificationToken={}",
                     user.getId(), user.getEmail(), verificationToken);
-
-            Boutique boutique = Boutique.builder()
-                    .user(user)
-                    .tenant(tenant)
-                    .name(request.getFullName() + "'s Store")
-                    .slug(request.getFullName().toLowerCase().replaceAll("\\s+", "-").replaceAll("[^a-z0-9-]", "") + "-" + UUID.randomUUID().toString().substring(0, 6))
-                    .currency("TND")
-                    .language(request.getLanguage() != null ? request.getLanguage() : "fr")
-                    .isActive(true)
-                    .enableCod(true)
-                    .build();
-            boutique = boutiqueRepository.save(boutique);
-            log.debug("Boutique created: id={}, name={} for user={}", boutique.getId(), boutique.getName(), user.getId());
 
             emailService.sendVerificationEmail(user.getEmail(), verificationToken);
             log.info("Registration successful for email: {}, verification email sent", request.getEmail());
@@ -400,6 +388,7 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
+        boolean subActive = subscriptionRepository.findByUserIdAndStatus(user.getId(), "ACTIVE").isPresent();
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -407,6 +396,7 @@ public class AuthService {
                 .role(user.getRole())
                 .tenant(buildTenantResponse(user.getTenant()))
                 .emailVerificationRequired(false)
+                .subscriptionActive(subActive || "SUPER_ADMIN".equals(user.getRole()))
                 .build();
     }
 

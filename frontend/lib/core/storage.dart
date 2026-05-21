@@ -55,17 +55,24 @@ class AppStorage {
     return token != null && token.isNotEmpty;
   }
 
+  static const _activeBoutiqueKey = 'active_boutique_id';
+  static const _userRoleKey = 'user_role';
+  static const _subscriptionActiveKey = 'subscription_active';
+
   static Future<void> saveActiveBoutiqueId(String id) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('active_boutique_id', id);
+    await prefs.setString(_activeBoutiqueKey, id);
   }
 
   static Future<String?> getActiveBoutiqueId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('active_boutique_id');
+    return prefs.getString(_activeBoutiqueKey);
   }
 
-  static const _userRoleKey = 'user_role';
+  static Future<void> clearActiveBoutiqueId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_activeBoutiqueKey);
+  }
 
   Future<void> saveUserRole(String role) async {
     final prefs = await SharedPreferences.getInstance();
@@ -75,5 +82,31 @@ class AppStorage {
   Future<String?> getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userRoleKey);
+  }
+
+  static Future<void> saveSubscriptionActive(bool active) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_subscriptionActiveKey, active);
+  }
+
+  static Future<bool> getSubscriptionActive() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_subscriptionActiveKey) ?? false;
+  }
+
+  static Future<void> clearSubscriptionActive() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_subscriptionActiveKey);
+  }
+
+  static Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
+    await prefs.remove(_userIdKey);
+    await prefs.remove(_userKey);
+    await prefs.remove(_activeBoutiqueKey);
+    await prefs.remove(_userRoleKey);
+    await prefs.remove(_subscriptionActiveKey);
   }
 }

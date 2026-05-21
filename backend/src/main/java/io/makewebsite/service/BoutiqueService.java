@@ -69,6 +69,14 @@ public class BoutiqueService {
     public BoutiqueResponse createBoutique(CreateBoutiqueRequest request, UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        // Only SUPER_ADMIN can create boutiques without an active subscription
+        boolean hasActiveSub = subscriptionRepository.findByUserIdAndStatus(userId, "ACTIVE").isPresent();
+        if (!hasActiveSub && !"SUPER_ADMIN".equals(user.getRole())) {
+            log.warn("createBoutique rejected: userId={} has no active subscription", userId);
+            throw new RuntimeException("Un abonnement actif est requis pour créer une boutique");
+        }
+
         Tenant tenant = user.getTenant();
         if (tenant == null) {
             tenant = tenantRepository.save(Tenant.builder()
@@ -103,6 +111,9 @@ public class BoutiqueService {
                 .description(request.getDescription())
                 .currency(request.getCurrency() != null ? request.getCurrency() : "TND")
                 .language(request.getLanguage() != null ? request.getLanguage() : "fr")
+                .category(request.getCategory())
+                .country(request.getCountry())
+                .city(request.getCity())
                 .isActive(true)
                 .enableCod(true)
                 .build();
@@ -227,6 +238,9 @@ public class BoutiqueService {
         if (request.getD17QrCodeUrl() != null) boutique.setD17QrCodeUrl(request.getD17QrCodeUrl());
         if (request.getD17Status() != null) boutique.setD17Status(request.getD17Status());
         boutique = boutiqueRepository.save(boutique);
+        log.info("updatePayments: boutiqueId={} enableJax={} enableIntigo={} enableAdeex={} enableCod={} enableD17={}",
+                id, boutique.getEnableJax(), boutique.getEnableIntigo(), boutique.getEnableAdeex(),
+                boutique.getEnableCod(), boutique.getEnableD17());
         return mapToResponse(boutique);
     }
 
@@ -411,7 +425,9 @@ public class BoutiqueService {
                 .logoUrl(b.getLogoUrl()).description(b.getDescription())
                 .email(b.getEmail()).phone(b.getPhone()).address(b.getAddress())
                 .primaryColor(b.getPrimaryColor()).secondaryColor(b.getSecondaryColor())
-                .currency(b.getCurrency()).language(b.getLanguage()).timezone(b.getTimezone())
+                .currency(b.getCurrency()).language(b.getLanguage())
+                .category(b.getCategory()).country(b.getCountry()).city(b.getCity())
+                .timezone(b.getTimezone())
                 .storeConfig(b.getStoreConfig())
                 .headerColor(b.getHeaderColor()).footerColor(b.getFooterColor())
                 .bodyColor(b.getBodyColor()).cardProductColor(b.getCardProductColor())

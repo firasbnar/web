@@ -23,7 +23,16 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
   final _cityCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   String _paymentMethod = 'cod';
+  String? _deliveryProvider;
   bool _placing = false;
+  bool _loadingStore = true;
+  Map<String, dynamic>? _store;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStore();
+  }
 
   @override
   void dispose() {
@@ -36,6 +45,30 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
     super.dispose();
   }
 
+  Future<void> _loadStore() async {
+    try {
+      final res = await _api.get('/public/stores/${widget.slug}');
+      if (mounted) {
+        setState(() {
+          _store = res;
+          _loadingStore = false;
+          final providers = _enabledProviders(res);
+          if (providers.isNotEmpty) _deliveryProvider = providers.first['value'] as String;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingStore = false);
+    }
+  }
+
+  List<Map<String, dynamic>> _enabledProviders(Map<String, dynamic> store) {
+    final list = <Map<String, dynamic>>[];
+    if (store['enableJax'] == true) list.add({'value': 'JAX', 'label': 'JAX Delivery', 'icon': Icons.local_shipping});
+    if (store['enableIntigo'] == true) list.add({'value': 'Intigo', 'label': 'Intigo', 'icon': Icons.local_shipping});
+    if (store['enableAdeex'] == true) list.add({'value': 'Adeex', 'label': 'Adeex', 'icon': Icons.flight});
+    return list;
+  }
+
   Future<void> _placeOrder() async {
     if (_nameCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().isEmpty || _addressCtrl.text.trim().isEmpty || _cityCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires'), backgroundColor: AppColors.danger));
@@ -45,7 +78,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
     try {
       final cart = context.read<PublicCartProvider>();
       final items = cart.items(widget.slug);
-      final body = {
+      final body = <String, dynamic>{
         'fullName': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
@@ -53,14 +86,17 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
         'city': _cityCtrl.text.trim(),
         'paymentMethod': _paymentMethod,
         'notes': _notesCtrl.text.trim(),
+        'deliveryCompany': _deliveryProvider,
         'items': items.map((i) => {
           'productId': i.productId,
           'quantity': i.quantity,
           'unitPrice': i.effectivePrice,
         }).toList(),
       };
+      print('[Checkout] Placing order: deliveryCompany=$_deliveryProvider paymentMethod=$_paymentMethod');
 
       final res = await _api.post('/public/store/${widget.slug}/orders', data: body);
+      print('[Checkout] Order response: success=${res['success']} orderId=${res['orderId']}');
 
       if (res['success'] == true) {
         final orderId = res['orderId'] as String;
@@ -101,6 +137,14 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
     final subtotal = cart.subtotal(widget.slug);
     final shipping = 7.0;
     final total = subtotal + shipping;
+    final providers = _store != null ? _enabledProviders(_store!) : <Map<String, dynamic>>[];
+
+    if (_loadingStore) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Commande'), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Commande'), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())),
@@ -124,6 +168,12 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                   TextField(controller: _cityCtrl, decoration: const InputDecoration(labelText: 'Ville *', border: OutlineInputBorder())),
                   const SizedBox(height: 12),
                   TextField(controller: _notesCtrl, decoration: const InputDecoration(labelText: 'Notes (optionnel)', border: OutlineInputBorder()), maxLines: 3),
+                  if (providers.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text('Transporteur', style: AppTypography.heading3),
+                    const SizedBox(height: 12),
+                    ...providers.map((p) => _deliveryOption(p['value'] as String, p['label'] as String, p['icon'] as IconData)),
+                  ],
                   const SizedBox(height: 24),
                   Text('Mode de paiement', style: AppTypography.heading3),
                   const SizedBox(height: 12),
@@ -191,6 +241,34 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _deliveryOption(String value, String label, IconData icon) {
+    final selected = _deliveryProvider == value;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () => setState(() => _deliveryProvider = value),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primarySurface : AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: selected ? AppColors.primary : AppColors.textHint),
+              const SizedBox(width: 12),
+              Text(label, style: AppTypography.body2.copyWith(fontWeight: FontWeight.w500)),
+              const Spacer(),
+              if (selected)
+                const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

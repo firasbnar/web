@@ -27,6 +27,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -88,6 +89,7 @@ public class PublicStoreController {
 
     // ---- Clean JSON API (plural /stores/) ----
 
+    @Transactional(readOnly = true)
     @GetMapping("/stores/{slug}")
     public ResponseEntity<PublicStoreResponse> getStoreJson(
             @PathVariable String slug,
@@ -98,25 +100,84 @@ public class PublicStoreController {
         if (b == null) return ResponseEntity.notFound().build();
 
         long totalViews = storeViewRepository.countByBoutiqueId(b.getId());
+        log.info("getStoreJson: slug={} boutiqueId={}", slug, b.getId());
         log.debug("Total views for slug={}: {}", slug, totalViews);
-        return ResponseEntity.ok(toPublicStoreResponse(b));
+
+        List<PublicProductResponse> products = productRepository.findPublicProductsWithCategory(b.getId())
+                .stream().map(this::toPublicProductResponse).toList();
+        log.info("getStoreJson: mapped {} products for slug={}", products.size(), slug);
+
+        List<PublicCategoryResponse> categories = categoryRepository.findByBoutiqueIdOrderBySortOrder(b.getId())
+                .stream().map(c -> PublicCategoryResponse.builder()
+                        .id(c.getId()).name(c.getName()).slug(c.getSlug())
+                        .productCount(productRepository.countByBoutiqueIdAndCategoryId(b.getId(), c.getId()))
+                        .build())
+                .toList();
+        log.info("getStoreJson: mapped {} categories for slug={}", categories.size(), slug);
+
+        BigDecimal minPrice = productRepository.findMinPriceByBoutiqueIdAndIsActiveTrue(b.getId());
+        long productCount = productRepository.countByBoutiqueId(b.getId());
+        String publicationStatus;
+        if ("FROZEN".equals(b.getStoreStatus())) publicationStatus = "FROZEN";
+        else if ("SUSPENDED".equals(b.getStoreStatus())) publicationStatus = "SUSPENDED";
+        else if (Boolean.FALSE.equals(b.getIsPublished())) publicationStatus = "DRAFT";
+        else publicationStatus = "PUBLISHED";
+
+        PublicStoreResponse response = PublicStoreResponse.builder()
+                .id(b.getId()).name(b.getName()).slug(b.getSlug())
+                .logoUrl(b.getLogoUrl()).bannerUrl(b.getBannerUrl())
+                .description(b.getDescription())
+                .email(b.getEmail()).phone(b.getPhone()).address(b.getAddress())
+                .primaryColor(b.getPrimaryColor()).secondaryColor(b.getSecondaryColor())
+                .headerColor(b.getHeaderColor()).footerColor(b.getFooterColor())
+                .bodyColor(b.getBodyColor()).cardProductColor(b.getCardProductColor())
+                .buttonColor(b.getButtonColor()).topBarColor(b.getTopBarColor())
+                .textColor(b.getTextColor()).fontFamily(b.getFontFamily())
+                .currency(b.getCurrency()).language(b.getLanguage())
+                .announcementText(b.getAnnouncementText())
+                .deliveryFees(b.getDeliveryFees())
+                .cashOnDelivery(b.getCashOnDelivery())
+                .simpleCheckout(b.getSimpleCheckout())
+                .konnectActive("active".equals(b.getKonnectStatus()))
+                .d17Active("active".equals(b.getD17Status()))
+                .enableJax(Boolean.TRUE.equals(b.getEnableJax()))
+                .enableIntigo(Boolean.TRUE.equals(b.getEnableIntigo()))
+                .enableAdeex(Boolean.TRUE.equals(b.getEnableAdeex()))
+                .facebookUrl(b.getFacebookUrl()).instagramUrl(b.getInstagramUrl())
+                .tiktokUrl(b.getTiktokUrl()).whatsappNumber(b.getWhatsappNumber())
+                .publicationStatus(publicationStatus)
+                .freezeReason(b.getFreezeReason())
+                .publicUrl("/store/" + b.getSlug())
+                .minPrice(minPrice)
+                .productCount(productCount)
+                .categories(categories)
+                .products(products)
+                .build();
+
+        log.info("getStoreJson: mapping success for slug={}", slug);
+        return ResponseEntity.ok(response);
     }
 
+    @Transactional(readOnly = true)
     @GetMapping("/stores/{slug}/products")
     public ResponseEntity<List<PublicProductResponse>> listProductsJson(@PathVariable String slug) {
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.notFound().build();
-        List<Product> products = productRepository.findByBoutiqueIdAndIsActiveTrue(b.getId());
-        return ResponseEntity.ok(products.stream().map(this::toPublicProductResponse).toList());
+        List<PublicProductResponse> products = productRepository.findPublicProductsWithCategory(b.getId())
+                .stream().map(this::toPublicProductResponse).toList();
+        log.info("listProductsJson: slug={} products={}", slug, products.size());
+        return ResponseEntity.ok(products);
     }
 
+    @Transactional(readOnly = true)
     @GetMapping("/stores/{slug}/products/{productId}")
     public ResponseEntity<PublicProductResponse> getProductJson(
             @PathVariable String slug, @PathVariable UUID productId) {
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.notFound().build();
-        Product p = productRepository.findById(productId).orElse(null);
+        Product p = productRepository.findByIdWithCategory(productId).orElse(null);
         if (p == null || !p.getIsActive()) return ResponseEntity.notFound().build();
+        log.info("getProductJson: slug={} productId={} name={}", slug, productId, p.getName());
         return ResponseEntity.ok(toPublicProductResponse(p));
     }
 
@@ -145,6 +206,7 @@ public class PublicStoreController {
 
     // ---- Backward-compatible JSON endpoints (singular /store/) ----
 
+    @Transactional(readOnly = true)
     @GetMapping("/store/{slug}/products")
     public ResponseEntity<Map<String, Object>> listProducts(
             @PathVariable String slug,
@@ -153,13 +215,11 @@ public class PublicStoreController {
             @RequestParam(required = false) UUID categoryId) {
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.notFound().build();
-        List<Product> products;
+        List<Product> products = productRepository.findPublicProductsWithCategory(b.getId());
         if (categoryId != null) {
-            products = productRepository.findByBoutiqueIdAndIsActiveTrue(b.getId()).stream()
+            products = products.stream()
                     .filter(p -> p.getCategory() != null && p.getCategory().getId().equals(categoryId))
                     .toList();
-        } else {
-            products = productRepository.findByBoutiqueIdAndIsActiveTrue(b.getId());
         }
         List<Map<String, Object>> list = products.stream().map(p -> {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -226,6 +286,7 @@ public class PublicStoreController {
         String paymentMethod = (String) body.get("paymentMethod");
         String email = (String) body.get("email");
         String notes = (String) body.get("notes");
+        String deliveryCompany = (String) body.get("deliveryCompany");
         List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
 
         if (fullName == null || phone == null || billingAddress == null || city == null || items == null || items.isEmpty()) {
@@ -297,6 +358,7 @@ public class PublicStoreController {
                 .city(city)
                 .shippingAddress(billingAddress + ", " + city)
                 .notes(notes)
+                .deliveryCompany(deliveryCompany)
                 .build();
         order.setItems(orderItems);
         order = orderRepository.save(order);
@@ -401,52 +463,6 @@ public class PublicStoreController {
         Optional<Boutique> existing = boutiqueRepository.findBySlug(name != null ? name.toLowerCase() : "");
         boolean available = existing.isEmpty() || (currentId != null && existing.get().getId().toString().equals(currentId));
         return ResponseEntity.ok(Map.of("available", available));
-    }
-
-    private PublicStoreResponse toPublicStoreResponse(Boutique b) {
-        BigDecimal minPrice = productRepository.findMinPriceByBoutiqueIdAndIsActiveTrue(b.getId());
-        long productCount = productRepository.countByBoutiqueId(b.getId());
-        String publicationStatus;
-        if ("FROZEN".equals(b.getStoreStatus())) publicationStatus = "FROZEN";
-        else if ("SUSPENDED".equals(b.getStoreStatus())) publicationStatus = "SUSPENDED";
-        else if (Boolean.FALSE.equals(b.getIsPublished())) publicationStatus = "DRAFT";
-        else publicationStatus = "PUBLISHED";
-
-        List<PublicProductResponse> products = productRepository.findByBoutiqueIdAndIsActiveTrue(b.getId())
-                .stream().map(this::toPublicProductResponse).toList();
-
-        return PublicStoreResponse.builder()
-                .id(b.getId()).name(b.getName()).slug(b.getSlug())
-                .logoUrl(b.getLogoUrl()).bannerUrl(b.getBannerUrl())
-                .description(b.getDescription())
-                .email(b.getEmail()).phone(b.getPhone()).address(b.getAddress())
-                .primaryColor(b.getPrimaryColor()).secondaryColor(b.getSecondaryColor())
-                .headerColor(b.getHeaderColor()).footerColor(b.getFooterColor())
-                .bodyColor(b.getBodyColor()).cardProductColor(b.getCardProductColor())
-                .buttonColor(b.getButtonColor()).topBarColor(b.getTopBarColor())
-                .textColor(b.getTextColor()).fontFamily(b.getFontFamily())
-                .currency(b.getCurrency()).language(b.getLanguage())
-                .announcementText(b.getAnnouncementText())
-                .deliveryFees(b.getDeliveryFees())
-                .cashOnDelivery(b.getCashOnDelivery())
-                .simpleCheckout(b.getSimpleCheckout())
-                .konnectActive("active".equals(b.getKonnectStatus()))
-                .d17Active("active".equals(b.getD17Status()))
-                .facebookUrl(b.getFacebookUrl()).instagramUrl(b.getInstagramUrl())
-                .tiktokUrl(b.getTiktokUrl()).whatsappNumber(b.getWhatsappNumber())
-                .publicationStatus(publicationStatus)
-                .freezeReason(b.getFreezeReason())
-                .publicUrl("/store/" + b.getSlug())
-                .minPrice(minPrice)
-                .productCount(productCount)
-                .categories(categoryRepository.findByBoutiqueIdOrderBySortOrder(b.getId()).stream()
-                    .map(c -> PublicCategoryResponse.builder()
-                        .id(c.getId()).name(c.getName()).slug(c.getSlug())
-                        .productCount(productRepository.countByBoutiqueIdAndCategoryId(b.getId(), c.getId()))
-                        .build())
-                    .toList())
-                .products(products)
-                .build();
     }
 
     private PublicProductResponse toPublicProductResponse(Product p) {

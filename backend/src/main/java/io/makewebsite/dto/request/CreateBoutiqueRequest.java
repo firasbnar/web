@@ -23,4 +23,10 @@ public class CreateBoutiqueRequest {
 
     @Builder.Default
     private String language = "fr";
+
+    private String category;
+
+    private String country;
+
+    private String city;
 }

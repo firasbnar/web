@@ -31,7 +31,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _govCtrl = TextEditingController();
 
   // Step 2: Delivery
-  String _deliveryMethod = 'standard';
+  String? _deliveryProvider;
+  bool _loadingStore = false;
+  Map<String, dynamic>? _store;
 
   // Step 3: Payment
   String _paymentMethod = 'cod';
@@ -48,9 +50,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _success = false;
   String? _orderNumber;
 
-  double get _shippingFee => _deliveryMethod == 'express' ? 5.0 : 0.0;
+  double get _shippingFee => 0.0;
   double get _subtotal => context.read<CartProvider>().subtotal;
   double get _total => _subtotal + _shippingFee - _discount;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStore();
+  }
+
+  Future<void> _loadStore() async {
+    setState(() => _loadingStore = true);
+    try {
+      final res = await _api.get('/boutiques/${widget.boutiqueId}');
+      if (mounted) {
+        final data = res['data'] as Map<String, dynamic>?;
+        setState(() {
+          _store = data;
+          _loadingStore = false;
+          final providers = _enabledProviders(data ?? {});
+          if (providers.isNotEmpty) _deliveryProvider = providers.first['value'] as String;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingStore = false);
+    }
+  }
+
+  List<Map<String, dynamic>> _enabledProviders(Map<String, dynamic> store) {
+    final list = <Map<String, dynamic>>[];
+    if (store['enableJax'] == true) list.add({'value': 'JAX', 'label': 'JAX Delivery', 'icon': Icons.local_shipping});
+    if (store['enableIntigo'] == true) list.add({'value': 'Intigo', 'label': 'Intigo', 'icon': Icons.local_shipping});
+    if (store['enableAdeex'] == true) list.add({'value': 'Adeex', 'label': 'Adeex', 'icon': Icons.flight});
+    return list;
+  }
 
   @override
   void dispose() {
@@ -145,7 +179,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'discount': _discount,
         'notes': _notesCtrl.text.trim().isNotEmpty ? _notesCtrl.text.trim() : null,
         'couponCode': _couponCtrl.text.trim().isNotEmpty ? _couponCtrl.text.trim() : null,
+        'deliveryCompany': _deliveryProvider,
       });
+      print('[Checkout] Order placed: deliveryCompany=$_deliveryProvider boutiqueId=${widget.boutiqueId}');
       _orderNumber = (res['data'] is Map ? res['data']['orderNumber']?.toString() : null);
 
       if (_paymentMethod == 'stripe' && _orderNumber != null) {
@@ -219,15 +255,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         title: const Text('Livraison'),
         isActive: _currentStep >= 2,
         state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-        content: Column(
-          children: [
-            _deliveryOption('standard', 'Standard', 'Livraison sous 3-5 jours', 0),
-            const SizedBox(height: 8),
-            _deliveryOption('express', 'Express', 'Livraison sous 24h', 5.0),
-            const SizedBox(height: 8),
-            _deliveryOption('pickup', 'Point relais', 'Retrait en magasin', 0),
-          ],
-        ),
+        content: _loadingStore
+            ? const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+            : Column(
+                children: [
+                  ..._enabledProviders(_store ?? {}).map((p) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _deliveryOption(p['value'] as String, p['label'] as String, p['icon'] as IconData),
+                  )),
+                  if (_enabledProviders(_store ?? {}).isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text('Aucun transporteur disponible', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
+                    ),
+                ],
+              ),
       ),
       Step(
         title: const Text('Paiement'),
@@ -344,10 +386,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _deliveryOption(String value, String title, String subtitle, double price) {
-    final selected = _deliveryMethod == value;
+  Widget _deliveryOption(String value, String label, IconData icon) {
+    final selected = _deliveryProvider == value;
     return InkWell(
-      onTap: () => setState(() => _deliveryMethod = value),
+      onTap: () => setState(() => _deliveryProvider = value),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -357,18 +399,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         child: Row(
           children: [
-            Radio<String>(value: value, groupValue: _deliveryMethod, onChanged: (v) => setState(() => _deliveryMethod = v!)),
+            Icon(icon, color: selected ? AppColors.primary : AppColors.textSecondary),
             const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: AppTypography.body2),
-                  Text(subtitle, style: AppTypography.caption),
-                ],
-              ),
-            ),
-            Text(price > 0 ? '$price TND' : 'Gratuit', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+            Text(label, style: AppTypography.body2),
+            const Spacer(),
+            if (selected)
+              const Icon(Icons.check_circle, color: AppColors.primary, size: 20),
           ],
         ),
       ),

@@ -41,6 +41,9 @@ public class PublicStoreResponse {
     private Boolean simpleCheckout;
     private Boolean konnectActive;
     private Boolean d17Active;
+    private Boolean enableJax;
+    private Boolean enableIntigo;
+    private Boolean enableAdeex;
     private String facebookUrl;
     private String instagramUrl;
     private String tiktokUrl;

@@ -16,7 +16,6 @@ import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/ai_chat_widget.dart';
-import '../../core/api_client.dart';
 
 
 class StoreDashboardScreen extends StatefulWidget {
@@ -26,7 +25,6 @@ class StoreDashboardScreen extends StatefulWidget {
 }
 
 class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
-  final _api = ApiClient();
   Map<String, dynamic>? _dashboardData;
   Map<String, dynamic>? _boutiqueSummary;
   bool _loadingDashboard = true;
@@ -42,6 +40,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     final bp = context.read<BoutiqueProvider>();
     if (bp.boutiques.isEmpty) {
       await bp.loadBoutiques();
+    }
+    // Guard: if still no boutique after load, redirect user to create one
+    if (bp.boutiques.isEmpty) {
+      if (mounted) context.go('/create-store');
+      return;
     }
     if (bp.activeBoutique != null) {
       _dashboardData = await bp.loadDashboard();

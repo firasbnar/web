@@ -1,14 +1,14 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:makewebsite_app/screens/auth/change_password_screen.dart';
+import 'package:makewebsite_app/screens/auth/forgot_password_screen.dart';
+import 'package:makewebsite_app/screens/auth/login_screen.dart';
+import 'package:makewebsite_app/screens/auth/register_screen.dart';
+import 'package:makewebsite_app/screens/auth/reset_password_screen.dart';
+import 'package:makewebsite_app/screens/landing_screen.dart';
+import 'package:makewebsite_app/screens/splash_screen.dart';
 import '../providers/auth_provider.dart';
-import '../screens/splash_screen.dart';
-import '../screens/landing_screen.dart';
-import '../screens/auth/login_screen.dart';
-import '../screens/auth/register_screen.dart';
-import '../screens/auth/forgot_password_screen.dart';
-import '../screens/auth/reset_password_screen.dart';
-import '../screens/auth/change_password_screen.dart';
 
 import '../screens/auth/verification_pending_screen.dart';
 import '../screens/home/store_dashboard_screen.dart';
@@ -100,7 +100,10 @@ GoRouter createRouter(AuthProvider auth) {
       // Root path → landing
       if (location == '/' || location.isEmpty) return '/landing';
 
-      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store'];
+      // /dashboard is an alias for /home
+      if (path == '/dashboard') return '/home';
+
+      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store', '/plans', '/create-store', '/store-selector'];
       final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
 
       // --- SUPER_ADMIN is platform-level only, no access to owner/merchant routes ---
@@ -137,6 +140,21 @@ GoRouter createRouter(AuthProvider auth) {
         developer.log('[ROUTER] Must change password, redirecting');
         return '/change-password';
       }
+
+      // Subscription guard: non-SUPER_ADMIN needs active subscription for protected routes
+      // /plans and /create-store are exempt (onboarding flow)
+      if (path.startsWith('/plans') || path.startsWith('/create-store')) return null;
+      final subRequiredPaths = ['/home', '/store-selector', '/products', '/orders', '/customers',
+          '/analytics', '/traffic', '/delivery', '/inventory', '/pos', '/subscription',
+          '/coupons', '/reviews', '/team', '/messages', '/notifications', '/boutique-settings',
+          '/payment-settings', '/ai-assistant', '/stores'];
+      final needsSub = subRequiredPaths.any((p) => path == p || path.startsWith('$p/'));
+      if (needsSub && role != 'SUPER_ADMIN' && !auth.subscriptionActive) {
+        developer.log('[ROUTER] No active subscription, redirecting to /plans');
+        return '/plans';
+      }
+
+
 
       if (path.startsWith('/super-admin')) {
         developer.log('[ROUTER] Non-SUPER_ADMIN blocked from /super-admin');

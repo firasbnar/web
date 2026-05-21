@@ -21,4 +21,7 @@ public class AuthResponse {
 
     @Builder.Default
     private boolean mustChangePassword = false;
+
+    @Builder.Default
+    private boolean subscriptionActive = false;
 }

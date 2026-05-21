@@ -87,7 +87,13 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
         ChangeNotifierProvider(create: (_) => PublicCartProvider()),
       ],
       builder: (context, _) {
-        _router ??= createRouter(context.read<AuthProvider>());
+        final auth = context.read<AuthProvider>();
+        final bp = context.read<BoutiqueProvider>();
+
+        // Wire up: on logout, clear boutique provider state
+        auth.onLogout = () => bp.clear();
+
+        _router ??= createRouter(auth);
 
         return MaterialApp.router(
           title: 'MakeWebsite',
