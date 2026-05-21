@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/api_client.dart';
 import '../services/csv_export_service.dart';
 import '../models/traffic_stats.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_typography.dart';
 
 class VisitTable extends StatefulWidget {
   final List<RecentVisit> visits;
@@ -51,7 +51,8 @@ class _VisitTableState extends State<VisitTable> {
         (v.page?.toLowerCase().contains(q) ?? false) ||
         (v.country?.toLowerCase().contains(q) ?? false) ||
         (v.city?.toLowerCase().contains(q) ?? false) ||
-        (v.browser?.toLowerCase().contains(q) ?? false)
+        (v.browser?.toLowerCase().contains(q) ?? false) ||
+        (v.referrer?.toLowerCase().contains(q) ?? false)
     ).toList();
   }
 
@@ -75,13 +76,16 @@ class _VisitTableState extends State<VisitTable> {
       CsvExportService.download(csv, 'traffic_export.csv');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Export terminé')),
+          SnackBar(content: Text('Export terminé'), behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur export: ${ApiClient.extractErrorMessage(e)}')),
+          SnackBar(content: Text('Erreur export: ${ApiClient.extractErrorMessage(e)}'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
         );
       }
     }
@@ -93,86 +97,134 @@ class _VisitTableState extends State<VisitTable> {
     return d;
   }
 
+  String _detectBrowser(String? userAgent) {
+    if (userAgent == null) return 'Autre';
+    final ua = userAgent.toLowerCase();
+    if (ua.contains('edg')) return 'Edge';
+    if (ua.contains('chrome')) return 'Chrome';
+    if (ua.contains('firefox')) return 'Firefox';
+    if (ua.contains('safari')) return 'Safari';
+    if (ua.contains('opera') || ua.contains('opr')) return 'Opera';
+    return 'Autre';
+  }
+
+  String _browserBadgeColor(String? browser) {
+    switch (browser?.toLowerCase()) {
+      case 'chrome': return '#4285F4';
+      case 'firefox': return '#FF7139';
+      case 'safari': return '#006CFF';
+      case 'edge': return '#0078D7';
+      case 'opera': return '#FF1B2D';
+      default: return '#9B97B8';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredVisits;
-    return Card(
-      margin: const EdgeInsets.all(16),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: AppColors.primary.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 4)),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySurface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.people_outline, size: 16, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.people_outline, size: 18, color: AppColors.textPrimary),
-                        const SizedBox(width: 8),
-                        Text('Dernières Visites', style: AppTypography.heading3),
+                        Text('Dernières Visites', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        if (widget.pageInfo != null)
+                          Text('${widget.pageInfo!['totalElements'] ?? 0} visites au total',
+                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
                       ],
                     ),
+                    const Spacer(),
                     if (widget.loading)
-                      const SizedBox(width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2)),
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextField(
                   decoration: InputDecoration(
-                    hintText: 'Rechercher par IP, page, pays...',
-                    prefixIcon: const Icon(Icons.search, size: 18),
+                    hintText: 'Rechercher par IP, page, pays, navigateur...',
+                    hintStyle: GoogleFonts.inter(fontSize: 13, color: AppColors.textHint),
+                    prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textHint),
                     suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 16),
-                            onPressed: () => setState(() => _searchQuery = ''),
-                          )
+                        ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => setState(() => _searchQuery = ''))
                         : null,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.border)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     isDense: true,
+                    filled: true,
+                    fillColor: AppColors.background,
                   ),
-                  style: const TextStyle(fontSize: 13),
+                  style: GoogleFonts.inter(fontSize: 13),
                   onChanged: (v) => setState(() => _searchQuery = v),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    DropdownButton<int>(
-                      value: widget.pageSize,
-                      underline: const SizedBox(),
-                      items: [10, 25, 50].map((n) => DropdownMenuItem(
-                        value: n,
-                        child: Text('$n Par page', style: const TextStyle(fontSize: 12)),
-                      )).toList(),
-                      onChanged: (v) { if (v != null) widget.onPageSizeChanged?.call(v); },
-                    ),
-                    SizedBox(
-                      height: 36,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.download, size: 14),
-                        label: const Text('Exporter CSV'),
-                        onPressed: _exportCsv,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: widget.pageSize,
+                          isDense: true,
+                          items: [10, 25, 50].map((n) => DropdownMenuItem(
+                            value: n, child: Text('$n / page', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary)),
+                          )).toList(),
+                          onChanged: (v) { if (v != null) widget.onPageSizeChanged?.call(v); },
+                        ),
                       ),
                     ),
+                    const Spacer(),
                     SizedBox(
-                      height: 36,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.refresh, size: 14),
-                        label: const Text('Actualiser'),
+                      width: 150,
+                      child: _toolbarButton(
+                        icon: Icons.download,
+                        label: 'Exporter CSV',
+                        onPressed: _exportCsv,
+                        outlined: true,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 130,
+                      child: _toolbarButton(
+                        icon: Icons.refresh,
+                        label: 'Actualiser',
                         onPressed: widget.onRefresh,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                        ),
+                        outlined: false,
                       ),
                     ),
                   ],
@@ -180,31 +232,46 @@ class _VisitTableState extends State<VisitTable> {
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: AppColors.border),
           if (widget.error != null)
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(40),
               child: Center(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, color: AppColors.danger, size: 32),
-                    const SizedBox(height: 8),
-                    Text(widget.error ?? '', style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+                    Container(
+                      width: 56, height: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.error_outline, size: 28, color: AppColors.danger),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(widget.error ?? '', style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13)),
                   ],
                 ),
               ),
             )
           else if (filtered.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(40),
+            Padding(
+              padding: const EdgeInsets.all(48),
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.inbox_outlined, size: 48, color: AppColors.border),
-                    SizedBox(height: 8),
-                    Text('Aucune visite trouvée',
-                        style: TextStyle(color: AppColors.textHint, fontSize: 13)),
+                    Container(
+                      width: 64, height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySurface,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.inbox_outlined, size: 32, color: AppColors.primary),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Aucune visite trouvée', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text('Les visites apparaîtront ici une fois enregistrées.',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -213,11 +280,17 @@ class _VisitTableState extends State<VisitTable> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AppColors.surfaceAlt),
+                headingRowColor: WidgetStateProperty.all(AppColors.background),
+                headingRowHeight: 44,
+                dataRowMinHeight: 48,
+                dataRowMaxHeight: 52,
+                horizontalMargin: 20,
+                columnSpacing: 24,
+                showCheckboxColumn: false,
                 sortColumnIndex: _columnIndex(_sortColumn),
                 sortAscending: _sortAscending,
                 columns: [
-                  _sortCol('IP', 'ipHash'),
+                  _sortCol('Visiteur', 'ipHash'),
                   _sortCol('Date/Heure', 'viewedAt'),
                   _sortCol('Page', 'page'),
                   _sortCol('Référent', 'referrer'),
@@ -228,22 +301,88 @@ class _VisitTableState extends State<VisitTable> {
                 rows: filtered.map((v) {
                   final ip = v.ipHash;
                   return DataRow(cells: [
-                  DataCell(Text(ip != null && ip.length > 12
-                      ? '${ip.substring(0, 12)}\u2026'
-                      : ip ?? '',
-                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: AppColors.primary))),
-                  DataCell(Text(_formatDate(v.viewedAt), style: const TextStyle(fontSize: 12))),
-                  DataCell(Text(v.page ?? '/', style: const TextStyle(fontSize: 12))),
-                  DataCell(Text(v.referrer ?? 'Direct', style: const TextStyle(fontSize: 12))),
-                  DataCell(Text(v.browser ?? 'Autre', style: const TextStyle(fontSize: 12))),
-                  DataCell(Text(v.country ?? '-', style: const TextStyle(fontSize: 12))),
-                  DataCell(Text(v.city ?? '-', style: const TextStyle(fontSize: 12))),
+                    DataCell(Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySurface,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(ip != null && ip.length > 12 ? '${ip.substring(0, 12)}\u2026' : ip ?? '',
+                          style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.primary)),
+                    )),
+                    DataCell(Text(_formatDate(v.viewedAt), style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary))),
+                    DataCell(Container(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Text(v.page ?? '/', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary),
+                          overflow: TextOverflow.ellipsis),
+                    )),
+                    DataCell(_buildReferrerBadge(v.referrer)),
+                    DataCell(_buildBrowserBadge(v.browser, v.userAgent)),
+                    DataCell(Text(v.country ?? 'Local', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary))),
+                    DataCell(Text(v.city ?? 'Local', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textPrimary))),
                   ]);
                 }).toList(),
               ),
             ),
           if (widget.pageInfo != null) ..._buildPagination(widget.pageInfo!),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBrowserBadge(String? browser, String? userAgent) {
+    final b = browser ?? _detectBrowser(userAgent);
+    final colorHex = _browserBadgeColor(b);
+    final color = Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(b, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: color)),
+    );
+  }
+
+  Widget _buildReferrerBadge(String? referrer) {
+    final r = (referrer == null || referrer.isEmpty) ? 'Direct' : referrer;
+    final isDirect = r == 'Direct';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isDirect ? AppColors.primarySurface : AppColors.success.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      constraints: const BoxConstraints(maxWidth: 120),
+      child: Text(r, style: GoogleFonts.inter(
+        fontSize: 11, fontWeight: FontWeight.w500,
+        color: isDirect ? AppColors.primary : AppColors.success,
+      ), overflow: TextOverflow.ellipsis),
+    );
+  }
+
+  Widget _toolbarButton({required IconData icon, required String label, VoidCallback? onPressed, bool outlined = false}) {
+    if (outlined) {
+      return OutlinedButton.icon(
+        icon: Icon(icon, size: 14),
+        label: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          side: BorderSide(color: AppColors.border),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        ),
+      );
+    }
+    return FilledButton.icon(
+      icon: Icon(icon, size: 14),
+      label: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       ),
     );
   }
@@ -255,57 +394,41 @@ class _VisitTableState extends State<VisitTable> {
     final hasNext = current < total - 1;
 
     return [
-      const Divider(height: 1),
+      const Divider(height: 1, color: AppColors.border),
       Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Page ${current + 1} / $total',
-              style: AppTypography.caption,
-            ),
-            Text(
-              '${pageInfo['totalElements'] ?? 0} visites',
-              style: AppTypography.caption,
+            Text('${pageInfo['totalElements'] ?? 0} visites · Page ${current + 1} sur $total',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasPrev)
+                  _pageButton(Icons.chevron_left, 'Précédent', () => widget.onPageChanged?.call(current - 1)),
+                if (hasPrev && hasNext) const SizedBox(width: 8),
+                if (hasNext)
+                  _pageButton(Icons.chevron_right, 'Suivant', () => widget.onPageChanged?.call(current + 1)),
+              ],
             ),
           ],
         ),
       ),
-      if (hasPrev || hasNext)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12, left: 12, right: 12),
-          child: Row(
-            mainAxisAlignment: !hasPrev
-                ? MainAxisAlignment.end
-                : !hasNext
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.spaceBetween,
-            children: [
-              if (hasPrev)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 200, minHeight: 36),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.arrow_back, size: 16),
-                    label: const Text('Précédent'),
-                    onPressed: () => widget.onPageChanged?.call(current - 1),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                  ),
-                ),
-              if (hasNext)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 200, minHeight: 36),
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.arrow_forward, size: 16),
-                    label: const Text('Suivant'),
-                    onPressed: () => widget.onPageChanged?.call(current + 1),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                  ),
-                ),
-            ],
-          ),
-        ),
     ];
+  }
+
+  Widget _pageButton(IconData icon, String label, VoidCallback? onPressed) {
+    return FilledButton.icon(
+      icon: Icon(icon, size: 14),
+      label: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      ),
+    );
   }
 
   int? _columnIndex(String col) {
@@ -323,7 +446,7 @@ class _VisitTableState extends State<VisitTable> {
 
   DataColumn _sortCol(String label, String column) {
     return DataColumn(
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      label: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary, letterSpacing: 0.3)),
       onSort: (_, __) => _sort(column),
     );
   }

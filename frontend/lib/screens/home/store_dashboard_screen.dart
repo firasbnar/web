@@ -16,6 +16,7 @@ import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/ai_chat_widget.dart';
+import '../../core/api_client.dart';
 
 
 class StoreDashboardScreen extends StatefulWidget {
@@ -25,9 +26,11 @@ class StoreDashboardScreen extends StatefulWidget {
 }
 
 class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
+  final _api = ApiClient();
   Map<String, dynamic>? _dashboardData;
   Map<String, dynamic>? _boutiqueSummary;
   bool _loadingDashboard = true;
+  bool _togglingMessaging = false;
 
   @override
   void initState() {
@@ -584,24 +587,38 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           const SizedBox(width: 8),
           _actionChip(Icons.layers_outlined, 'Template', false, () => context.go('/boutique/template'), grey: true),
           const SizedBox(width: 12),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Client messaging', style: AppTypography.caption),
-              const SizedBox(width: 4),
-              SizedBox(
-                height: 24,
-                child: Switch(
-                  value: true,
-                  activeTrackColor: Colors.green.shade300,
-                  activeThumbColor: Colors.green,
-                  onChanged: (v) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Messaging ${v ? 'activé' : 'désactivé'}'), behavior: SnackBarBehavior.floating));
-                  },
-                ),
-              ),
-            ],
+          Consumer<BoutiqueProvider>(
+            builder: (_, bp, __) {
+              final enabled = bp.activeBoutique?.clientMessagingEnabled ?? true;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Client messaging', style: AppTypography.caption),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    height: 24,
+                    child: _togglingMessaging
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Switch(
+                            value: enabled,
+                            activeTrackColor: Colors.green.shade300,
+                            activeThumbColor: Colors.green,
+                            onChanged: (v) async {
+                              setState(() => _togglingMessaging = true);
+                              try {
+                                await bp.saveConfig({'clientMessagingEnabled': v ? 'yes' : 'no'});
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Messaging ${v ? 'activé' : 'désactivé'}'), behavior: SnackBarBehavior.floating));
+                                }
+                              } catch (_) {}
+                              if (mounted) setState(() => _togglingMessaging = false);
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

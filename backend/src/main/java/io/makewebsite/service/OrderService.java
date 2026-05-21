@@ -98,6 +98,10 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
         storeStatusGuard.requireActive(boutique);
 
+        if ("paypal".equalsIgnoreCase(request.getPaymentMethod())) {
+            throw new RuntimeException("PayPal n'est plus disponible");
+        }
+
         User user = userId != null ? userRepository.findById(userId).orElse(null) : null;
 
         Customer customer = null;
@@ -277,12 +281,16 @@ public class OrderService {
                 .id(o.getId()).boutiqueId(o.getBoutique().getId())
                 .userId(o.getUser() != null ? o.getUser().getId() : null)
                 .customerId(o.getCustomer() != null ? o.getCustomer().getId() : null)
-                .customerName(o.getCustomer() != null ? o.getCustomer().getFullName() : "Client inconnu")
+                .customerName(o.getCustomer() != null ? o.getCustomer().getFullName()
+                    : (o.getCustomerName() != null ? o.getCustomerName() : "Client inconnu"))
+                .customerPhone(o.getCustomer() != null ? o.getCustomer().getPhone() : o.getCustomerPhone())
+                .customerEmail(o.getCustomer() != null ? o.getCustomer().getEmail() : o.getCustomerEmail())
                 .orderNumber(o.getOrderNumber()).status(o.getStatus())
                 .subtotal(o.getSubtotal()).shippingFee(o.getShippingFee())
                 .discount(o.getDiscount()).total(o.getTotal())
                 .paymentMethod(o.getPaymentMethod()).paymentStatus(o.getPaymentStatus())
                 .paymentRef(o.getPaymentRef()).shippingAddress(o.getShippingAddress())
+                .city(o.getCity())
                 .deliveryCompany(o.getDeliveryCompany()).trackingNumber(o.getTrackingNumber())
                 .notes(o.getNotes()).invoiceNumber(o.getInvoiceNumber())
                 .invoiceCreatedAt(o.getInvoiceCreatedAt()).createdAt(o.getCreatedAt())

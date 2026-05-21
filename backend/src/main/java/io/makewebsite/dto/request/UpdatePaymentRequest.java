@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class UpdatePaymentRequest {
-    private Boolean enablePaypal;
     private Boolean enableCod;
     private Boolean enableD17;
     private Boolean enableAdeex;
@@ -21,11 +20,6 @@ public class UpdatePaymentRequest {
     private String stripePublishableKey;
     private String stripeSecretKey;
     private String stripeWebhookSecret;
-
-    // PayPal config
-    private String paypalClientId;
-    private String paypalSecret;
-    private String paypalWebhookId;
 
     // Konnect config
     private String konnectMerchantId;

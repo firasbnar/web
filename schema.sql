@@ -66,7 +66,6 @@ CREATE TABLE boutiques (
   tiktok_url TEXT,
   whatsapp_number VARCHAR(20),
   custom_css TEXT,
-  enable_paypal BOOLEAN DEFAULT FALSE,
   enable_cod BOOLEAN DEFAULT TRUE,
   enable_d17 BOOLEAN DEFAULT FALSE,
   enable_adeex BOOLEAN DEFAULT FALSE,

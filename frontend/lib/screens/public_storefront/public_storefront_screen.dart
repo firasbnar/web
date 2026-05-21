@@ -1,3 +1,5 @@
+import 'dart:html' as html;
+import 'dart:js_util' as js_util;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +33,57 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
     _loadStore();
   }
 
+  Future<void> _trackVisit(double? lat, double? lng) async {
+    try {
+      final boutiqueId = _store?['id'];
+      if (boutiqueId == null) return;
+      final payload = <String, dynamic>{
+        'page': '/store/${widget.slug}',
+        'referrer': html.window.location.href,
+        'userAgent': html.window.navigator.userAgent,
+        'latitude': lat,
+        'longitude': lng,
+      };
+      print('[Geo] Sending visit payload: $payload');
+      await _api.post('/public/stores/${widget.slug}/visit', data: payload);
+      print('[Geo] Visit tracked successfully: lat=$lat lng=$lng');
+    } catch (e) {
+      print('[Geo] Visit tracking error: $e');
+    }
+  }
+
+  void _requestGeolocation() {
+    try {
+      print('[Geo] Requesting browser geolocation...');
+
+      js_util.callMethod(
+        html.window.navigator.geolocation,
+        'getCurrentPosition',
+        [
+          (position) {
+            final coords = js_util.getProperty(position, 'coords');
+            final lat = js_util.getProperty(coords, 'latitude') as num?;
+            final lng = js_util.getProperty(coords, 'longitude') as num?;
+
+            print('[Geo] Geolocation granted: lat=$lat lng=$lng');
+            _trackVisit(lat?.toDouble(), lng?.toDouble());
+          },
+          (error) {
+            print('[Geo] Geolocation denied or error: $error');
+            _trackVisit(null, null);
+          },
+          {
+            'enableHighAccuracy': false,
+            'timeout': 10000,
+          }
+        ],
+      );
+    } catch (e) {
+      print('[Geo] Geolocation exception: $e');
+      _trackVisit(null, null);
+    }
+  }
+
   Future<void> _loadStore() async {
     setState(() { _loading = true; _error = null; });
     try {
@@ -38,6 +91,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
       if (mounted) {
         setState(() { _store = res; _loading = false; });
         _setSocialMeta(res);
+        _requestGeolocation();
       }
     } catch (e) {
       if (mounted) setState(() { _error = 'Boutique introuvable'; _loading = false; });

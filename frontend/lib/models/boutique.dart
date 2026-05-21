@@ -26,7 +26,6 @@ class Boutique {
   final String? whatsappNumber;
   final String? customCss;
   final String? customJs;
-  final bool enablePaypal;
   final bool enableCod;
   final bool enableD17;
   final bool enableAdeex;
@@ -62,7 +61,6 @@ class Boutique {
   final String? fontFamily;
   final bool darkMode;
   final String? stripePublishableKey;
-  final String? paypalClientId;
   final double? freeShippingThreshold;
   final int? estimatedDeliveryDays;
   final bool enableLocalPickup;
@@ -71,6 +69,8 @@ class Boutique {
   final bool enablePushNotifications;
   final bool enableMarketingEmails;
   final bool enableOrderAlerts;
+  final bool clientMessagingEnabled;
+  final bool teamEnabled;
   final String? telegramChatId;
   final bool telegramEnabled;
 
@@ -110,7 +110,6 @@ class Boutique {
     this.whatsappNumber,
     this.customCss,
     this.customJs,
-    this.enablePaypal = false,
     this.enableCod = true,
     this.enableD17 = false,
     this.enableAdeex = false,
@@ -142,7 +141,6 @@ class Boutique {
     this.fontFamily,
     this.darkMode = false,
     this.stripePublishableKey,
-    this.paypalClientId,
     this.freeShippingThreshold,
     this.estimatedDeliveryDays,
     this.enableLocalPickup = false,
@@ -151,6 +149,8 @@ class Boutique {
     this.enablePushNotifications = true,
     this.enableMarketingEmails = false,
     this.enableOrderAlerts = true,
+    this.clientMessagingEnabled = true,
+    this.teamEnabled = false,
     this.telegramChatId,
     this.telegramEnabled = false,
     this.storeStatus,
@@ -190,7 +190,6 @@ class Boutique {
     whatsappNumber: json['whatsappNumber'],
     customCss: json['customCss'],
     customJs: json['customJs'],
-    enablePaypal: json['enablePaypal'] ?? false,
     enableCod: json['enableCod'] ?? true,
     enableD17: json['enableD17'] ?? false,
     enableAdeex: json['enableAdeex'] ?? false,
@@ -222,7 +221,6 @@ class Boutique {
     fontFamily: json['fontFamily'],
     darkMode: json['darkMode'] ?? false,
     stripePublishableKey: json['stripePublishableKey'],
-    paypalClientId: json['paypalClientId'],
     freeShippingThreshold: (json['freeShippingThreshold'] as num?)?.toDouble(),
     estimatedDeliveryDays: json['estimatedDeliveryDays'],
     enableLocalPickup: json['enableLocalPickup'] ?? false,
@@ -231,6 +229,8 @@ class Boutique {
     enablePushNotifications: json['enablePushNotifications'] ?? true,
     enableMarketingEmails: json['enableMarketingEmails'] ?? false,
     enableOrderAlerts: json['enableOrderAlerts'] ?? true,
+    clientMessagingEnabled: json['clientMessagingEnabled'] ?? true,
+    teamEnabled: json['teamEnabled'] ?? false,
     telegramChatId: json['telegramChatId'],
     telegramEnabled: json['telegramEnabled'] ?? false,
     storeStatus: json['storeStatus'],
@@ -270,7 +270,6 @@ class Boutique {
     'whatsappNumber': whatsappNumber,
     'customCss': customCss,
     'customJs': customJs,
-    'enablePaypal': enablePaypal,
     'enableCod': enableCod,
     'enableD17': enableD17,
     'enableAdeex': enableAdeex,
@@ -301,7 +300,6 @@ class Boutique {
     'fontFamily': fontFamily,
     'darkMode': darkMode,
     'stripePublishableKey': stripePublishableKey,
-    'paypalClientId': paypalClientId,
     'freeShippingThreshold': freeShippingThreshold,
     'estimatedDeliveryDays': estimatedDeliveryDays,
     'enableLocalPickup': enableLocalPickup,
@@ -310,6 +308,8 @@ class Boutique {
     'enablePushNotifications': enablePushNotifications,
     'enableMarketingEmails': enableMarketingEmails,
     'enableOrderAlerts': enableOrderAlerts,
+    'clientMessagingEnabled': clientMessagingEnabled,
+    'teamEnabled': teamEnabled,
     'telegramChatId': telegramChatId,
     'telegramEnabled': telegramEnabled,
     'storeStatus': storeStatus,

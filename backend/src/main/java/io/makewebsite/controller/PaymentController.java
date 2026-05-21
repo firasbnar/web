@@ -17,16 +17,6 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
     private final PaymentService paymentService;
 
-    @PostMapping("/paypal/create-order")
-    public ResponseEntity<ApiResponse<JsonNode>> createPayPalOrder(@Valid @RequestBody CreatePaymentRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(paymentService.createPayPalOrder(request)));
-    }
-
-    @PostMapping("/paypal/capture")
-    public ResponseEntity<ApiResponse<JsonNode>> capturePayPalOrder(@RequestParam String orderId) {
-        return ResponseEntity.ok(ApiResponse.ok(paymentService.capturePayPalOrder(orderId)));
-    }
-
     @PostMapping("/stripe/create-intent")
     public ResponseEntity<ApiResponse<JsonNode>> createStripeIntent(@Valid @RequestBody CreatePaymentRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(paymentService.createStripePaymentIntent(request)));

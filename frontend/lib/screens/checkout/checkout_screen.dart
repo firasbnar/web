@@ -238,8 +238,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _paymentOption('cod', 'Paiement à la livraison', Icons.money),
             const SizedBox(height: 8),
             _paymentOption('stripe', 'Carte bancaire (Stripe)', Icons.credit_card),
-            const SizedBox(height: 8),
-            _paymentOption('paypal', 'PayPal', Icons.payment),
           ],
         ),
       ),

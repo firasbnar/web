@@ -123,19 +123,28 @@ class _DeliveryCompanyScreenState extends State<DeliveryCompanyScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _deliveryMethod('JAX Delivery', 'Service de livraison rapide en Tunisie', _jaxEnabled, (v) => setState(() => _jaxEnabled = v ?? false), [
+            _deliveryMethod('JAX Delivery', 'Service de livraison rapide en Tunisie', _jaxEnabled, (v) async {
+              setState(() => _jaxEnabled = v ?? false);
+              await context.read<BoutiqueProvider>().updatePayments({'enableJax': _jaxEnabled});
+            }, [
               _configField('Clé API', _jaxApiCtrl),
               _configField('Zone A (DT)', _jaxZoneACtrl),
               _configField('Zone B (DT)', _jaxZoneBCtrl),
               _configField('Zone C (DT)', _jaxZoneCCtrl),
             ]),
             const SizedBox(height: 12),
-            _deliveryMethod('Intigo', 'Solutions de livraison nationale', _intigoEnabled, (v) => setState(() => _intigoEnabled = v ?? false), [
+            _deliveryMethod('Intigo', 'Solutions de livraison nationale', _intigoEnabled, (v) async {
+              setState(() => _intigoEnabled = v ?? false);
+              await context.read<BoutiqueProvider>().updatePayments({'enableIntigo': _intigoEnabled});
+            }, [
               _configField('ID Marchand', _intigoMerchantCtrl),
               _configField('Clé secrète', _intigoSecretCtrl, secret: true),
             ]),
             const SizedBox(height: 12),
-            _deliveryMethod('Adeex', 'Livraison internationale', _adeexEnabled, (v) => setState(() => _adeexEnabled = v ?? false), [
+            _deliveryMethod('Adeex', 'Livraison internationale', _adeexEnabled, (v) async {
+              setState(() => _adeexEnabled = v ?? false);
+              await context.read<BoutiqueProvider>().updatePayments({'enableAdeex': _adeexEnabled});
+            }, [
               _configField('URL API', _adeexUrlCtrl),
               _configField('Token', _adeexTokenCtrl, secret: true),
             ]),

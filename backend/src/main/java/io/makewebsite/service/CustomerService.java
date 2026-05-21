@@ -82,14 +82,31 @@ public class CustomerService {
 
     @Transactional
     public Customer findOrCreateCustomer(UUID boutiqueId, String fullName, String email,
-                                          String phone, String address, String city,
-                                          String governorate, String postalCode, String country) {
+                                           String phone, String address, String city,
+                                           String governorate, String postalCode, String country) {
         Boutique boutique = boutiqueRepository.getReferenceById(boutiqueId);
 
+        // Try phone match first
+        if (phone != null && !phone.isEmpty()) {
+            Optional<Customer> byPhone = customerRepository.findByBoutiqueIdAndPhone(boutiqueId, phone);
+            if (byPhone.isPresent()) {
+                Customer c = byPhone.get();
+                if (fullName != null) c.setFullName(fullName);
+                if (email != null) c.setEmail(email);
+                if (address != null) c.setAddress(address);
+                if (city != null) c.setCity(city);
+                if (governorate != null) c.setGovernorate(governorate);
+                if (postalCode != null) c.setPostalCode(postalCode);
+                if (country != null) c.setCountry(country);
+                return customerRepository.save(c);
+            }
+        }
+
+        // Fallback to email match
         if (email != null && !email.isEmpty()) {
-            Optional<Customer> existing = customerRepository.findByBoutiqueIdAndEmail(boutiqueId, email);
-            if (existing.isPresent()) {
-                Customer c = existing.get();
+            Optional<Customer> byEmail = customerRepository.findByBoutiqueIdAndEmail(boutiqueId, email);
+            if (byEmail.isPresent()) {
+                Customer c = byEmail.get();
                 if (fullName != null) c.setFullName(fullName);
                 if (phone != null) c.setPhone(phone);
                 if (address != null) c.setAddress(address);
@@ -97,7 +114,7 @@ public class CustomerService {
                 if (governorate != null) c.setGovernorate(governorate);
                 if (postalCode != null) c.setPostalCode(postalCode);
                 if (country != null) c.setCountry(country);
-                return c;
+                return customerRepository.save(c);
             }
         }
 

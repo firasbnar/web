@@ -20,6 +20,8 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
 
     Optional<Customer> findByBoutiqueIdAndEmail(UUID boutiqueId, String email);
 
+    Optional<Customer> findByBoutiqueIdAndPhone(UUID boutiqueId, String phone);
+
     long countByBoutiqueId(UUID boutiqueId);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.customer.id = :customerId")

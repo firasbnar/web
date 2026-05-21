@@ -79,6 +79,21 @@ public class Order {
     @Column(name = "payment_ref")
     private String paymentRef;
 
+    @Column(name = "customer_name")
+    @Size(max = 100)
+    private String customerName;
+
+    @Column(name = "customer_phone")
+    @Size(max = 20)
+    private String customerPhone;
+
+    @Column(name = "customer_email")
+    @Size(max = 150)
+    private String customerEmail;
+
+    @Size(max = 100)
+    private String city;
+
     @Column(name = "shipping_address", columnDefinition = "TEXT")
     private String shippingAddress;
 

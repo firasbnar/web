@@ -36,6 +36,20 @@ class CouponsProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> toggleActive(String id) async {
+    try {
+      final res = await _api.put('/coupons/$id/toggle-active');
+      final updated = Coupon.fromJson(res['data']);
+      final idx = _coupons.indexWhere((c) => c.id == id);
+      if (idx >= 0) _coupons[idx] = updated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e); notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> deleteCoupon(String id) async {
     try {
       await _api.delete('/coupons/$id');

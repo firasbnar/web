@@ -65,12 +65,26 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
     }
   }
 
-  void _toggleEnabled() {
+  Future<void> _toggleEnabled() async {
     if (!_enabled && _chatIdCtrl.text.trim().isEmpty) {
       _showError('Veuillez d\'abord saisir un ID Chat Telegram');
       return;
     }
-    setState(() => _enabled = !_enabled);
+    setState(() => _saving = true);
+    final bp = context.read<BoutiqueProvider>();
+    final newValue = !_enabled;
+    final success = await bp.saveTelegramSettings(_chatIdCtrl.text.trim(), newValue);
+    if (mounted) {
+      if (success) {
+        setState(() => _enabled = newValue);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Telegram ${newValue ? 'activé' : 'désactivé'}'), backgroundColor: AppColors.success),
+        );
+      } else {
+        _showError(bp.error ?? 'Erreur lors de la sauvegarde');
+      }
+      setState(() => _saving = false);
+    }
   }
 
   void _showError(String message) {

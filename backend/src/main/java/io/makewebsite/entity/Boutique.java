@@ -111,10 +111,6 @@ public class Boutique {
     private String customJs;
 
     @Builder.Default
-    @Column(name = "enable_paypal")
-    private Boolean enablePaypal = false;
-
-    @Builder.Default
     @Column(name = "enable_cod")
     private Boolean enableCod = true;
 
@@ -260,15 +256,6 @@ public class Boutique {
 
     @Column(name = "stripe_webhook_secret", length = 200)
     private String stripeWebhookSecret;
-
-    @Column(name = "paypal_client_id", length = 200)
-    private String paypalClientId;
-
-    @Column(name = "paypal_secret", length = 200)
-    private String paypalSecret;
-
-    @Column(name = "paypal_webhook_id", length = 200)
-    private String paypalWebhookId;
 
     @Column(name = "free_shipping_threshold")
     private Double freeShippingThreshold;

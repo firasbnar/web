@@ -161,7 +161,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                       ),
                       Switch(
                         value: coupon.isActive,
-                        onChanged: (v) {},
+                        onChanged: (v) => cp.toggleActive(coupon.id),
                         activeThumbColor: AppColors.primary,
                       ),
                     ],

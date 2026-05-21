@@ -5,6 +5,7 @@ import io.makewebsite.dto.response.*;
 import io.makewebsite.service.TrafficService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/traffic")
 @RequiredArgsConstructor
@@ -28,7 +30,11 @@ public class TrafficController {
     @GetMapping("/{boutiqueId}/stats")
     public ResponseEntity<ApiResponse<TrafficStatsResponse>> getStats(
             @PathVariable UUID boutiqueId) {
-        return ResponseEntity.ok(ApiResponse.ok(trafficService.getStats(boutiqueId)));
+        TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
+        log.info("Traffic stats for {}: total={}, today={}, week={}, month={}",
+                boutiqueId, stats.getTotalVisits(), stats.getTodayVisits(),
+                stats.getWeekVisits(), stats.getMonthVisits());
+        return ResponseEntity.ok(ApiResponse.ok(stats));
     }
 
     @GetMapping("/{boutiqueId}/overview")
@@ -78,6 +84,9 @@ public class TrafficController {
     @PostMapping("/track")
     public ResponseEntity<ApiResponse<Map<String, Object>>> trackVisit(
             @Valid @RequestBody TrackVisitRequest request) {
+        log.info("Track visit: boutiqueId={}, slug={}, page={}, ip={}, sessionId={}",
+                request.getBoutiqueId(), request.getBoutiqueSlug(),
+                request.getPage(), request.getIpAddress(), request.getSessionId());
         return ResponseEntity.ok(ApiResponse.ok(
                 "Visite enregistrée", trafficService.trackVisit(request)));
     }
@@ -87,19 +96,25 @@ public class TrafficController {
             @PathVariable UUID boutiqueId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.ok(
-                trafficService.getRecentVisits(boutiqueId, page, size)));
+        Map<String, Object> data = trafficService.getRecentVisits(boutiqueId, page, size);
+        List<?> content = (List<?>) data.getOrDefault("content", List.of());
+        log.info("Recent visits for {}: {} items on page {} of {}",
+                boutiqueId, content.size(), page, data.getOrDefault("totalPages", 0));
+        return ResponseEntity.ok(ApiResponse.ok(data));
     }
 
     @GetMapping("/{boutiqueId}/map")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getMapData(
             @PathVariable UUID boutiqueId) {
-        return ResponseEntity.ok(ApiResponse.ok(trafficService.getMapData(boutiqueId)));
+        List<Map<String, Object>> data = trafficService.getMapData(boutiqueId);
+        log.info("Map data for {}: {} geo points", boutiqueId, data.size());
+        return ResponseEntity.ok(ApiResponse.ok(data));
     }
 
     @GetMapping("/{boutiqueId}/export")
     public ResponseEntity<String> exportCsv(@PathVariable UUID boutiqueId) {
         String csv = trafficService.exportCsv(boutiqueId);
+        log.info("CSV export for {}: {} bytes", boutiqueId, csv.length());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
         headers.setContentDisposition(ContentDisposition.attachment().filename("traffic_export.csv").build());

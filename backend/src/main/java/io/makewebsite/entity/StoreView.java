@@ -44,6 +44,13 @@ public class StoreView {
     @Column(length = 100)
     private String city;
 
+    private Double latitude;
+
+    private Double longitude;
+
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
     @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 

@@ -48,7 +48,6 @@ public class BoutiqueResponse {
     private String whatsappNumber;
     private String customCss;
     private String customJs;
-    private Boolean enablePaypal;
     private Boolean enableCod;
     private Boolean enableD17;
     private Boolean enableAdeex;
@@ -72,7 +71,6 @@ public class BoutiqueResponse {
     private String facebookPixelId;
     private String googleAnalyticsId;
     private String stripePublishableKey;
-    private String paypalClientId;
     private Double freeShippingThreshold;
     private Integer estimatedDeliveryDays;
     private Boolean enableLocalPickup;

@@ -53,12 +53,17 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
   bool _enableMarketingEmails = false;
   bool _enableOrderAlerts = true;
   bool _savingNotif = false;
+  bool _savingNotifEmail = false;
+  bool _savingNotifSms = false;
+  bool _savingNotifPush = false;
+  bool _savingNotifAlerts = false;
+  bool _savingNotifMarketing = false;
+  bool _savingKonnect = false;
+  bool _savingD17 = false;
 
   // --- Payment Provider Keys ---
   final _stripePublishableCtrl = TextEditingController();
   final _stripeSecretCtrl = TextEditingController();
-  final _paypalClientCtrl = TextEditingController();
-  final _paypalSecretCtrl = TextEditingController();
   bool _savingPayments = false;
 
   // ========== DELIVERY ZONES ==========
@@ -200,8 +205,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
     _stripePublishableCtrl.text = b.stripePublishableKey ?? '';
     _stripeSecretCtrl.text = ''; // never pre-fill secret keys
-    _paypalClientCtrl.text = b.paypalClientId ?? '';
-    _paypalSecretCtrl.text = ''; // never pre-fill secret keys
 
     _fontFamily = b.fontFamily ?? 'Inter';
     _darkMode = b.darkMode;
@@ -447,8 +450,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     _seoKeywordsCtrl.dispose();
     _stripePublishableCtrl.dispose();
     _stripeSecretCtrl.dispose();
-    _paypalClientCtrl.dispose();
-    _paypalSecretCtrl.dispose();
     super.dispose();
   }
 
@@ -609,11 +610,17 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 _ToggleRow(
                   label: 'Activer Konnect',
                   value: _konnectEnabled,
-                  onChanged: (v) => setState(() => _konnectEnabled = v),
+                  loading: _savingKonnect,
+                  onChanged: (v) async {
+                    setState(() => _savingKonnect = true);
+                    setState(() => _konnectEnabled = v);
+                    await bp.saveConfig({'konnectStatus': v ? 'active' : 'inactive'});
+                    setState(() => _savingKonnect = false);
+                  },
                 ),
                 const SizedBox(height: 12),
                 _SaveButton(
-                  label: 'Sauvegarder Konnect',
+                  label: 'Sauvegarder les clés Konnect',
                   onPressed: () => _saveConfig(bp),
                 ),
               ],
@@ -692,11 +699,17 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 _ToggleRow(
                   label: 'Activer D17',
                   value: _d17Enabled,
-                  onChanged: (v) => setState(() => _d17Enabled = v),
+                  loading: _savingD17,
+                  onChanged: (v) async {
+                    setState(() => _savingD17 = true);
+                    setState(() => _d17Enabled = v);
+                    await bp.saveConfig({'d17Status': v ? 'active' : 'inactive'});
+                    setState(() => _savingD17 = false);
+                  },
                 ),
                 const SizedBox(height: 12),
                 _SaveButton(
-                  label: 'Sauvegarder D17',
+                  label: 'Sauvegarder les infos D17',
                   onPressed: () => _saveConfig(bp),
                 ),
               ],
@@ -704,33 +717,19 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 5. STRIPE & PAYPAL ==========
+          // ========== 5. STRIPE ==========
           _SettingsCard(
-            title: 'Stripe & PayPal',
+            title: 'Stripe',
             icon: Icons.payment_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Configuration des passerelles de paiement en ligne',
+                Text('Configuration de Stripe',
                     style: AppTypography.caption),
                 const SizedBox(height: 16),
-                Text('Stripe', style: AppTypography.heading4.copyWith(fontSize: 14)),
-                const SizedBox(height: 8),
                 _FormField(label: 'Clé publiable Stripe', controller: _stripePublishableCtrl, hint: 'pk_test_...'),
                 const SizedBox(height: 12),
                 _FormField(label: 'Clé secrète Stripe', controller: _stripeSecretCtrl, hint: 'sk_test_...', maxLines: 2),
-                const SizedBox(height: 16),
-                Text('PayPal', style: AppTypography.heading4.copyWith(fontSize: 14)),
-                const SizedBox(height: 8),
-                _FormField(label: 'PayPal Client ID', controller: _paypalClientCtrl, hint: 'Ae...'),
-                const SizedBox(height: 12),
-                _FormField(label: 'PayPal Secret', controller: _paypalSecretCtrl, maxLines: 2),
-                const SizedBox(height: 12),
-                _ToggleRow(
-                  label: 'Activer PayPal',
-                  value: b.enablePaypal,
-                  onChanged: (v) => setState(() {}),
-                ),
                 const SizedBox(height: 16),
                 _SaveButton(
                   label: 'Sauvegarder les clés',
@@ -740,8 +739,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                     final ok = await bp.updatePayments({
                       'stripePublishableKey': _stripePublishableCtrl.text,
                       'stripeSecretKey': _stripeSecretCtrl.text,
-                      'paypalClientId': _paypalClientCtrl.text,
-                      'paypalSecret': _paypalSecretCtrl.text,
                     });
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -882,7 +879,10 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                           const SizedBox(height: 4),
                           SwitchListTile(
                             value: _darkMode,
-                            onChanged: (v) => setState(() => _darkMode = v),
+                            onChanged: (v) async {
+                              setState(() => _darkMode = v);
+                              await bp.saveStoreTheme({'darkMode': v ? 'yes' : 'no'});
+                            },
                             title: Text(_darkMode ? 'Activé' : 'Désactivé', style: const TextStyle(fontSize: 13)),
                             dense: true,
                             contentPadding: EdgeInsets.zero,
@@ -931,11 +931,36 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ToggleRow(label: 'Notifications par email', value: _enableEmailNotif, onChanged: (v) => setState(() => _enableEmailNotif = v)),
-                _ToggleRow(label: 'Notifications par SMS', value: _enableSmsNotif, onChanged: (v) => setState(() => _enableSmsNotif = v)),
-                _ToggleRow(label: 'Notifications push', value: _enablePushNotif, onChanged: (v) => setState(() => _enablePushNotif = v)),
-                _ToggleRow(label: 'Alertes nouvelles commandes', value: _enableOrderAlerts, onChanged: (v) => setState(() => _enableOrderAlerts = v)),
-                _ToggleRow(label: 'Emails marketing', value: _enableMarketingEmails, onChanged: (v) => setState(() => _enableMarketingEmails = v)),
+                _ToggleRow(label: 'Notifications par email', value: _enableEmailNotif, loading: _savingNotifEmail, onChanged: (v) async {
+                  setState(() => _savingNotifEmail = true);
+                  setState(() => _enableEmailNotif = v);
+                  await bp.saveNotificationSettings({'enableEmailNotifications': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifEmail = false);
+                }),
+                _ToggleRow(label: 'Notifications par SMS', value: _enableSmsNotif, loading: _savingNotifSms, onChanged: (v) async {
+                  setState(() => _savingNotifSms = true);
+                  setState(() => _enableSmsNotif = v);
+                  await bp.saveNotificationSettings({'enableSmsNotifications': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifSms = false);
+                }),
+                _ToggleRow(label: 'Notifications push', value: _enablePushNotif, loading: _savingNotifPush, onChanged: (v) async {
+                  setState(() => _savingNotifPush = true);
+                  setState(() => _enablePushNotif = v);
+                  await bp.saveNotificationSettings({'enablePushNotifications': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifPush = false);
+                }),
+                _ToggleRow(label: 'Alertes nouvelles commandes', value: _enableOrderAlerts, loading: _savingNotifAlerts, onChanged: (v) async {
+                  setState(() => _savingNotifAlerts = true);
+                  setState(() => _enableOrderAlerts = v);
+                  await bp.saveNotificationSettings({'enableOrderAlerts': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifAlerts = false);
+                }),
+                _ToggleRow(label: 'Emails marketing', value: _enableMarketingEmails, loading: _savingNotifMarketing, onChanged: (v) async {
+                  setState(() => _savingNotifMarketing = true);
+                  setState(() => _enableMarketingEmails = v);
+                  await bp.saveNotificationSettings({'enableMarketingEmails': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifMarketing = false);
+                }),
                 const SizedBox(height: 12),
                 _SaveButton(
                   label: 'Sauvegarder préférences',
@@ -1721,18 +1746,25 @@ class _ToggleRow extends StatelessWidget {
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
-  const _ToggleRow(
-      {required this.label, required this.value, required this.onChanged});
+  final bool loading;
+  const _ToggleRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.loading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.primary,
-        ),
+        loading
+            ? const SizedBox(width: 40, height: 24, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))))
+            : Switch(
+                value: value,
+                onChanged: onChanged,
+                activeThumbColor: AppColors.primary,
+              ),
         const SizedBox(width: 8),
         Text(label, style: AppTypography.body2),
       ],

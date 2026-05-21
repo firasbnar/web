@@ -7,6 +7,7 @@ import io.makewebsite.dto.response.CouponValidationResponse;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CouponService {
@@ -58,6 +60,18 @@ public class CouponService {
         if (request.getExpiresAt() != null) coupon.setExpiresAt(request.getExpiresAt());
         if (request.getIsActive() != null) coupon.setIsActive(request.getIsActive());
         coupon = couponRepository.save(coupon);
+        return mapToResponse(coupon);
+    }
+
+    @Transactional
+    public CouponResponse toggleActive(UUID id) {
+        Coupon coupon = couponRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Code promo non trouvé"));
+        boolean previous = coupon.getIsActive() != null && coupon.getIsActive();
+        coupon.setIsActive(!previous);
+        coupon = couponRepository.save(coupon);
+        log.info("Coupon toggleActive: id={}, code={}, boutiqueId={}, previous={}, new={}",
+                id, coupon.getCode(), coupon.getBoutique().getId(), previous, coupon.getIsActive());
         return mapToResponse(coupon);
     }
 

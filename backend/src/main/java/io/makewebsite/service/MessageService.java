@@ -49,6 +49,10 @@ public class MessageService {
         Boutique boutique = boutiqueRepository.findById(boutiqueId)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
 
+        if (Boolean.FALSE.equals(boutique.getClientMessagingEnabled())) {
+            throw new RuntimeException("La messagerie client est désactivée pour cette boutique");
+        }
+
         Optional<Conversation> existingConversation = conversationRepository
                 .findByBoutiqueIdAndCustomerEmail(boutiqueId, request.getCustomerEmail());
 

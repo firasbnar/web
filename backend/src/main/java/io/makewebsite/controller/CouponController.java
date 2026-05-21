@@ -32,6 +32,16 @@ public class CouponController {
         return ResponseEntity.ok(ApiResponse.ok("Code promo mis à jour", couponService.updateCoupon(id, request)));
     }
 
+    @PutMapping("/{id}/toggle-active")
+    public ResponseEntity<ApiResponse<ToggleStatusResponse>> toggleActive(@PathVariable UUID id) {
+        CouponResponse coupon = couponService.toggleActive(id);
+        ToggleStatusResponse res = ToggleStatusResponse.builder()
+                .id(coupon.getId()).active(coupon.getIsActive())
+                .message(coupon.getIsActive() ? "Code promo activé" : "Code promo désactivé")
+                .build();
+        return ResponseEntity.ok(ApiResponse.ok(res.getMessage(), res));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCoupon(@PathVariable UUID id) {
         couponService.deleteCoupon(id);

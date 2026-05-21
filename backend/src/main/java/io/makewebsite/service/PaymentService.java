@@ -16,7 +16,10 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -44,12 +47,6 @@ public class PaymentService {
 
     @Value("${stripe.webhook-secret}")
     private String stripeWebhookSecret;
-
-    @Value("${paypal.client-id}")
-    private String paypalClientId;
-
-    @Value("${paypal.secret}")
-    private String paypalSecret;
 
     @Value("${app.public-url}")
     private String publicUrl;
@@ -118,56 +115,6 @@ public class PaymentService {
         if (boutiqueRepository.findByUserIdAndId(userId, boutiqueId).isEmpty()) {
             log.warn("User {} attempted to pay for order {} belonging to boutique {} which they do not own", userId, orderNumber, boutiqueId);
             throw new RuntimeException("Vous n'êtes pas autorisé à payer cette commande");
-        }
-    }
-
-    public JsonNode createPayPalOrder(CreatePaymentRequest request) {
-        if (request.getBoutiqueId() != null) {
-            storeStatusGuard.requireActive(request.getBoutiqueId());
-        }
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-
-            HttpHeaders authHeaders = new HttpHeaders();
-            authHeaders.setBasicAuth(paypalClientId, paypalSecret);
-            authHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            HttpEntity<String> authEntity = new HttpEntity<>("grant_type=client_credentials", authHeaders);
-            ResponseEntity<String> authResponse = restTemplate.postForEntity(
-                    "https://api-m.sandbox.paypal.com/v1/oauth2/token", authEntity, String.class);
-            JsonNode authJson = objectMapper.readTree(authResponse.getBody());
-            String accessToken = authJson.get("access_token").asText();
-
-            HttpHeaders orderHeaders = new HttpHeaders();
-            orderHeaders.setBearerAuth(accessToken);
-            orderHeaders.setContentType(MediaType.APPLICATION_JSON);
-
-            String orderJson = "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"amount\":{\"currency_code\":\"" +
-                    (request.getCurrency() != null ? request.getCurrency() : "USD") +
-                    "\",\"value\":\"" + request.getAmount() + "\"}}]}";
-
-            HttpEntity<String> orderEntity = new HttpEntity<>(orderJson, orderHeaders);
-            ResponseEntity<String> orderResponse = restTemplate.postForEntity(
-                    "https://api-m.sandbox.paypal.com/v2/checkout/orders", orderEntity, String.class);
-            return objectMapper.readTree(orderResponse.getBody());
-        } catch (Exception e) {
-            log.error("PayPal error: {}", e.getMessage());
-            throw new RuntimeException("PayPal error: " + e.getMessage());
-        }
-    }
-
-    public JsonNode capturePayPalOrder(String orderId) {
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBasicAuth(paypalClientId, paypalSecret);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<String> entity = new HttpEntity<>("", headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "https://api-m.sandbox.paypal.com/v2/checkout/orders/" + orderId + "/capture", entity, String.class);
-            return objectMapper.readTree(response.getBody());
-        } catch (Exception e) {
-            log.error("PayPal capture error: {}", e.getMessage());
-            throw new RuntimeException("PayPal capture error: " + e.getMessage());
         }
     }
 

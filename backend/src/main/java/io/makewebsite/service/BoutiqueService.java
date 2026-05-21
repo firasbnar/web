@@ -148,9 +148,11 @@ public class BoutiqueService {
     public BoutiqueResponse publishBoutique(UUID id, UUID userId) {
         Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        boolean previous = boutique.getIsPublished() != null && boutique.getIsPublished();
         boutique.setIsPublished(true);
         boutique.setPublishedAt(LocalDateTime.now());
         boutique = boutiqueRepository.save(boutique);
+        log.info("Boutique publish: boutiqueId={}, userId={}, previous={}, new=true", id, userId, previous);
         return mapToResponse(boutique);
     }
 
@@ -158,9 +160,11 @@ public class BoutiqueService {
     public BoutiqueResponse unpublishBoutique(UUID id, UUID userId) {
         Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
+        boolean previous = boutique.getIsPublished() != null && boutique.getIsPublished();
         boutique.setIsPublished(false);
         boutique.setPublishedAt(null);
         boutique = boutiqueRepository.save(boutique);
+        log.info("Boutique unpublish: boutiqueId={}, userId={}, previous={}, new=false", id, userId, previous);
         return mapToResponse(boutique);
     }
 
@@ -208,7 +212,6 @@ public class BoutiqueService {
     public BoutiqueResponse updatePayments(UUID id, UpdatePaymentRequest request, UUID userId) {
         Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
-        if (request.getEnablePaypal() != null) boutique.setEnablePaypal(request.getEnablePaypal());
         if (request.getEnableCod() != null) boutique.setEnableCod(request.getEnableCod());
         if (request.getEnableD17() != null) boutique.setEnableD17(request.getEnableD17());
         if (request.getEnableAdeex() != null) boutique.setEnableAdeex(request.getEnableAdeex());
@@ -217,9 +220,6 @@ public class BoutiqueService {
         if (request.getStripePublishableKey() != null) boutique.setStripePublishableKey(request.getStripePublishableKey());
         if (request.getStripeSecretKey() != null) boutique.setStripeSecretKey(request.getStripeSecretKey());
         if (request.getStripeWebhookSecret() != null) boutique.setStripeWebhookSecret(request.getStripeWebhookSecret());
-        if (request.getPaypalClientId() != null) boutique.setPaypalClientId(request.getPaypalClientId());
-        if (request.getPaypalSecret() != null) boutique.setPaypalSecret(request.getPaypalSecret());
-        if (request.getPaypalWebhookId() != null) boutique.setPaypalWebhookId(request.getPaypalWebhookId());
         if (request.getKonnectMerchantId() != null) boutique.setKonnectMerchantId(request.getKonnectMerchantId());
         if (request.getKonnectApiKey() != null) boutique.setKonnectApiKey(request.getKonnectApiKey());
         if (request.getKonnectStatus() != null) boutique.setKonnectStatus(request.getKonnectStatus());
@@ -424,7 +424,7 @@ public class BoutiqueService {
                 .tiktokUrl(b.getTiktokUrl()).twitterUrl(b.getTwitterUrl())
                 .linkedinUrl(b.getLinkedinUrl()).whatsappNumber(b.getWhatsappNumber())
                 .customCss(b.getCustomCss()).customJs(b.getCustomJs())
-                .enablePaypal(b.getEnablePaypal()).enableCod(b.getEnableCod())
+                .enableCod(b.getEnableCod())
                 .enableD17(b.getEnableD17()).enableAdeex(b.getEnableAdeex())
                 .enableJax(b.getEnableJax()).enableIntigo(b.getEnableIntigo())
                 .bannerUrl(b.getBannerUrl()).faviconUrl(b.getFaviconUrl())
@@ -435,7 +435,7 @@ public class BoutiqueService {
                 .konnectMerchantId(b.getKonnectMerchantId()).konnectApiKey(b.getKonnectApiKey()).konnectStatus(b.getKonnectStatus())
                 .d17MerchantNumber(b.getD17MerchantNumber()).d17QrCodeUrl(b.getD17QrCodeUrl()).d17Status(b.getD17Status())
                 .facebookPixelId(b.getFacebookPixelId()).googleAnalyticsId(b.getGoogleAnalyticsId())
-                .stripePublishableKey(b.getStripePublishableKey()).paypalClientId(b.getPaypalClientId())
+                .stripePublishableKey(b.getStripePublishableKey())
                 .freeShippingThreshold(b.getFreeShippingThreshold()).estimatedDeliveryDays(b.getEstimatedDeliveryDays())
                 .enableLocalPickup(b.getEnableLocalPickup())
                 .enableEmailNotifications(b.getEnableEmailNotifications()).enableSmsNotifications(b.getEnableSmsNotifications())

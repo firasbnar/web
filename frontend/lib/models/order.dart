@@ -4,6 +4,9 @@ class Order {
   final String? userId;
   final String? customerId;
   final String? customerName;
+  final String? customerPhone;
+  final String? customerEmail;
+  final String? orderCity;
   final String orderNumber;
   final String status;
   final double subtotal;
@@ -24,6 +27,7 @@ class Order {
 
   Order({
     required this.id, this.boutiqueId, this.userId, this.customerId, this.customerName,
+    this.customerPhone, this.customerEmail, this.orderCity,
     required this.orderNumber, required this.status,
     required this.subtotal, this.shippingFee = 0, this.discount = 0, required this.total,
     this.paymentMethod, this.paymentStatus, this.paymentRef,
@@ -61,6 +65,9 @@ class Order {
       userId: userId ?? this.userId,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
+      customerPhone: customerPhone ?? customerPhone,
+      customerEmail: customerEmail ?? customerEmail,
+      orderCity: orderCity ?? orderCity,
       orderNumber: orderNumber ?? this.orderNumber,
       status: status ?? this.status,
       subtotal: subtotal ?? this.subtotal,
@@ -92,6 +99,9 @@ class Order {
       userId: json['userId']?.toString(),
       customerId: json['customerId']?.toString(),
       customerName: json['customerName'],
+      customerPhone: json['customerPhone'],
+      customerEmail: json['customerEmail'],
+      orderCity: json['city'],
       orderNumber: json['orderNumber'] ?? '',
       status: json['status'] ?? 'PENDING',
       subtotal: (json['subtotal'] ?? 0).toDouble(),

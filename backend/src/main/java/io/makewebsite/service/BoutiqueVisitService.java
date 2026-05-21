@@ -2,6 +2,8 @@ package io.makewebsite.service;
 
 import io.makewebsite.entity.StoreView;
 import io.makewebsite.repository.StoreViewRepository;
+import io.makewebsite.service.GeoLocationService.GeoData;
+import io.makewebsite.service.GeoLocationService.ReverseGeoData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class BoutiqueVisitService {
 
     private final StoreViewRepository storeViewRepository;
+    private final GeoLocationService geoLocationService;
 
     private String hashIp(String ip) {
         if (ip == null) return "unknown";
@@ -32,6 +35,18 @@ public class BoutiqueVisitService {
         } catch (NoSuchAlgorithmException e) {
             return ip;
         }
+    }
+
+    private String detectBrowser(String userAgent) {
+        if (userAgent == null) return null;
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("edg")) return "Edge";
+        if (ua.contains("chrome")) return "Chrome";
+        if (ua.contains("firefox")) return "Firefox";
+        if (ua.contains("safari")) return "Safari";
+        if (ua.contains("opera") || ua.contains("opr")) return "Opera";
+        if (ua.contains("msie") || ua.contains("trident")) return "Internet Explorer";
+        return "Autre";
     }
 
     private boolean hasRecentVisit(UUID boutiqueId, String visitorId, String ipHash) {
@@ -54,9 +69,52 @@ public class BoutiqueVisitService {
     }
 
     @Transactional
-    public void recordVisit(UUID boutiqueId, String slug, String ipAddress, String userAgent, String visitorId) {
+    public void recordVisit(UUID boutiqueId, String slug, String ipAddress, String userAgent, String visitorId, String referrer, Double latitude, Double longitude) {
         String ipHash = hashIp(ipAddress);
         if (hasRecentVisit(boutiqueId, visitorId, ipHash)) return;
+
+        Double lat = latitude;
+        Double lng = longitude;
+        String country = null;
+        String city = null;
+        String address = null;
+
+        // If browser provided coordinates, reverse-geocode them for accurate country/city/address
+        boolean hasBrowserCoords = lat != null && lng != null;
+        if (hasBrowserCoords) {
+            try {
+                var rev = geoLocationService.reverseGeocode(lat, lng);
+                if (rev.isPresent()) {
+                    var r = rev.get();
+                    country = r.country();
+                    city = r.city();
+                    address = r.address();
+                    log.info("Reverse geocode: lat={} lng={} → country={} city={} addr={}", lat, lng, country, city, address);
+                }
+            } catch (Exception e) {
+                log.warn("Reverse geocode failed, falling back to IP geo: {}", e.getMessage());
+            }
+        }
+
+        // If no reverse geo result (or no browser coords), fallback to IP geolocation
+        if (country == null || city == null) {
+            GeoData geo = ipAddress != null ? geoLocationService.locate(ipAddress).orElse(null) : null;
+            if (geo != null) {
+                if (country == null) country = geo.country();
+                if (city == null) city = geo.city();
+                if (lat == null) lat = geo.latitude();
+                if (lng == null) lng = geo.longitude();
+                if (address == null) address = city != null && country != null ? city + ", " + country : null;
+                log.info("IP geo fallback: country={} city={} lat={} lng={}", country, city, lat, lng);
+            }
+        }
+
+        // Final fallback — never leave country/city null
+        if (country == null) country = "Inconnu";
+        if (city == null) city = "Inconnu";
+
+        // Browser detection
+        String browser = detectBrowser(userAgent);
 
         StoreView view = StoreView.builder()
                 .boutiqueId(boutiqueId)
@@ -64,9 +122,17 @@ public class BoutiqueVisitService {
                 .ipHash(ipHash)
                 .visitorId(visitorId)
                 .userAgent(userAgent)
+                .referrer(referrer)
+                .country(country)
+                .city(city)
+                .latitude(lat)
+                .longitude(lng)
+                .address(address)
+                .browser(browser)
                 .viewedAt(LocalDateTime.now())
                 .build();
         storeViewRepository.save(view);
-        log.info("Visit recorded for boutiqueId={} slug={} visitorId={} ipHash={}", boutiqueId, slug, visitorId, ipHash);
+        log.info("Visit recorded for boutiqueId={} slug={} country={} city={} addr={} lat={} lng={} browser={} ipHash={}",
+                boutiqueId, slug, country, city, address, lat, lng, browser, ipHash);
     }
 }

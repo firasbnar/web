@@ -218,10 +218,11 @@ class TimelinePoint {
 }
 
 class MapPoint {
-  final String id;
+  final String? id;
   final String? ipHash;
   final String? country;
   final String? city;
+  final String? address;
   final double? latitude;
   final double? longitude;
   final String? browser;
@@ -232,32 +233,34 @@ class MapPoint {
   final bool isActive;
 
   MapPoint({
-    required this.id,
+    this.id,
     this.ipHash,
     this.country,
     this.city,
+    this.address,
     this.latitude,
     this.longitude,
     this.browser,
     this.deviceType,
     this.operatingSystem,
-    required this.totalVisits,
+    this.totalVisits = 0,
     this.lastActivityAt,
     this.isActive = true,
   });
 
   factory MapPoint.fromJson(Map<String, dynamic> json) {
     return MapPoint(
-      id: json['id']?.toString() ?? '',
+      id: json['id']?.toString(),
       ipHash: json['ipHash']?.toString(),
       country: json['country']?.toString(),
       city: json['city']?.toString(),
+      address: json['address']?.toString(),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       browser: json['browser']?.toString(),
       deviceType: json['deviceType']?.toString(),
       operatingSystem: json['operatingSystem']?.toString(),
-      totalVisits: (json['totalVisits'] as num?)?.toInt() ?? 0,
+      totalVisits: (json['visits'] as num?)?.toInt() ?? (json['totalVisits'] as num?)?.toInt() ?? 0,
       lastActivityAt: json['lastActivityAt']?.toString(),
       isActive: json['isActive'] ?? true,
     );
@@ -272,6 +275,9 @@ class RecentVisit {
   final String? browser;
   final String? country;
   final String? city;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
   final String? userAgent;
   final String? viewedAt;
 
@@ -283,6 +289,9 @@ class RecentVisit {
     this.browser,
     this.country,
     this.city,
+    this.address,
+    this.latitude,
+    this.longitude,
     this.userAgent,
     this.viewedAt,
   });
@@ -294,8 +303,11 @@ class RecentVisit {
       page: json['page']?.toString(),
       referrer: json['referrer']?.toString(),
       browser: json['browser']?.toString(),
-      country: json['country']?.toString(),
-      city: json['city']?.toString(),
+      country: json['country']?.toString() ?? 'Inconnu',
+      city: json['city']?.toString() ?? 'Inconnu',
+      address: json['address']?.toString(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       userAgent: json['userAgent']?.toString(),
       viewedAt: json['viewedAt']?.toString(),
     );

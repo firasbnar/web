@@ -8,13 +8,16 @@ import io.makewebsite.service.TrafficService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class StorefrontController {
@@ -80,20 +83,27 @@ public class StorefrontController {
 
     private void trackStoreVisit(Boutique boutique, HttpServletRequest request) {
         try {
+            String ip = request.getRemoteAddr();
+            String ua = request.getHeader("User-Agent");
+            String referrer = request.getHeader("Referer");
+            log.info("=== STORE VISIT === slug={}, boutiqueId={}, ip={}, ua={}, referrer={}",
+                    boutique.getSlug(), boutique.getId(), ip, ua != null ? ua.substring(0, Math.min(80, ua.length())) : "null", referrer);
+
             TrackVisitRequest req = new TrackVisitRequest();
             req.setBoutiqueId(boutique.getId());
             req.setBoutiqueSlug(boutique.getSlug());
             req.setPage("/store/" + boutique.getSlug());
-            req.setIpAddress(request.getRemoteAddr());
-            req.setUserAgent(request.getHeader("User-Agent"));
-            req.setReferrer(request.getHeader("Referer"));
+            req.setIpAddress(ip);
+            req.setUserAgent(ua);
+            req.setReferrer(referrer);
             req.setPlatform("WEB");
-            req.setDeviceType(detectDeviceType(request.getHeader("User-Agent")));
-            req.setBrowser(detectBrowser(request.getHeader("User-Agent")));
-            req.setOperatingSystem(detectOS(request.getHeader("User-Agent")));
-            trafficService.trackVisit(req);
+            req.setDeviceType(detectDeviceType(ua));
+            req.setBrowser(detectBrowser(ua));
+            req.setOperatingSystem(detectOS(ua));
+            Map<String, Object> result = trafficService.trackVisit(req);
+            log.info("=== VISIT SAVED === tracked={}, visitId={}", result.get("tracked"), result.get("visitId"));
         } catch (Exception e) {
-            // Don't let tracking break the store page
+            log.warn("Failed to track store visit for slug={}: {}", boutique.getSlug(), e.getMessage());
         }
     }
 

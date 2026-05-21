@@ -20,6 +20,8 @@ public class OrderResponse {
     private UUID userId;
     private UUID customerId;
     private String customerName;
+    private String customerPhone;
+    private String customerEmail;
     private String orderNumber;
     private String status;
     private BigDecimal subtotal;
@@ -30,6 +32,7 @@ public class OrderResponse {
     private String paymentStatus;
     private String paymentRef;
     private String shippingAddress;
+    private String city;
     private String deliveryCompany;
     private String trackingNumber;
     private String notes;

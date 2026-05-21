@@ -9,6 +9,7 @@ import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService {
     private final ProductRepository productRepository;
     private final BoutiqueRepository boutiqueRepository;
@@ -123,16 +125,24 @@ public class ProductService {
         if (product.getBoutique() != null) {
             storeStatusGuard.requireActive(product.getBoutique());
         }
-        product.setIsActive(!product.getIsActive());
+        boolean previous = product.getIsActive() != null && product.getIsActive();
+        product.setIsActive(!previous);
         product = productRepository.save(product);
+        log.info("Product toggleActive: id={}, name={}, boutiqueId={}, previous={}, new={}",
+                id, product.getName(), product.getBoutique() != null ? product.getBoutique().getId() : null,
+                previous, product.getIsActive());
         return mapToResponse(product);
     }
 
     @Transactional
     public ProductResponse toggleFeatured(UUID id) {
         Product product = findTenantProduct(id);
-        product.setIsFeatured(!product.getIsFeatured());
+        boolean previous = product.getIsFeatured() != null && product.getIsFeatured();
+        product.setIsFeatured(!previous);
         product = productRepository.save(product);
+        log.info("Product toggleFeatured: id={}, name={}, boutiqueId={}, previous={}, new={}",
+                id, product.getName(), product.getBoutique() != null ? product.getBoutique().getId() : null,
+                previous, product.getIsFeatured());
         return mapToResponse(product);
     }
 

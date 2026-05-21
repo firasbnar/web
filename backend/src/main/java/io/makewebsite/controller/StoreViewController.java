@@ -4,6 +4,7 @@ import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.entity.StoreView;
 import io.makewebsite.repository.StoreViewRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -28,15 +30,20 @@ public class StoreViewController {
         long todayVisits = storeViewRepository.countByBoutiqueIdAndViewedAtBetween(boutiqueId,
                 LocalDateTime.of(LocalDate.now(), LocalTime.MIN),
                 LocalDateTime.of(LocalDate.now(), LocalTime.MAX));
+        LocalDateTime weekStart = LocalDateTime.now().minusDays(7);
+        // Monday of current week
+        LocalDateTime weekStartMonday = LocalDateTime.now().with(java.time.DayOfWeek.MONDAY).with(LocalTime.MIN);
         long weekVisits = storeViewRepository.countByBoutiqueIdAndViewedAtBetween(boutiqueId,
-                LocalDateTime.now().minusDays(7), LocalDateTime.now());
+                weekStartMonday, LocalDateTime.now());
         long monthVisits = storeViewRepository.countByBoutiqueIdAndViewedAtBetween(boutiqueId,
-                LocalDateTime.now().minusDays(30), LocalDateTime.now());
+                LocalDateTime.now().withDayOfMonth(1).with(LocalTime.MIN), LocalDateTime.now());
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("totalVisits", totalVisits);
         stats.put("todayVisits", todayVisits);
         stats.put("weekVisits", weekVisits);
         stats.put("monthVisits", monthVisits);
+        log.info("Traffic stats for {}: total={}, today={}, week={}, month={}",
+                boutiqueId, totalVisits, todayVisits, weekVisits, monthVisits);
         return ResponseEntity.ok(ApiResponse.ok(stats));
     }
 
@@ -64,6 +71,8 @@ public class StoreViewController {
         result.put("totalElements", visitPage.getTotalElements());
         result.put("totalPages", visitPage.getTotalPages());
         result.put("currentPage", visitPage.getNumber());
+        log.info("Traffic visits for {}: {} elements on page {} of {}",
+                boutiqueId, visits.size(), page, visitPage.getTotalPages());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
@@ -76,6 +85,7 @@ public class StoreViewController {
             m.put("count", r[1]);
             return m;
         }).toList();
+        log.info("Top countries for {}: {} entries (raw results: {})", boutiqueId, list.size(), results.size());
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
@@ -89,6 +99,7 @@ public class StoreViewController {
             m.put("count", r[2]);
             return m;
         }).toList();
+        log.info("Top cities for {}: {} entries (raw results: {})", boutiqueId, list.size(), results.size());
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 

@@ -2,6 +2,7 @@ package io.makewebsite.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.makewebsite.dto.response.OrderResponse;
 import io.makewebsite.dto.response.PublicCategoryResponse;
 import io.makewebsite.dto.response.PublicProductResponse;
 import io.makewebsite.dto.response.PublicStoreResponse;
@@ -10,9 +11,15 @@ import io.makewebsite.exception.StoreFrozenException;
 import io.makewebsite.repository.*;
 import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.BoutiqueVisitService;
+import io.makewebsite.service.CaisseService;
+import io.makewebsite.service.CustomerService;
+import io.makewebsite.service.InvoiceService;
+import io.makewebsite.service.NotificationService;
 import io.makewebsite.service.PaymentService;
 import io.makewebsite.service.StoreGeneratorService;
 import io.makewebsite.service.StoreStatusGuard;
+import io.makewebsite.service.TelegramService;
+import io.makewebsite.service.WebSocketService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +59,15 @@ public class PublicStoreController {
     private final BoutiqueVisitService boutiqueVisitService;
     private final StoreViewRepository storeViewRepository;
     private final PaymentService paymentService;
+    private final CustomerService customerService;
+    private final InvoiceService invoiceService;
+    private final NotificationService notificationService;
+    private final WebSocketService webSocketService;
+    private final TelegramService telegramService;
+    private final CaisseService caisseService;
     private final ObjectMapper objectMapper;
+    private final TrafficRepository trafficRepository;
+    private final io.makewebsite.service.GeoLocationService geoLocationService;
 
     // Serve full generated store HTML
     @GetMapping("/store/{slug}")
@@ -82,25 +97,8 @@ public class PublicStoreController {
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.notFound().build();
 
-        // Skip counting if the authenticated user is the boutique owner
-        if (principal != null) {
-            try {
-                UUID ownerId = boutiqueRepository.findOwnerIdByBoutiqueId(b.getId());
-                if (ownerId != null && ownerId.equals(principal.getUserId())) {
-                    log.debug("Owner visit, skipping view count for slug={}", slug);
-                } else {
-                    boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), visitorId);
-                }
-            } catch (Exception e) {
-                log.warn("Owner check failed for slug={}, recording visit: {}", slug, e.getMessage());
-                boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), visitorId);
-            }
-        } else {
-            boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), visitorId);
-        }
-
         long totalViews = storeViewRepository.countByBoutiqueId(b.getId());
-        log.info("Total views for slug={}: {} (after recording visit)", slug, totalViews);
+        log.debug("Total views for slug={}: {}", slug, totalViews);
         return ResponseEntity.ok(toPublicStoreResponse(b));
     }
 
@@ -212,6 +210,8 @@ public class PublicStoreController {
     public ResponseEntity<Map<String, Object>> createOrder(
             @PathVariable String slug,
             @RequestBody Map<String, Object> body) {
+        log.info("Public checkout received for slug={}", slug);
+
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Store not found"));
         try {
@@ -231,6 +231,13 @@ public class PublicStoreController {
         if (fullName == null || phone == null || billingAddress == null || city == null || items == null || items.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Champs obligatoires manquants"));
         }
+
+        if ("paypal".equalsIgnoreCase(paymentMethod)) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "PayPal n'est plus disponible", "code", "PAYPAL_DISABLED"));
+        }
+
+        log.info("Public checkout: slug={}, boutiqueId={}, customer phone={}, email={}",
+                slug, b.getId(), phone, email != null ? email : "none");
 
         BigDecimal subtotal = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
@@ -263,8 +270,20 @@ public class PublicStoreController {
         BigDecimal total = subtotal.add(shipping);
         String orderNum = "PUB-" + System.currentTimeMillis() % 1000000;
 
+        // Create or update customer
+        Customer customer = customerService.findOrCreateCustomer(
+                b.getId(), fullName, email, phone, billingAddress, city,
+                null, null, null);
+
+        if (customer.getId() != null) {
+            log.info("Customer {} updated/created for boutique {}", customer.getId(), b.getId());
+        } else {
+            log.info("Customer created for boutique {}", b.getId());
+        }
+
         Order order = Order.builder()
                 .boutique(b)
+                .customer(customer)
                 .orderNumber(orderNum)
                 .status("PENDING")
                 .subtotal(subtotal)
@@ -272,11 +291,57 @@ public class PublicStoreController {
                 .total(total)
                 .paymentMethod(paymentMethod)
                 .paymentStatus("UNPAID")
+                .customerName(fullName)
+                .customerPhone(phone)
+                .customerEmail(email)
+                .city(city)
                 .shippingAddress(billingAddress + ", " + city)
                 .notes(notes)
                 .build();
         order.setItems(orderItems);
         order = orderRepository.save(order);
+
+        log.info("Order created: orderId={}, orderNumber={}", order.getId(), orderNum);
+
+        // Generate invoice
+        try {
+            invoiceService.generateInvoice(order.getId());
+        } catch (Exception e) {
+            log.warn("Failed to generate invoice for order {}: {}", order.getId(), e.getMessage());
+        }
+
+        // Update customer aggregation
+        try {
+            customerService.updateCustomerAggregation(customer, total);
+        } catch (Exception e) {
+            log.warn("Failed to update customer aggregation: {}", e.getMessage());
+        }
+
+        // Send notifications
+        try {
+            User owner = b.getUser();
+            String message = "Nouvelle commande " + orderNum + " - " + total + " TND";
+            notificationService.createNotification(owner.getId(), "Nouvelle commande", message, "NEW_ORDER");
+            OrderResponse responseDto = OrderResponse.builder()
+                    .id(order.getId()).boutiqueId(b.getId())
+                    .customerId(customer.getId())
+                    .customerName(fullName).customerPhone(phone).customerEmail(email)
+                    .orderNumber(orderNum).status("PENDING")
+                    .subtotal(subtotal).shippingFee(shipping).total(total)
+                    .paymentMethod(paymentMethod).paymentStatus("UNPAID")
+                    .shippingAddress(billingAddress + ", " + city).city(city)
+                    .notes(notes)
+                    .build();
+            webSocketService.sendNewOrderNotification(b.getId(), responseDto);
+            webSocketService.sendCaisseOrderUpdate(b.getId(), responseDto);
+            if (Boolean.TRUE.equals(owner.getTelegramEnabled()) && owner.getTelegramChatId() != null) {
+                telegramService.sendMessage(owner.getTelegramChatId(), message);
+            }
+            caisseService.recordActivity(b.getId(), null, "Client",
+                    "ORDER_CREATED", "Commande " + orderNum + " créée - " + total + " TND");
+        } catch (Exception e) {
+            log.warn("Failed to send order notifications: {}", e.getMessage());
+        }
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("success", true);
@@ -406,7 +471,120 @@ public class PublicStoreController {
                 .build();
     }
 
+    @PostMapping("/stores/{slug}/visit")
+    public ResponseEntity<Map<String, Object>> recordStoreVisit(
+            @PathVariable String slug,
+            @RequestBody Map<String, Object> body,
+            HttpServletRequest request) {
+        Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
+        if (b == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Boutique introuvable"));
+
+        Double lat = body.get("latitude") != null ? ((Number) body.get("latitude")).doubleValue() : null;
+        Double lng = body.get("longitude") != null ? ((Number) body.get("longitude")).doubleValue() : null;
+        String visitorId = (String) body.get("visitorId");
+        String referrer = (String) body.get("referrer");
+        String ua = (String) body.get("userAgent");
+        if (ua == null) ua = request.getHeader("User-Agent");
+        if (referrer == null) referrer = request.getHeader("Referer");
+
+        log.info("Visit received for slug={} boutiqueId={} lat={} lng={} visitorId={}",
+                slug, b.getId(), lat, lng, visitorId);
+
+        // Always resolve country/city from IP geolocation (needed for top countries/cities analytics)
+        // Browser-provided lat/lng takes precedence for map coordinates
+        String country = null;
+        String city = null;
+        String ipHash = hashIp(request.getRemoteAddr());
+        try {
+            var geo = geoLocationService.locate(request.getRemoteAddr());
+            if (geo.isPresent()) {
+                var g = geo.get();
+                country = g.country();
+                city = g.city();
+                if (lat == null) lat = g.latitude();
+                if (lng == null) lng = g.longitude();
+                log.info("IP geolocation: country={} city={} browserLat={} browserLng={} geoLat={} geoLng={}",
+                        country, city, body.get("latitude"), body.get("longitude"), g.latitude(), g.longitude());
+            }
+        } catch (Exception e) {
+            log.warn("IP geolocation failed for slug={}: {}", slug, e.getMessage());
+        }
+
+        boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), ua, visitorId, referrer, lat, lng);
+
+        // Create/update a Visitor record so map data shows this visit
+        try {
+            String browser = detectBrowser(ua);
+            Visitor existing = trafficRepository.findByBoutiqueIdAndIpHash(b.getId(), ipHash).orElse(null);
+            if (existing != null) {
+                existing.setTotalVisits(existing.getTotalVisits() + 1);
+                existing.setLastActivityAt(java.time.LocalDateTime.now());
+                existing.setIsActive(true);
+                existing.setCountry(country);
+                existing.setCity(city);
+                existing.setLatitude(lat);
+                existing.setLongitude(lng);
+                existing.setBrowser(browser);
+                existing.setUserAgent(ua);
+                existing.setReferralSource(referrer);
+                trafficRepository.save(existing);
+                log.info("Visitor updated for boutiqueId={} ipHash={} lat={} lng={} country={} city={}",
+                        b.getId(), ipHash, lat, lng, country, city);
+            } else {
+                Visitor v = Visitor.builder()
+                        .boutiqueId(b.getId())
+                        .ipHash(ipHash)
+                        .country(country)
+                        .city(city)
+                        .latitude(lat)
+                        .longitude(lng)
+                        .browser(browser)
+                        .userAgent(ua)
+                        .referralSource(referrer)
+                        .totalVisits(1L)
+                        .isActive(true)
+                        .build();
+                trafficRepository.save(v);
+                log.info("Visitor created for boutiqueId={} ipHash={} lat={} lng={} country={} city={}",
+                        b.getId(), ipHash, lat, lng, country, city);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create Visitor record for slug={}: {}", slug, e.getMessage());
+        }
+
+        long totalViews = storeViewRepository.countByBoutiqueId(b.getId());
+        log.info("Visit complete for slug={}: totalViews={}", slug, totalViews);
+        return ResponseEntity.ok(Map.of("success", true, "totalViews", totalViews, "lat", lat, "lng", lng));
+    }
+
+    private String hashIp(String ip) {
+        if (ip == null) return "unknown";
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(ip.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString().substring(0, 32);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return ip;
+        }
+    }
+
+    private String detectBrowser(String userAgent) {
+        if (userAgent == null) return null;
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("edg")) return "Edge";
+        if (ua.contains("chrome")) return "Chrome";
+        if (ua.contains("firefox")) return "Firefox";
+        if (ua.contains("safari")) return "Safari";
+        if (ua.contains("opera") || ua.contains("opr")) return "Opera";
+        if (ua.contains("msie") || ua.contains("trident")) return "Internet Explorer";
+        return "Autre";
+    }
+
     private void trackStoreVisit(Boutique boutique, HttpServletRequest request) {
-        boutiqueVisitService.recordVisit(boutique.getId(), boutique.getSlug(), request.getRemoteAddr(), request.getHeader("User-Agent"), null);
+        boutiqueVisitService.recordVisit(boutique.getId(), boutique.getSlug(),
+                request.getRemoteAddr(), request.getHeader("User-Agent"), null,
+                request.getHeader("Referer"), null, null);
     }
 }

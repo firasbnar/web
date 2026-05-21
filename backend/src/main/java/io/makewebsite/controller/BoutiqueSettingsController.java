@@ -83,6 +83,7 @@ public class BoutiqueSettingsController {
         if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications("yes".equals(body.get("enablePushNotifications")));
         if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails("yes".equals(body.get("enableMarketingEmails")));
         if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts("yes".equals(body.get("enableOrderAlerts")));
+        if (body.containsKey("clientMessagingEnabled")) b.setClientMessagingEnabled("yes".equals(body.get("clientMessagingEnabled")));
         boutiqueRepository.save(b);
         storeGeneratorService.regenerate(id);
         return ResponseEntity.ok(ApiResponse.ok("Configuration sauvegardée", Map.of("id", b.getId())));

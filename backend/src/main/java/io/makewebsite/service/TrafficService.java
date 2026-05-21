@@ -271,6 +271,9 @@ public class TrafficService {
         Double latitude = geo != null ? geo.latitude() : null;
         Double longitude = geo != null ? geo.longitude() : null;
 
+        log.info("Geo lookup for ip={}: country={}, city={}, lat={}, lon={}",
+                req.getIpAddress(), country, city, latitude, longitude);
+
         // Create StoreView record
         StoreView view = StoreView.builder()
                 .boutiqueId(req.getBoutiqueId())
@@ -413,6 +416,9 @@ public class TrafficService {
             m.put("browser", v.getBrowser());
             m.put("country", v.getCountry());
             m.put("city", v.getCity());
+            m.put("address", v.getAddress());
+            m.put("latitude", v.getLatitude());
+            m.put("longitude", v.getLongitude());
             m.put("userAgent", v.getUserAgent());
             m.put("viewedAt", v.getViewedAt() != null ? v.getViewedAt().toString() : null);
             return m;
@@ -427,30 +433,37 @@ public class TrafficService {
 
     public List<Map<String, Object>> getMapData(UUID boutiqueId) {
         List<Visitor> visitors = trafficRepository.findActiveVisitorsByBoutiqueId(boutiqueId);
-        return visitors.stream()
-                .filter(v -> v.getLatitude() != null && v.getLongitude() != null)
-                .map(v -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", v.getId());
-                    m.put("ipHash", v.getIpHash());
-                    m.put("country", v.getCountry());
-                    m.put("city", v.getCity());
-                    m.put("latitude", v.getLatitude());
-                    m.put("longitude", v.getLongitude());
-                    m.put("browser", v.getBrowser());
-                    m.put("deviceType", v.getDeviceType());
-                    m.put("operatingSystem", v.getOperatingSystem());
-                    m.put("totalVisits", v.getTotalVisits());
-                    m.put("lastActivityAt", v.getLastActivityAt() != null ? v.getLastActivityAt().toString() : null);
-                    m.put("isActive", v.getIsActive());
-                    return m;
-                }).toList();
+        // Aggregate by country+city and count visits
+        Map<String, Map<String, Object>> aggregated = new java.util.LinkedHashMap<>();
+        for (Visitor v : visitors) {
+            if (v.getLatitude() == null || v.getLongitude() == null) continue;
+            String key = (v.getCountry() != null ? v.getCountry() : "Inconnu") + "|" + (v.getCity() != null ? v.getCity() : "Inconnu");
+            if (aggregated.containsKey(key)) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> existing = aggregated.get(key);
+                existing.put("visits", ((Number) existing.get("visits")).intValue() + 1);
+            } else {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("country", v.getCountry() != null ? v.getCountry() : "Inconnu");
+                m.put("city", v.getCity() != null ? v.getCity() : "Inconnu");
+                m.put("latitude", v.getLatitude());
+                m.put("longitude", v.getLongitude());
+                m.put("address", v.getCity() != null && v.getCountry() != null ? v.getCity() + ", " + v.getCountry() : null);
+                m.put("browser", v.getBrowser());
+                m.put("deviceType", v.getDeviceType());
+                m.put("operatingSystem", v.getOperatingSystem());
+                m.put("visits", 1);
+                aggregated.put(key, m);
+            }
+        }
+        log.info("Map data for {}: {} aggregated points from {} visitors", boutiqueId, aggregated.size(), visitors.size());
+        return new java.util.ArrayList<>(aggregated.values());
     }
 
     public String exportCsv(UUID boutiqueId) {
         List<StoreView> views = storeViewRepository.findAllByBoutiqueIdOrderByViewedAtDesc(boutiqueId);
         StringBuilder sb = new StringBuilder("\uFEFF");
-        sb.append("ID,IP Hash,Page,Referrer,Browser,Country,City,User Agent,Viewed At\n");
+        sb.append("ID,IP Hash,Page,Referrer,Browser,Country,City,Address,User Agent,Viewed At\n");
         for (StoreView v : views) {
             sb.append(v.getId()).append(",");
             sb.append(CsvUtil.escapeCsv(v.getIpHash())).append(",");
@@ -459,6 +472,7 @@ public class TrafficService {
             sb.append(CsvUtil.escapeCsv(v.getBrowser())).append(",");
             sb.append(CsvUtil.escapeCsv(v.getCountry())).append(",");
             sb.append(CsvUtil.escapeCsv(v.getCity())).append(",");
+            sb.append(CsvUtil.escapeCsv(v.getAddress())).append(",");
             sb.append(CsvUtil.escapeCsv(v.getUserAgent())).append(",");
             sb.append(v.getViewedAt()).append("\n");
         }
