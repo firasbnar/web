@@ -275,7 +275,7 @@ public class AuthService {
     public void changePassword(UUID userId, ChangePasswordRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Ancien mot de passe incorrect");
         }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));

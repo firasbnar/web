@@ -60,7 +60,7 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Boutique créée'), backgroundColor: AppColors.success));
       if (!mounted) return;
-      context.go('/dashboard');
+      context.go('/home');
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);

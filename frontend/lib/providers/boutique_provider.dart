@@ -66,16 +66,13 @@ class BoutiqueProvider extends ChangeNotifier {
       final savedId = await AppStorage.getActiveBoutiqueId();
       if (savedId != null && _boutiques.any((b) => b.id == savedId)) {
         _activeBoutique = _boutiques.firstWhere((b) => b.id == savedId);
-      } else if (_boutiques.isNotEmpty) {
-        _activeBoutique = _boutiques.first;
-        await AppStorage.saveActiveBoutiqueId(_activeBoutique!.id);
+        _activeBoutiqueId = savedId;
       } else {
-        // No boutiques at all — user needs to create one
+        // Don't auto-select — let user choose via store selector
         _activeBoutique = null;
         _activeBoutiqueId = null;
         await AppStorage.clearActiveBoutiqueId();
       }
-      _activeBoutiqueId = _activeBoutique?.id;
       if (_activeBoutique != null) {
         await loadCountries();
       }
@@ -96,6 +93,7 @@ class BoutiqueProvider extends ChangeNotifier {
     try {
       await _api.put('/users/active-boutique', data: {'boutiqueId': boutiqueId});
     } catch (_) {}
+    await loadCountries();
     notifyListeners();
   }
 
@@ -244,13 +242,13 @@ class BoutiqueProvider extends ChangeNotifier {
   /// Returns the inner [data] map (fields: boutiqueId, boutiqueName, publicUrl,
   /// views, products, remainingDays, planName, subscriptionStatus, publicationStatus).
   Future<Map<String, dynamic>?> loadBoutiqueSummary() async {
+    if (_activeBoutiqueId == null) return null;
     try {
-      final res = await _api.get('/dashboard/boutique-summary');
-      // ignore: avoid_print
+      final res = await _api.get('/dashboard/boutique-summary',
+          queryParameters: {'boutiqueId': _activeBoutiqueId});
       print('[BoutiqueSummary] response=$res');
       return res['data'] as Map<String, dynamic>?;
     } catch (e) {
-      // ignore: avoid_print
       print('[BoutiqueSummary] error=$e');
       return null;
     }

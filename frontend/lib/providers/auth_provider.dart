@@ -164,6 +164,14 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  void updateAvatar(String url) {
+    if (_user != null) {
+      _user = _user!.copyWith(avatarUrl: url);
+      _api.storage.saveUserData(jsonEncode(_user!.toJson()));
+      notifyListeners();
+    }
+  }
+
   void setSubscriptionActive(bool active) {
     _subscriptionActive = active;
     AppStorage.saveSubscriptionActive(active);

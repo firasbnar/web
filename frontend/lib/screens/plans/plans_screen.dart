@@ -55,7 +55,11 @@ class _PlansScreenState extends State<PlansScreen> {
           if (bp.boutiques.isEmpty) {
             context.go('/create-store');
           } else {
-            context.go('/dashboard');
+            if (bp.boutiques.length == 1) {
+              context.go('/home');
+            } else {
+              context.go('/store-selector');
+            }
           }
         }
       }

@@ -103,7 +103,10 @@ GoRouter createRouter(AuthProvider auth) {
       // /dashboard is an alias for /home
       if (path == '/dashboard') return '/home';
 
-      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store', '/plans', '/create-store', '/store-selector'];
+      // Public store browsings
+      if (path.startsWith('/explore')) return null;
+
+      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store', '/plans', '/create-store', '/store-selector', '/stores'];
       final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
 
       // --- SUPER_ADMIN is platform-level only, no access to owner/merchant routes ---
@@ -210,7 +213,6 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
           GoRoute(path: '/home', builder: (_, __) => const StoreDashboardScreen()),
-          GoRoute(path: '/store-selector', builder: (_, __) => const StoreSelectorScreen()),
           GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
           GoRoute(path: '/messages/:id', builder: (_, state) => ConversationScreen(conversation: state.extra as Conversation)),
           GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
@@ -229,7 +231,38 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/delivery', builder: (_, __) => const DeliveryCompanyScreen()),
           GoRoute(path: '/analytics', builder: (_, __) => const AnalyticsScreen()),
           GoRoute(path: '/traffic', builder: (_, __) => const TrafficScreen()),
-           GoRoute(path: '/traffic/analytics', builder: (_, __) => const TrafficAnalyticsScreen()),
+          GoRoute(path: '/traffic/analytics', builder: (_, __) => const TrafficAnalyticsScreen()),
+          // Multi-store scoped routes
+          GoRoute(
+            path: '/stores/:boutiqueId/dashboard',
+            builder: (_, state) => StoreDashboardScreen(
+              boutiqueId: state.pathParameters['boutiqueId'],
+            ),
+          ),
+          GoRoute(
+            path: '/stores/:boutiqueId/products',
+            builder: (_, __) => const ProductsScreen(),
+          ),
+          GoRoute(
+            path: '/stores/:boutiqueId/orders',
+            builder: (_, __) => const OrdersScreen(),
+          ),
+          GoRoute(
+            path: '/stores/:boutiqueId/customers',
+            builder: (_, __) => const CustomersScreen(),
+          ),
+          GoRoute(
+            path: '/stores/:boutiqueId/traffic',
+            builder: (_, __) => const TrafficScreen(),
+          ),
+          GoRoute(
+            path: '/stores/:boutiqueId/settings',
+            builder: (_, __) => const BoutiqueSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/stores/:boutiqueId',
+            redirect: (_, state) => '/stores/${state.pathParameters['boutiqueId']}/dashboard',
+          ),
           GoRoute(path: '/admin', builder: (_, __) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/activities', builder: (_, __) => const JournalActiviteScreen()),
           GoRoute(path: '/payment-settings', redirect: (_, __) => '/boutique-settings'),
@@ -265,7 +298,9 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/wishlist', builder: (_, __) => const WishlistScreen()),
       GoRoute(path: '/order-history', builder: (_, __) => const OrderHistoryScreen()),
       GoRoute(path: '/order-tracking/:id', builder: (_, state) => OrderTrackingScreen(orderId: state.pathParameters['id']!)),
-      GoRoute(path: '/stores', builder: (_, __) => const StoresBrowserScreen()),
+      GoRoute(path: '/store-selector', builder: (_, __) => const StoreSelectorScreen()),
+      GoRoute(path: '/stores', redirect: (_, __) => '/store-selector'),
+      GoRoute(path: '/explore', builder: (_, __) => const StoresBrowserScreen()),
       GoRoute(path: '/create-store', builder: (_, __) => const CreateStoreScreen()),
       GoRoute(path: '/public-store/:slug', builder: (_, state) => PublicStorefrontScreen(slug: state.pathParameters['slug']!)),
     ],

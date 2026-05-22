@@ -40,7 +40,7 @@ class MainScaffold extends StatelessWidget {
       const _MenuItem(Icons.point_of_sale, 'POS', '/pos'),
       const _MenuItem(Icons.local_offer_outlined, 'Codes promo', '/coupons'),
       const _MenuItem(Icons.smart_toy_outlined, 'Assistant IA', '/ai-assistant'),
-      const _MenuItem(Icons.storefront_outlined, 'Explorer', '/stores'),
+      const _MenuItem(Icons.storefront_outlined, 'Explorer', '/explore'),
       const _MenuItem(Icons.payments_outlined, 'Paiements', '/boutique-settings'),
       const _MenuItem(Icons.store_outlined, 'Paramètres boutique', '/boutique-settings'),
       const _MenuItem(Icons.message_outlined, 'Messages', '/messages'),

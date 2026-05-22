@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -49,29 +48,9 @@ public class BoutiqueVisitService {
         return "Autre";
     }
 
-    private boolean hasRecentVisit(UUID boutiqueId, String visitorId, String ipHash) {
-        LocalDateTime thirtyMinAgo = LocalDateTime.now().minusMinutes(30);
-        if (visitorId != null && !visitorId.isEmpty()) {
-            Optional<StoreView> existing = storeViewRepository
-                    .findFirstByBoutiqueIdAndVisitorIdAndViewedAtAfter(boutiqueId, visitorId, thirtyMinAgo);
-            if (existing.isPresent()) {
-                log.debug("Duplicate visit by visitorId={} for boutiqueId={} within 30min, skipping", visitorId, boutiqueId);
-                return true;
-            }
-        }
-        Optional<StoreView> existing = storeViewRepository
-                .findFirstByBoutiqueIdAndIpHashAndViewedAtAfter(boutiqueId, ipHash, thirtyMinAgo);
-        if (existing.isPresent()) {
-            log.debug("Duplicate visit by ipHash={} for boutiqueId={} within 30min, skipping", ipHash, boutiqueId);
-            return true;
-        }
-        return false;
-    }
-
     @Transactional
     public void recordVisit(UUID boutiqueId, String slug, String ipAddress, String userAgent, String visitorId, String referrer, Double latitude, Double longitude) {
         String ipHash = hashIp(ipAddress);
-        if (hasRecentVisit(boutiqueId, visitorId, ipHash)) return;
 
         Double lat = latitude;
         Double lng = longitude;

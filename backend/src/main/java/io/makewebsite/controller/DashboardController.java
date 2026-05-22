@@ -14,8 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
@@ -37,20 +39,16 @@ public class DashboardController {
     private final StoreViewRepository storeViewRepository;
 
     @GetMapping("/boutique-summary")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<BoutiqueSummaryResponse>> boutiqueSummary(
+            @RequestParam UUID boutiqueId,
             @AuthenticationPrincipal UserPrincipal principal) {
         UUID ownerId = principal.getUserId();
-        log.info("=== Dashboard boutique-summary for ownerId={} ===", ownerId);
+        log.info("=== DASHBOARD SUMMARY === ownerId={}, requestedBoutiqueId={}", ownerId, boutiqueId);
 
-        // Find the boutique owned by this user
-        List<Boutique> boutiques = boutiqueRepository.findByUserId(ownerId);
-        if (boutiques.isEmpty()) {
-            log.warn("No boutique found for ownerId={}", ownerId);
-            return ResponseEntity.ok(ApiResponse.error("Aucune boutique trouvée"));
-        }
-        Boutique boutique = boutiques.get(0);
-        UUID boutiqueId = boutique.getId();
-        log.info("boutiqueId={} boutiqueName={}", boutiqueId, boutique.getName());
+        Boutique boutique = boutiqueRepository.findByUserIdAndId(ownerId, boutiqueId)
+                .orElseThrow(() -> new RuntimeException("Boutique non trouvée ou accès refusé"));
+        log.info("boutiqueId={} boutiqueName={}", boutique.getId(), boutique.getName());
 
         // Count products
         long productCount = productRepository.countByBoutiqueId(boutiqueId);
@@ -61,7 +59,7 @@ public class DashboardController {
         log.info("viewsCount={} (from store_views table)", views);
 
         // Calculate remaining subscription days
-        long remainingDays = -1;
+        long remainingDays = 0;
         String planName = "Free";
         String subscriptionStatus = "FREE";
         String subscriptionEndDate = null;
@@ -122,11 +120,12 @@ public class DashboardController {
                 }
             } else {
                 log.info("No subscriptions found for ownerId={}, user is on Free plan", ownerId);
+                remainingDays = 0;
             }
         } catch (Exception e) {
             log.error("Failed to load subscription for ownerId={}: {}", ownerId, e.getMessage(), e);
-            subscriptionStatus = "ERROR";
-            planName = "Erreur";
+            subscriptionStatus = "FREE";
+            planName = "Free";
             remainingDays = 0;
         }
         log.info("Calculated: remainingDays={} planName={} subscriptionStatus={} subscriptionEndDate={}",

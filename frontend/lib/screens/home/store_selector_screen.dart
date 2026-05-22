@@ -5,8 +5,27 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
 
-class StoreSelectorScreen extends StatelessWidget {
+class StoreSelectorScreen extends StatefulWidget {
   const StoreSelectorScreen({super.key});
+
+  @override
+  State<StoreSelectorScreen> createState() => _StoreSelectorScreenState();
+}
+
+class _StoreSelectorScreenState extends State<StoreSelectorScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final bp = context.read<BoutiqueProvider>();
+      if (bp.boutiques.isEmpty) {
+        await bp.loadBoutiques();
+        if (mounted && bp.boutiques.isEmpty) {
+          context.go('/create-store');
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +45,17 @@ class StoreSelectorScreen extends StatelessWidget {
           if (bp.loading) return const Center(child: CircularProgressIndicator());
           if (bp.boutiques.isEmpty) {
             return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.store_outlined, size: 64, color: AppColors.textHint.withAlpha(100)),
-                const SizedBox(height: 16),
-                Text('Aucune boutique', style: AppTypography.heading3),
-                const SizedBox(height: 8),
-                Text('Créez votre première boutique', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
-              ],
-            ),
-          );
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.store_outlined, size: 64, color: AppColors.textHint.withAlpha(100)),
+                  const SizedBox(height: 16),
+                  Text('Aucune boutique', style: AppTypography.heading3),
+                  const SizedBox(height: 8),
+                  Text('Créez votre première boutique', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
+                ],
+              ),
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -79,7 +98,7 @@ class StoreSelectorScreen extends StatelessWidget {
                           children: [
                             Text(boutique.name, style: AppTypography.body1.copyWith(fontWeight: FontWeight.w600)),
                             const SizedBox(height: 2),
-                            Text('${boutique.slug}.makewebsite.io',
+                            Text('/store/${boutique.slug}',
                                 style: AppTypography.caption.copyWith(color: AppColors.textHint)),
                           ],
                         ),

@@ -19,7 +19,8 @@ import '../../widgets/ai_chat_widget.dart';
 
 
 class StoreDashboardScreen extends StatefulWidget {
-  const StoreDashboardScreen({super.key});
+  final String? boutiqueId;
+  const StoreDashboardScreen({super.key, this.boutiqueId});
   @override
   State<StoreDashboardScreen> createState() => _StoreDashboardScreenState();
 }
@@ -41,9 +42,27 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     if (bp.boutiques.isEmpty) {
       await bp.loadBoutiques();
     }
+    // If boutiqueId passed via route, switch to that boutique
+    if (widget.boutiqueId != null && widget.boutiqueId != bp.activeBoutiqueId) {
+      final match = bp.boutiques.where((b) => b.id == widget.boutiqueId);
+      if (match.isNotEmpty) {
+        await bp.switchBoutique(widget.boutiqueId!);
+      } else {
+        // The requested boutique doesn't belong to this user
+        if (mounted) {
+          context.go('/store-selector');
+        }
+        return;
+      }
+    }
     // Guard: if still no boutique after load, redirect user to create one
     if (bp.boutiques.isEmpty) {
       if (mounted) context.go('/create-store');
+      return;
+    }
+    // If user has multiple stores and no specific boutique was requested, show selector
+    if (widget.boutiqueId == null && bp.boutiques.length > 1 && bp.activeBoutiqueId == null) {
+      if (mounted) context.go('/store-selector');
       return;
     }
     if (bp.activeBoutique != null) {
@@ -439,24 +458,23 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     final plan = data['planName'] as String? ?? 'Free';
 
     final bool isExpired = subStatus == 'EXPIRED';
-    final bool isUnlimited = daysRaw is int && daysRaw == -1;
-    final bool isError = subStatus == 'ERROR';
+    final bool isUnlimited = daysRaw is int && daysRaw == -1 && subStatus == 'ACTIVE';
+    final bool isFree = subStatus == 'FREE';
 
     String daysValue;
     String planLabel;
     Color daysColor = AppColors.textPrimary;
 
-    if (isError) {
-      daysValue = '--';
-      planLabel = 'Erreur';
-      daysColor = AppColors.danger;
-    } else if (isUnlimited) {
+    if (isUnlimited) {
       daysValue = '∞';
       planLabel = 'Illimité';
     } else if (isExpired) {
       daysValue = '0';
       planLabel = 'Expiré';
       daysColor = AppColors.danger;
+    } else if (isFree) {
+      daysValue = '0';
+      planLabel = 'Gratuit';
     } else {
       daysValue = '${daysRaw ?? 0}';
       planLabel = plan;
