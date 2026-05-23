@@ -1,5 +1,3 @@
-import 'dart:html' as html;
-import 'dart:js_util' as js_util;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/env_config.dart';
 import '../../providers/public_cart_provider.dart';
 import '../../services/social_meta.dart';
+import '../../services/web_utils.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -39,8 +38,8 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
       if (boutiqueId == null) return;
       final payload = <String, dynamic>{
         'page': '/store/${widget.slug}',
-        'referrer': html.window.location.href,
-        'userAgent': html.window.navigator.userAgent,
+        'referrer': WebUtils.currentUrl,
+        'userAgent': WebUtils.userAgent,
         'latitude': lat,
         'longitude': lng,
       };
@@ -53,35 +52,16 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
   }
 
   void _requestGeolocation() {
-    try {
-      print('[Geo] Requesting browser geolocation...');
-
-      js_util.callMethod(
-        html.window.navigator.geolocation,
-        'getCurrentPosition',
-        [
-          (position) {
-            final coords = js_util.getProperty(position, 'coords');
-            final lat = js_util.getProperty(coords, 'latitude') as num?;
-            final lng = js_util.getProperty(coords, 'longitude') as num?;
-
-            print('[Geo] Geolocation granted: lat=$lat lng=$lng');
-            _trackVisit(lat?.toDouble(), lng?.toDouble());
-          },
-          (error) {
-            print('[Geo] Geolocation denied or error: $error');
-            _trackVisit(null, null);
-          },
-          {
-            'enableHighAccuracy': false,
-            'timeout': 10000,
-          }
-        ],
-      );
-    } catch (e) {
-      print('[Geo] Geolocation exception: $e');
-      _trackVisit(null, null);
-    }
+    WebUtils.requestGeolocation(
+      onSuccess: (lat, lng) {
+        print('[Geo] Geolocation granted: lat=$lat lng=$lng');
+        _trackVisit(lat, lng);
+      },
+      onError: () {
+        print('[Geo] Geolocation denied or unavailable');
+        _trackVisit(null, null);
+      },
+    );
   }
 
   Future<void> _loadStore() async {
@@ -234,7 +214,10 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: _loadStore,
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,6 +386,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
               ),
             const SizedBox(height: 80),
           ],
+        ),
         ),
       ),
     );
