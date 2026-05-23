@@ -132,7 +132,7 @@ public class SecurityConfig {
             "http://localhost:*",
             "http://127.0.0.1:*",
             "https://*.ngrok-free.dev",
-            "https://scraggly-unmasked-glutinous.ngrok-free.dev"
+            "https://*.ngrok-free.app"
         ));
         config.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"

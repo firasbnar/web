@@ -5,10 +5,11 @@ class EnvConfig {
   static const String env = String.fromEnvironment('ENV', defaultValue: 'local');
 
   /// Override at build time: --dart-define=API_BASE_URL=https://my-ngrok.ngrok-free.dev/api
-  /// Default targets Android emulator (10.0.2.2); override for web (localhost) or physical device (your IP).
+  /// Default `/api` — all API calls go to the same origin as the frontend.
+  /// The reverse proxy (nginx) forwards `/api/*` to the Spring Boot backend.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue:'http://localhost:8080/api',
+    defaultValue: '/api',
   );
 
   /// Override at build time: --dart-define=WS_URL=wss://my-ngrok.ngrok-free.dev/ws
