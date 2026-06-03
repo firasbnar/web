@@ -41,32 +41,35 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailCtrl.text.trim().toLowerCase();
     final password = _passwordCtrl.text;
     final success = await provider.login(email, password);
-    if (mounted) {
-      if (success) {
-        if (provider.mustChangePassword) {
-          context.go('/change-password');
-        } else if (provider.role == 'ADMIN') {
-          context.go('/admin');
-        } else {
-          context.go('/home');
-        }
-      } else if (provider.error != null) {
-        if (provider.error!.contains('vérifier') || provider.error!.contains('email')) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('${provider.error!} → '),
-            action: SnackBarAction(
-              label: 'Renvoyer',
-              onPressed: () {
-                context.go('/verify-email', extra: _emailCtrl.text.trim());
-              },
-            ),
-            duration: const Duration(seconds: 8),
-            backgroundColor: AppColors.warning,
-          ));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.error!)));
-        }
+
+    if (!mounted) return;
+    if (success) {
+      if (provider.mustChangePassword) {
+        context.go('/change-password');
+      } else if (provider.role == 'ADMIN') {
+        context.go('/admin');
+      } else {
+        context.go('/home');
       }
+      return;
+    }
+
+    final errorMessage = provider.error ?? 'Email ou mot de passe incorrect';
+    final lowerMessage = errorMessage.toLowerCase();
+    if (lowerMessage.contains('vérifier') || lowerMessage.contains('verifier')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errorMessage),
+        action: SnackBarAction(
+          label: 'Renvoyer',
+          onPressed: () {
+            context.go('/verify-email', extra: _emailCtrl.text.trim());
+          },
+        ),
+        duration: const Duration(seconds: 8),
+        backgroundColor: AppColors.warning,
+      ));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
@@ -122,44 +125,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                  Consumer<AuthProvider>(
-                    builder: (_, auth, __) => SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.login),
-                        label: Text(auth.loading ? 'Connexion...' : 'Continuer avec Google'),
-                        onPressed: auth.loading ? null : () async {
-                          final ok = await auth.loginWithGoogle();
-                          if (ok && mounted) {
-                            final provider = context.read<AuthProvider>();
-                            if (provider.mustChangePassword) {
-                              context.go('/change-password');
-                            } else if (provider.role == 'ADMIN') {
-                              context.go('/admin');
-                            } else {
-                              context.go('/home');
-                            }
+                Consumer<AuthProvider>(
+                  builder: (_, auth, __) => SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.login),
+                      label: Text(auth.loading ? 'Connexion...' : 'Continuer avec Google'),
+                      onPressed: auth.loading ? null : () async {
+                        final ok = await auth.loginWithGoogle();
+                        if (ok && mounted) {
+                          final provider = context.read<AuthProvider>();
+                          if (provider.mustChangePassword) {
+                            context.go('/change-password');
+                          } else if (provider.role == 'ADMIN') {
+                            context.go('/admin');
+                          } else {
+                            context.go('/home');
                           }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.border),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                        minimumSize: const Size(double.infinity, 50),
                       ),
+                    ),
                   ),
                 ),
-                  const SizedBox(height: 24),
-                  TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: Text('Créer un compte', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: () => context.go('/verify-email'),
-                    child: Text('Vérifier mon email', style: AppTypography.body2.copyWith(color: AppColors.primary)),
-                  ),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () => context.go('/register'),
+                  child: Text('Créer un compte', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: () => context.go('/verify-email'),
+                  child: Text('Vérifier mon email', style: AppTypography.body2.copyWith(color: AppColors.primary)),
+                ),
               ],
             ),
           ),

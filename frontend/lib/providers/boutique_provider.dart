@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/api_client.dart';
@@ -69,9 +70,19 @@ class BoutiqueProvider extends ChangeNotifier {
         _activeBoutiqueId = savedId;
       } else {
         // Don't auto-select — let user choose via store selector
-        _activeBoutique = null;
-        _activeBoutiqueId = null;
-        await AppStorage.clearActiveBoutiqueId();
+        if (_boutiques.isNotEmpty) {
+          _activeBoutique = _boutiques.first;
+          _activeBoutiqueId = _activeBoutique!.id;
+          await AppStorage.saveActiveBoutiqueId(_activeBoutiqueId!);
+          try {
+            await _api.put('/users/active-boutique', data: {'boutiqueId': _activeBoutiqueId});
+          } catch (_) {}
+          developer.log('[BOUTIQUE] Auto-selected active boutique=$_activeBoutiqueId');
+        } else {
+          _activeBoutique = null;
+          _activeBoutiqueId = null;
+          await AppStorage.clearActiveBoutiqueId();
+        }
       }
       if (_activeBoutique != null) {
         await loadCountries();
@@ -95,6 +106,25 @@ class BoutiqueProvider extends ChangeNotifier {
     } catch (_) {}
     await loadCountries();
     notifyListeners();
+  }
+
+  Future<bool> ensureActiveBoutique() async {
+    developer.log('[BOUTIQUE] ensureActiveBoutique start active=$_activeBoutiqueId count=${_boutiques.length}');
+    if (_activeBoutique != null) return true;
+    if (_boutiques.isEmpty) {
+      await loadBoutiques();
+    }
+    if (_activeBoutique != null) {
+      developer.log('[BOUTIQUE] ensureActiveBoutique ready active=$_activeBoutiqueId');
+      return true;
+    }
+    if (_boutiques.isNotEmpty) {
+      await switchBoutique(_boutiques.first.id);
+      developer.log('[BOUTIQUE] ensureActiveBoutique selected first active=$_activeBoutiqueId');
+      return true;
+    }
+    developer.log('[BOUTIQUE] ensureActiveBoutique failed: no boutiques');
+    return false;
   }
 
   Future<void> loadStats() async {

@@ -13,6 +13,10 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 public class AiResponse {
+    private String type;
     private String reply;
+    private List<Map<String, Object>> products;
+    private List<Map<String, Object>> recommendations;
+    private Map<String, Object> analytics;
     private List<Map<String, Object>> history;
 }

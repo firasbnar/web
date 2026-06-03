@@ -535,7 +535,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(s['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                        Text(s['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
                         Text('${s['ownerName'] ?? ""} — ${s['ownerEmail'] ?? ""}', style: AppTypography.caption),
                         Text('${s['productCount']} produits · ${s['orderCount']} commandes', style: AppTypography.caption),
                         const SizedBox(height: 4),
@@ -687,9 +687,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(u['fullName'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
-                        Text(u['email'] ?? '', style: AppTypography.caption),
-                        Text('${u['boutiqueCount']} boutique(s) · ${u['role']}', style: AppTypography.caption),
+                        Text(u['fullName'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                        Text(u['email'] ?? '', style: AppTypography.caption, overflow: TextOverflow.ellipsis),
+                        Text('${u['boutiqueCount']} boutique(s) · ${u['role']}', style: AppTypography.caption, overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),

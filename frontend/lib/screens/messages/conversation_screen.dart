@@ -115,7 +115,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(msg.content, style: TextStyle(color: isMine ? Colors.white : Colors.black87)),
+                            Text(msg.content, style: TextStyle(color: isMine ? Colors.white : Colors.black87), softWrap: true, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 4),
                             if (msg.createdAt != null)
                               Text(_formatTime(msg.createdAt!), style: TextStyle(fontSize: 10, color: isMine ? Colors.white70 : AppColors.textHint)),

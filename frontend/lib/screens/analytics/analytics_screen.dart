@@ -1,4 +1,6 @@
 ﻿import 'package:flutter/material.dart';
+import 'dart:developer' as developer;
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -24,12 +26,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     super.initState();
     _from = DateTime.now().subtract(const Duration(days: 7));
     _to = DateTime.now();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
-  void _loadData() {
+  Future<void> _loadData() async {
     final bp = context.read<BoutiqueProvider>();
+    developer.log('[ANALYTICS] loadData route=${GoRouterState.of(context).uri} active=${bp.activeBoutiqueId}');
+    await bp.ensureActiveBoutique();
+    if (!mounted) return;
     if (bp.currentBoutique != null) {
+      developer.log('[ANALYTICS] loading data active=${bp.currentBoutique!.id}');
       context.read<AnalyticsProvider>().loadAll(
         bp.currentBoutique!.id,
         _period,
@@ -60,6 +68,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    developer.log('[ANALYTICS] build width=${MediaQuery.of(context).size.width}');
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -395,7 +404,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ),
         const SizedBox(width: 10),
         Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary))),
-        Text(value, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        Flexible(child: Text(value, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis)),
       ],
     );
   }
@@ -439,50 +448,55 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              SizedBox(
-                width: 140,
-                height: 140,
-                child: PieChart(
-                  PieChartData(
-                    sections: entries.asMap().entries.map((e) => PieChartSectionData(
-                      value: (e.value.value as num).toDouble(),
-                      title: '${((e.value.value as num) / total * 100).toStringAsFixed(0)}%',
-                      color: colors[e.key % colors.length],
-                      titleStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
-                      radius: 40,
-                    )).toList(),
-                    centerSpaceRadius: 28,
-                    sectionsSpace: 2,
+          LayoutBuilder(
+            builder: (_, constraints) {
+              final pieSize = constraints.maxWidth * 0.35;
+              return Row(
+              children: [
+                SizedBox(
+                  width: pieSize,
+                  height: pieSize,
+                  child: PieChart(
+                    PieChartData(
+                      sections: entries.asMap().entries.map((e) => PieChartSectionData(
+                        value: (e.value.value as num).toDouble(),
+                        title: '${((e.value.value as num) / total * 100).toStringAsFixed(0)}%',
+                        color: colors[e.key % colors.length],
+                        titleStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                        radius: 40,
+                      )).toList(),
+                      centerSpaceRadius: 28,
+                      sectionsSpace: 2,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  children: entries.asMap().entries.map((e) {
-                    final color = colors[e.key % colors.length];
-                    final label = statusLabels[e.value.key] ?? e.value.key;
-                    final count = (e.value.value as num).toInt();
-                    final pct = total > 0 ? (count / total * 100) : 0.0;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Row(
-                        children: [
-                          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary))),
-                          Text('$count orders', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                          const SizedBox(width: 6),
-                          SizedBox(width: 40, child: Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textHint), textAlign: TextAlign.right)),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    children: entries.asMap().entries.map((e) {
+                      final color = colors[e.key % colors.length];
+                      final label = statusLabels[e.value.key] ?? e.value.key;
+                      final count = (e.value.value as num).toInt();
+                      final pct = total > 0 ? (count / total * 100) : 0.0;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(
+                          children: [
+                            Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary))),
+                            Flexible(child: Text('$count orders', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis)),
+                            const SizedBox(width: 6),
+                            Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textHint), textAlign: TextAlign.right),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            );
+            },
           ),
         ],
       ),
@@ -516,49 +530,54 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              SizedBox(
-                width: 140,
-                height: 140,
-                child: PieChart(
-                  PieChartData(
-                    sections: entries.asMap().entries.map((e) => PieChartSectionData(
-                      value: (e.value.value as num).toDouble(),
-                      title: '${((e.value.value as num) / total * 100).toStringAsFixed(0)}%',
-                      color: colors[e.key % colors.length],
-                      titleStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
-                      radius: 40,
-                    )).toList(),
-                    centerSpaceRadius: 28,
-                    sectionsSpace: 2,
+          LayoutBuilder(
+            builder: (_, constraints) {
+              final pieSize = constraints.maxWidth * 0.35;
+              return Row(
+              children: [
+                SizedBox(
+                  width: pieSize,
+                  height: pieSize,
+                  child: PieChart(
+                    PieChartData(
+                      sections: entries.asMap().entries.map((e) => PieChartSectionData(
+                        value: (e.value.value as num).toDouble(),
+                        title: '${((e.value.value as num) / total * 100).toStringAsFixed(0)}%',
+                        color: colors[e.key % colors.length],
+                        titleStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                        radius: 40,
+                      )).toList(),
+                      centerSpaceRadius: 28,
+                      sectionsSpace: 2,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  children: entries.asMap().entries.map((e) {
-                    final color = colors[e.key % colors.length];
-                    final count = (e.value.value as num).toInt();
-                    final pct = total > 0 ? (count / total * 100) : 0.0;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Row(
-                        children: [
-                          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(e.value.key, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary))),
-                          Text('$count', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                          const SizedBox(width: 6),
-                          SizedBox(width: 40, child: Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textHint), textAlign: TextAlign.right)),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    children: entries.asMap().entries.map((e) {
+                      final color = colors[e.key % colors.length];
+                      final count = (e.value.value as num).toInt();
+                      final pct = total > 0 ? (count / total * 100) : 0.0;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(
+                          children: [
+                            Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(e.value.key, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary))),
+                            Flexible(child: Text('$count', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis)),
+                            const SizedBox(width: 6),
+                            Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textHint), textAlign: TextAlign.right),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            );
+            },
           ),
         ],
       ),

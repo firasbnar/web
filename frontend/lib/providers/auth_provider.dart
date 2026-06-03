@@ -35,7 +35,11 @@ class AuthProvider extends ChangeNotifier {
   bool get subscriptionActive => _subscriptionActive;
 
   Future<bool> login(String email, String password) async {
-    _loading = true; _error = null; _emailVerificationRequired = false; _mustChangePassword = false; notifyListeners();
+    _loading = true;
+    _error = null;
+    _emailVerificationRequired = false;
+    _mustChangePassword = false;
+    notifyListeners();
     try {
       // Clear stale session before logging in
       await AppStorage.clearActiveBoutiqueId();
@@ -51,13 +55,17 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
-      _loading = false; notifyListeners();
       developer.log('[AUTH] Login success: role=$_role userId=${_user!.id} subActive=$_subscriptionActive');
       return true;
+    } on DioException catch (e) {
+      _error = _extractLoginErrorMessage(e);
+      return false;
     } catch (e) {
       _error = _extractError(e);
-      _loading = false; notifyListeners();
       return false;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
@@ -93,7 +101,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> register(String fullName, String email, String password, String? phone, String? language) async {
-    _loading = true; _error = null; _emailVerificationRequired = false; _pendingEmail = null; notifyListeners();
+    _loading = true;
+    _error = null;
+    _emailVerificationRequired = false;
+    _pendingEmail = null;
+    notifyListeners();
     try {
       await AppStorage.clearActiveBoutiqueId();
       final res = await _api.post('/auth/register', data: {
@@ -105,7 +117,6 @@ class AuthProvider extends ChangeNotifier {
       if (requiresVerification) {
         _pendingEmail = email;
         _emailVerificationRequired = true;
-        _loading = false; notifyListeners();
         developer.log('[AUTH] Register requires email verification: $email');
         return true;
       }
@@ -116,13 +127,17 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
-      _loading = false; notifyListeners();
       developer.log('[AUTH] Register success: role=$_role userId=${_user!.id}');
       return true;
+    } on DioException catch (e) {
+      _error = _extractRegisterErrorMessage(e);
+      return false;
     } catch (e) {
       _error = _extractError(e);
-      _loading = false; notifyListeners();
       return false;
+    } finally {
+      _loading = false;
+      notifyListeners();
     }
   }
 
@@ -278,12 +293,32 @@ class AuthProvider extends ChangeNotifier {
   String _extractError(dynamic e) {
     if (e is DioException) {
       final data = e.response?.data;
-      if (data is Map<String, dynamic> && data.containsKey('message')) {
-        return data['message'] as String;
+      if (data is Map && data['message'] != null && data['message'].toString().isNotEmpty) {
+        return data['message'].toString();
       }
       if (e.response?.statusCode == 401) return 'Email ou mot de passe incorrect';
       if (e.response?.statusCode == 403) return 'Compte non vérifié';
     }
     return 'Une erreur est survenue';
+  }
+
+  String _extractLoginErrorMessage(DioException e) {
+    if (e.response == null) return 'Serveur inaccessible';
+    final message = ApiClient.extractErrorMessage(e);
+    if (message.trim().isNotEmpty &&
+        message != 'Erreur de communication' &&
+        !message.toLowerCase().contains('session')) {
+      return message;
+    }
+    return 'Email ou mot de passe incorrect';
+  }
+
+  String _extractRegisterErrorMessage(DioException e) {
+    if (e.response == null) return 'Serveur inaccessible';
+    final message = ApiClient.extractErrorMessage(e);
+    if (message.trim().isNotEmpty && message != 'Erreur de communication') {
+      return message;
+    }
+    return 'Impossible de créer le compte';
   }
 }

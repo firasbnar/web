@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +17,7 @@ class MainScaffold extends StatelessWidget {
     if (location.startsWith('/products')) return 1;
     if (location.startsWith('/orders')) return 2;
     if (location.startsWith('/analytics')) return 3;
-    return 0;
+    return 4;
   }
 
   void _onTap(BuildContext context, int index) {
@@ -117,62 +118,41 @@ class MainScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    final isRoot = location == '/home' || location == '/products' || location == '/orders' || location == '/analytics';
+    final selectedIndex = _currentIndex(context);
 
-    return Scaffold(
-      appBar: !isRoot
-          ? AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.pop(),
-              ),
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-              foregroundColor: AppColors.textPrimary,
-            )
-          : null,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        transitionBuilder: (child, animation) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.15, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: child,
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey(location),
-          child: child,
+    developer.log('[SHELL] route=$location selected=$selectedIndex');
+
+    // NOTE: No outer Scaffold here. Each child screen has its own Scaffold.
+    // This avoids Duplicate GlobalKey errors from nested Scaffolds.
+    // AnimatedSwitcher is NOT used to avoid keeping two widget trees
+    // simultaneously, which causes GlobalKey conflicts.
+    return Column(
+      children: [
+        Expanded(child: child),
+        Container(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.grey.shade200, width: 0.5)),
+          ),
+          child: BottomNavigationBar(
+            currentIndex: selectedIndex,
+            onTap: (i) => _onTap(context, i),
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: AppColors.textHint,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            elevation: 0,
+            backgroundColor: Colors.white,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Accueil'),
+              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), activeIcon: Icon(Icons.inventory_2), label: 'Produits'),
+              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Commandes'),
+              BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'Analytics'),
+              BottomNavigationBarItem(icon: Icon(Icons.more_horiz), activeIcon: Icon(Icons.more_horiz), label: 'Plus'),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey.shade200, width: 0.5)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex(context),
-          onTap: (i) => _onTap(context, i),
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textHint,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-          elevation: 0,
-          backgroundColor: Colors.white,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Accueil'),
-            BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), activeIcon: Icon(Icons.inventory_2), label: 'Produits'),
-            BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Commandes'),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'Analytics'),
-            BottomNavigationBarItem(icon: Icon(Icons.more_horiz), activeIcon: Icon(Icons.more_horiz), label: 'Plus'),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }

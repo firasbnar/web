@@ -33,6 +33,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Optional<Order> findByOrderNumber(String orderNumber);
 
+    @Query("SELECT o FROM Order o JOIN FETCH o.boutique WHERE o.orderNumber = :orderNumber")
+    Optional<Order> findByOrderNumberWithBoutique(@Param("orderNumber") String orderNumber);
+
     long countByBoutiqueId(UUID boutiqueId);
 
     long countByBoutiqueIdAndStatus(UUID boutiqueId, String status);
@@ -43,6 +46,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.boutique.id = :boutiqueId AND o.createdAt BETWEEN :from AND :to")
     BigDecimal sumRevenueByBoutiqueIdAndCreatedAtBetween(@Param("boutiqueId") UUID boutiqueId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT o.deliveryCompany, COUNT(o)
+            FROM Order o
+            WHERE o.boutique.id = :boutiqueId AND o.deliveryCompany IS NOT NULL AND o.deliveryCompany <> ''
+            GROUP BY o.deliveryCompany
+            ORDER BY COUNT(o) DESC
+            """)
+    List<Object[]> countByDeliveryCompany(@Param("boutiqueId") UUID boutiqueId);
 
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.boutique.id = :boutiqueId")
     BigDecimal sumRevenueByBoutiqueId(@Param("boutiqueId") UUID boutiqueId);

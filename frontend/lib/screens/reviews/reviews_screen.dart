@@ -20,7 +20,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _load();
+    });
   }
 
   @override
@@ -39,8 +41,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     }
   }
 
-  void _load() {
+  Future<void> _load() async {
     final bp = context.read<BoutiqueProvider>();
+    await bp.ensureActiveBoutique();
+    if (!mounted) return;
     final boutiqueId = bp.activeBoutiqueId;
     if (boutiqueId != null) {
       context.read<ReviewsProvider>().loadReviews(boutiqueId, refresh: true);
@@ -121,23 +125,26 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Colors.white,
-      child: Row(
-        children: filters.map((f) {
-          final selected = rp.statusFilter == f.$1;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(f.$2, style: TextStyle(fontSize: 12, color: selected ? Colors.white : AppColors.textPrimary)),
-              selected: selected,
-              onSelected: (_) => rp.setStatusFilter(f.$1),
-              selectedColor: AppColors.primary,
-              backgroundColor: AppColors.surfaceAlt,
-              checkmarkColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          );
-        }).toList(),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: filters.map((f) {
+            final selected = rp.statusFilter == f.$1;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(f.$2, style: TextStyle(fontSize: 12, color: selected ? Colors.white : AppColors.textPrimary)),
+                selected: selected,
+                onSelected: (_) => rp.setStatusFilter(f.$1),
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.surfaceAlt,
+                checkmarkColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

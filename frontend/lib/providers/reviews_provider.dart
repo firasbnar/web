@@ -31,7 +31,7 @@ class ReviewsProvider extends ChangeNotifier {
   Future<void> loadPendingCount(String boutiqueId) async {
     try {
       final res = await _api.get('/reviews/boutique/$boutiqueId/pending-count');
-      _pendingCount = (res['data'] is int) ? res['data'] : (res['data']?['count'] ?? 0);
+      _pendingCount = (res['data'] is int) ? res['data'] : (res['data']?['pendingCount'] ?? 0);
       notifyListeners();
     } catch (_) {}
   }

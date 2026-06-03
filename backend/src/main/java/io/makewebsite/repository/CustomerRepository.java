@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -32,4 +33,12 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
 
     @Query("SELECT MAX(o.createdAt) FROM Order o WHERE o.customer.id = :customerId")
     java.time.LocalDateTime findLastOrderDateByCustomerId(@Param("customerId") UUID customerId);
+
+    @Query("""
+            SELECT c.fullName, c.totalOrders, c.totalSpent
+            FROM Customer c
+            WHERE c.boutique.id = :boutiqueId
+            ORDER BY c.totalSpent DESC, c.totalOrders DESC
+            """)
+    List<Object[]> findTopCustomers(@Param("boutiqueId") UUID boutiqueId, Pageable pageable);
 }

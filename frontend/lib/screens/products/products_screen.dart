@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -29,11 +30,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bp = context.read<BoutiqueProvider>();
-      if (bp.activeBoutique == null && bp.boutiques.isEmpty) {
-        await bp.loadBoutiques();
-      }
+      developer.log('[PRODUCTS] init route=${GoRouterState.of(context).uri} active=${bp.activeBoutiqueId}');
+      await bp.ensureActiveBoutique();
       if (!mounted) return;
       if (bp.activeBoutique != null) {
+        developer.log('[PRODUCTS] loading data active=${bp.activeBoutique!.id}');
         context.read<ProductsProvider>().loadProducts(bp.activeBoutique!.id, refresh: true);
         context.read<ProductsProvider>().loadCategories(bp.activeBoutique!.id);
       }
@@ -59,6 +60,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    developer.log('[PRODUCTS] build width=${MediaQuery.of(context).size.width}');
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(

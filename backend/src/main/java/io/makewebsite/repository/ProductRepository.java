@@ -44,4 +44,6 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     @Query("SELECT MIN(p.price) FROM Product p WHERE p.boutique.id = :boutiqueId AND p.isActive = true")
     BigDecimal findMinPriceByBoutiqueIdAndIsActiveTrue(@Param("boutiqueId") UUID boutiqueId);
+
+    List<Product> findByBoutiqueIdAndIsActiveTrueOrderByCreatedAtDesc(UUID boutiqueId);
 }

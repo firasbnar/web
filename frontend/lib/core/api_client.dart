@@ -29,11 +29,14 @@ class ApiClient {
           // Field-level validation errors
           final errors = data['errors'];
           if (errors is Map && errors.isNotEmpty) {
-            final firstError = errors.values.first;
-            if (firstError is List && firstError.isNotEmpty) {
-              return firstError.first.toString();
-            }
-            return firstError.toString();
+            return errors.entries
+                .map((entry) {
+                  final value = entry.value;
+                  if (value is List) return value.join(', ');
+                  return value.toString();
+                })
+                .where((msg) => msg.trim().isNotEmpty)
+                .join('\n');
           }
           if (errors is List && errors.isNotEmpty) {
             return errors.join(', ');
@@ -45,6 +48,12 @@ class ApiClient {
           }
         }
       } catch (_) {}
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.response == null) {
+        return 'Serveur inaccessible';
+      }
       if (error.response?.statusCode == 400) return 'Requête invalide';
       if (error.response?.statusCode == 401) return 'Session expirée';
       if (error.response?.statusCode == 403) return 'Accès refusé';
@@ -121,12 +130,29 @@ class ApiClient {
           // ignore: avoid_print
           print('[API ERROR] ${error.requestOptions.uri}');
           // ignore: avoid_print
+          print('  Exception Type: ${error.type}');
+          // ignore: avoid_print
+          print('  URL: ${error.requestOptions.uri}');
+          // ignore: avoid_print
           print('  Status: ${error.response?.statusCode}');
           // ignore: avoid_print
           print('  Method: ${error.requestOptions.method}');
+          // Log the actual error message
+          if (error.message != null) {
+            // ignore: avoid_print
+            print('  Error Message: ${error.message}');
+          }
+          if (error.error != null) {
+            // ignore: avoid_print
+            print('  Error Object: ${error.error} (${error.error.runtimeType})');
+          }
           if (error.requestOptions.headers.isNotEmpty) {
             // ignore: avoid_print
-            print('  Headers: ${_safeHeaders(error.requestOptions.headers)}');
+            print('  Request Headers: ${_safeHeaders(error.requestOptions.headers)}');
+          }
+          if (error.response?.headers.map.isNotEmpty == true) {
+            // ignore: avoid_print
+            print('  Response Headers: ${error.response?.headers.map}');
           }
           if (error.requestOptions.queryParameters.isNotEmpty) {
             // ignore: avoid_print

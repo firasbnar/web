@@ -79,7 +79,7 @@ class _WishlistCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text('${item.price.toStringAsFixed(3)} TND', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
                 if (item.boutiqueName != null)
-                  Text(item.boutiqueName!, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                  Text(item.boutiqueName!, style: AppTypography.caption.copyWith(color: AppColors.textSecondary), overflow: TextOverflow.ellipsis),
               ],
             ),
           ),

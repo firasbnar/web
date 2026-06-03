@@ -1,8 +1,10 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/env_config.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
@@ -34,14 +36,15 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
     final bp = context.read<BoutiqueProvider>();
-    if (bp.boutiques.isEmpty) {
-      await bp.loadBoutiques();
-    }
+    developer.log('[DASHBOARD] loadData start route=${GoRouterState.of(context).uri} active=${bp.activeBoutiqueId}');
+    await bp.ensureActiveBoutique();
     // If boutiqueId passed via route, switch to that boutique
     if (widget.boutiqueId != null && widget.boutiqueId != bp.activeBoutiqueId) {
       final match = bp.boutiques.where((b) => b.id == widget.boutiqueId);
@@ -60,11 +63,6 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       if (mounted) context.go('/create-store');
       return;
     }
-    // If user has multiple stores and no specific boutique was requested, show selector
-    if (widget.boutiqueId == null && bp.boutiques.length > 1 && bp.activeBoutiqueId == null) {
-      if (mounted) context.go('/store-selector');
-      return;
-    }
     if (bp.activeBoutique != null) {
       _dashboardData = await bp.loadDashboard();
       _boutiqueSummary = await bp.loadBoutiqueSummary();
@@ -73,11 +71,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       context.read<ReviewsProvider>().loadPendingCount(bp.activeBoutique!.id);
       bp.loadStats();
     }
+    developer.log('[DASHBOARD] loadData end active=${bp.activeBoutiqueId} loading=false hasDashboard=${_dashboardData != null}');
     if (mounted) setState(() => _loadingDashboard = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    developer.log('[DASHBOARD] build width=$width loading=$_loadingDashboard route=${GoRouterState.of(context).uri}');
     return Stack(
       children: [
         Scaffold(
@@ -214,7 +215,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     if (boutique == null) return const SizedBox.shrink();
     final url = boutique.publicUrl;
     if (url == null || url.isEmpty) return const SizedBox.shrink();
-    final absUrl = Uri.base.origin + url;
+    final absUrl = '${EnvConfig.frontendPublicUrl}$url';
     final pubStatus = boutique.publicationStatus ?? (boutique.isPublished ? 'PUBLISHED' : 'DRAFT');
 
     Color statusColor;
@@ -301,7 +302,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               if (pubStatus == 'DRAFT')
                 _smallBtn(Icons.publish, 'Publier', AppColors.primary, () async {
@@ -319,11 +322,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                       const SnackBar(content: Text('Boutique dépubliée'), behavior: SnackBarBehavior.floating));
                   }
                 }),
-              const SizedBox(width: 8),
               _smallBtn(Icons.open_in_new, 'Ouvrir', AppColors.primary, () async {
                 await launchUrl(Uri.parse(absUrl), mode: LaunchMode.externalApplication);
               }),
-              const SizedBox(width: 8),
               _smallBtn(Icons.share, 'Partager', AppColors.primary, () {
                 Clipboard.setData(ClipboardData(text: absUrl));
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -440,8 +441,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           children: [
             Icon(Icons.error_outline, size: 18, color: AppColors.danger),
             const SizedBox(width: 8),
-            Text('Impossible de charger les statistiques',
-                style: AppTypography.caption.copyWith(color: AppColors.danger)),
+            Flexible(child: Text('Impossible de charger les statistiques',
+                style: AppTypography.caption.copyWith(color: AppColors.danger))),
           ],
         ),
       );

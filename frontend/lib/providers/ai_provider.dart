@@ -15,7 +15,7 @@ class AiProvider extends ChangeNotifier {
     _messages.add({'role': 'user', 'content': message});
     _loading = true; notifyListeners();
     try {
-      final res = await _api.post('/ai/chat', data: {'message': message});
+      final res = await _api.post('/ai/owner/chat', data: {'message': message});
       final data = res['data'];
       _messages.add({'role': 'assistant', 'content': data['reply']});
       _loading = false; notifyListeners();

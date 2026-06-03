@@ -44,10 +44,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (mounted) {
       if (ok) {
         if (auth.emailVerificationRequired) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Compte créé. Vérifiez votre email.'),
+            backgroundColor: AppColors.success,
+          ));
           context.go('/verify-email', extra: _emailCtrl.text.trim().toLowerCase());
         } else if (auth.isAuthenticated) {
           context.go(auth.role == 'ADMIN' ? '/admin' : '/home');
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(auth.error ?? 'Impossible de créer le compte'),
+          backgroundColor: AppColors.danger,
+        ));
       }
     }
   }

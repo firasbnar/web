@@ -486,6 +486,7 @@ public class StoreGeneratorService {
         html = html.replace("{{WHATSAPP_NUMBER}}", b.getWhatsappNumber() != null ? esc(b.getWhatsappNumber()) : "");
         html = html.replace("{{STORE_LANGUAGE}}", b.getLanguage() != null ? esc(b.getLanguage()) : "fr");
         html = html.replace("{{BOUTIQUE_ID}}", b.getId().toString());
+        html = html.replace("{{BOUTIQUE_SLUG}}", esc(b.getSlug()));
 
         // Products JSON for chatbot context
         List<Map<String,Object>> productsMini = products.stream()

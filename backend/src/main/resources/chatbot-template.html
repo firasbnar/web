@@ -558,15 +558,16 @@
     name:          '{{BOUTIQUE_NAME}}',
     description:   '{{BOUTIQUE_DESCRIPTION}}',
     currency:      '{{CURRENCY_SYMBOL}}',
-    deliveryFees:  {{DELIVERY_FEES}},
-    cashOnDelivery: {{CASH_ON_DELIVERY_BOOL}},
-    konnectActive:  {{KONNECT_ACTIVE_BOOL}},
-    d17Active:      {{D17_ACTIVE_BOOL}},
+    deliveryFees:  '{{DELIVERY_FEES}}',
+    cashOnDelivery: '{{CASH_ON_DELIVERY_BOOL}}',
+    konnectActive:  '{{KONNECT_ACTIVE_BOOL}}',
+    d17Active:      '{{D17_ACTIVE_BOOL}}',
     whatsapp:      '{{WHATSAPP_NUMBER}}',
-    products: {{PRODUCTS_JSON}},
-    categories: {{CATEGORIES_JSON}},
+    products: '{{PRODUCTS_JSON}}',
+    categories: '{{CATEGORIES_JSON}}',
     language:   '{{STORE_LANGUAGE}}',
     boutiqueId: '{{BOUTIQUE_ID}}',
+    slug:       '{{BOUTIQUE_SLUG}}',
   };
 
   // ── STATE ──
@@ -655,33 +656,31 @@
     callClaudeAPI();
   }
 
-  // ── CALL CLAUDE API ──
+  // ── CALL AI API (Ollama via backend) ──
   async function callClaudeAPI() {
     isLoading = true;
     document.getElementById('chatSendBtn').disabled = true;
 
-    var messages = msgHistory.slice(-10).map(function(m) {
-      return { role: m.role, content: m.content };
-    });
+    var lastMsg = msgHistory.length > 0 ? msgHistory[msgHistory.length - 1].content : '';
 
     try {
-      var res = await fetch('/api/public/chat', {
+      var res = await fetch('/api/public/stores/' + STORE_CONTEXT.slug + '/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          boutiqueId: STORE_CONTEXT.boutiqueId,
-          messages: messages,
-          systemPrompt: buildSystemPrompt(),
+          message: lastMsg,
+          messages: msgHistory.slice(-10).map(function(m) {
+            return { role: m.role, content: m.content };
+          }),
         }),
       });
 
-      var data = await res.json();
+      var body = await res.json();
       hideTyping();
 
-      var reply = data.content
-        ? (data.content[0] ? data.content[0].text : null)
-        : null;
-      reply = reply || data.reply || "Desole, je n'ai pas pu obtenir une reponse. Reessayez.";
+      var reply = body.data && body.data.reply
+        ? body.data.reply
+        : "Desole, je n'ai pas pu obtenir une reponse. Reessayez.";
 
       msgHistory.push({ role: 'assistant', content: reply });
       addBotMessage(reply);

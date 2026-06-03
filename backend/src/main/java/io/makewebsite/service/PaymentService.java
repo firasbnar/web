@@ -21,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -221,7 +222,8 @@ public class PaymentService {
         }
     }
 
-    public JsonNode createPublicStripeSession(Order order, UUID boutiqueId) {
+    @Transactional(readOnly = true)
+    public JsonNode createPublicStripeSession(String orderNumber, UUID boutiqueId) {
         String key = stripeSecretKey;
         if (key == null || key.isBlank()) {
             key = resolveSecretKey("", "STRIPE_SECRET_KEY");
@@ -230,7 +232,13 @@ public class PaymentService {
             throw new RuntimeException("Stripe secret key not configured");
         }
 
-        String orderNumber = order.getOrderNumber();
+        Order order = orderRepository.findByOrderNumberWithBoutique(orderNumber)
+                .orElseThrow(() -> new RuntimeException("Commande introuvable"));
+
+        if (!order.getBoutique().getId().equals(boutiqueId)) {
+            throw new RuntimeException("Commande invalide pour cette boutique");
+        }
+
         BigDecimal orderTotal = order.getTotal();
         if (orderTotal == null || orderTotal.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Montant de la commande invalide");

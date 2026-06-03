@@ -434,7 +434,7 @@ public class PublicStoreController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Commande introuvable"));
         }
         try {
-            JsonNode session = paymentService.createPublicStripeSession(order, b.getId());
+            JsonNode session = paymentService.createPublicStripeSession(orderNumber, b.getId());
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "sessionId", session.get("sessionId").asText(),

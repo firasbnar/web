@@ -28,9 +28,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bp = context.read<BoutiqueProvider>();
-      if (bp.activeBoutique == null && bp.boutiques.isEmpty) {
-        await bp.loadBoutiques();
-      }
+      await bp.ensureActiveBoutique();
       if (bp.activeBoutique != null) {
         context.read<CustomersProvider>().loadCustomers(bp.activeBoutique!.id, refresh: true);
       }

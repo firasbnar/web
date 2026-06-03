@@ -29,6 +29,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   double _avgRating = 0;
   int _totalReviews = 0;
   bool _reviewsLoading = false;
+  bool _reviewSubmitted = false;
   String? _error;
 
   @override
@@ -77,45 +78,82 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final nameCtrl = TextEditingController();
     final commentCtrl = TextEditingController();
     int rating = 5;
-    final saved = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
-      title: const Text('Donner votre avis'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Votre nom *', border: OutlineInputBorder())),
-          const SizedBox(height: 12),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(5, (i) => IconButton(
-            icon: Icon(i < rating ? Icons.star : Icons.star_border, color: Colors.amber, size: 32),
-            onPressed: () => setD(() => rating = i + 1),
-          ))),
-          const SizedBox(height: 8),
-          TextField(controller: commentCtrl, decoration: const InputDecoration(labelText: 'Votre commentaire', border: OutlineInputBorder()), maxLines: 3),
-        ],
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-        AppButton(label: 'Envoyer', onPressed: () async {
-          if (nameCtrl.text.trim().isEmpty) return;
-          try {
-            final res = await _api.post('/products/${widget.productId}/reviews', data: {
-              'customerName': nameCtrl.text.trim(),
-              'rating': rating,
-              'comment': commentCtrl.text.trim().isNotEmpty ? commentCtrl.text.trim() : null,
-            });
-            Navigator.pop(ctx, true);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(res['message'] ?? 'Avis envoyé'),
-                backgroundColor: AppColors.success,
-              ));
-            }
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
-          }
-        }),
-      ],
-    )));
-    if (saved == true) _loadReviews();
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: StatefulBuilder(builder: (ctx, setD) => SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Text('Donner votre avis', style: AppTypography.heading4)),
+              const SizedBox(height: 20),
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Votre nom *', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (i) => IconButton(
+                    icon: Icon(i < rating ? Icons.star : Icons.star_border, color: Colors.amber, size: 36),
+                    onPressed: () => setD(() => rating = i + 1),
+                  )),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(controller: commentCtrl, decoration: const InputDecoration(labelText: 'Votre commentaire', border: OutlineInputBorder()), maxLines: 3),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(label: 'Envoyer', onPressed: () async {
+                  if (nameCtrl.text.trim().isEmpty) return;
+                  try {
+                    final res = await _api.post('/products/${widget.productId}/reviews', data: {
+                      'customerName': nameCtrl.text.trim(),
+                      'rating': rating,
+                      'comment': commentCtrl.text.trim().isNotEmpty ? commentCtrl.text.trim() : null,
+                    });
+                    Navigator.pop(ctx, true);
+                    if (mounted) {
+                      setState(() => _reviewSubmitted = true);
+                      _loadReviews();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(res['message'] ?? 'Merci pour votre avis !'),
+                        backgroundColor: AppColors.success,
+                        duration: const Duration(seconds: 4),
+                      ));
+                    }
+                  } catch (e) {
+                    Navigator.pop(ctx, false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
+                    }
+                  }
+                }),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Annuler'),
+                ),
+              ),
+            ],
+          ),
+        )),
+      ),
+    );
+    if (saved == true) {
+      setState(() => _reviewSubmitted = true);
+    }
   }
 
   Future<void> _addToCart() async {
@@ -198,7 +236,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('${p.price.toStringAsFixed(3)} TND', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
+                      Text('${p.price.toStringAsFixed(3)} TND', style: AppTypography.heading1.copyWith(color: AppColors.primary), overflow: TextOverflow.ellipsis),
                       if (p.comparePrice != null && p.comparePrice! > p.price) ...[
                         const SizedBox(width: 12),
                         Text('${p.comparePrice!.toStringAsFixed(3)} TND', style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
@@ -211,7 +249,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   if (p.description != null && p.description!.isNotEmpty) ...[
                     Text('Description', style: AppTypography.heading4),
                     const SizedBox(height: 8),
-                    Text(p.description!, style: AppTypography.body2),
+                    Text(p.description!, style: AppTypography.body2, overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 24),
                   if (p.stock > 0) ...[
@@ -305,6 +343,29 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
         ),
         const SizedBox(height: 16),
+        if (_reviewSubmitted)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Votre avis a été soumis et sera visible après validation par le marchand.',
+                    style: AppTypography.body2.copyWith(color: AppColors.success),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_reviewsLoading)
           const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
         else if (_reviews.isEmpty)

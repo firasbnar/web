@@ -8,6 +8,7 @@ import '../../services/social_meta.dart';
 import '../../services/web_utils.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/ai_chat_widget.dart';
 
 class PublicStorefrontScreen extends StatefulWidget {
   final String slug;
@@ -89,7 +90,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_loading) return const Scaffold(body: SafeArea(child: Center(child: CircularProgressIndicator())));
     if (_error != null || _store == null) {
       return Scaffold(
         body: Center(
@@ -214,6 +215,12 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
           ),
         ],
       ),
+      floatingActionButton: AiChatWidget(
+        boutiqueId: s['id'].toString(),
+        boutiqueName: name,
+        publicSlug: widget.slug,
+        isOwner: false,
+      ),
       body: RefreshIndicator(
         onRefresh: _loadStore,
         child: SingleChildScrollView(
@@ -229,7 +236,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
               ),
             if (logo != null && logo.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Center(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(logo, height: 80, fit: BoxFit.contain))),
+              Center(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(logo, height: 80, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()))),
             ],
             if (description != null && description.isNotEmpty) ...[
               const SizedBox(height: 16),

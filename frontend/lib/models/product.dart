@@ -1,3 +1,5 @@
+import '../core/url_utils.dart';
+
 class Product {
   final String id;
   final String? boutiqueId;
@@ -43,6 +45,7 @@ class Product {
         } catch (_) {}
       }
     }
+    imgList = imgList.map((url) => normalizeRemoteUrl(url) ?? url).toList();
     return Product(
       id: json['id'].toString(),
       boutiqueId: json['boutiqueId']?.toString(),
@@ -82,7 +85,7 @@ class Category {
     boutiqueId: json['boutiqueId']?.toString(),
     name: json['name'] ?? '',
     slug: json['slug'] ?? '',
-    imageUrl: json['imageUrl'],
+    imageUrl: normalizeRemoteUrl(json['imageUrl']),
     sortOrder: json['sortOrder'] ?? 0,
   );
 }

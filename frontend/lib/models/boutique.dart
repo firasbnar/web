@@ -1,3 +1,5 @@
+import '../core/url_utils.dart';
+
 class Boutique {
   final String id;
   final String name;
@@ -166,7 +168,7 @@ class Boutique {
     id: json['id'].toString(),
     name: json['name'] ?? '',
     slug: json['slug'] ?? '',
-    logoUrl: json['logoUrl'],
+    logoUrl: normalizeRemoteUrl(json['logoUrl']),
     description: json['description'],
     email: json['email'],
     phone: json['phone'],
@@ -181,7 +183,7 @@ class Boutique {
     seoTitle: json['seoTitle'],
     seoDescription: json['seoDescription'],
     seoKeywords: json['seoKeywords'],
-    ogImageUrl: json['ogImageUrl'],
+    ogImageUrl: normalizeRemoteUrl(json['ogImageUrl']),
     facebookUrl: json['facebookUrl'],
     instagramUrl: json['instagramUrl'],
     tiktokUrl: json['tiktokUrl'],
@@ -216,7 +218,7 @@ class Boutique {
     d17Status: json['d17Status'] ?? json['d17_status'],
     facebookPixelId: json['facebookPixelId'] ?? json['facebook_pixel_id'],
     googleAnalyticsId: json['googleAnalyticsId'] ?? json['google_analytics_id'],
-    bannerUrl: json['bannerUrl'],
+    bannerUrl: normalizeRemoteUrl(json['bannerUrl']),
     faviconUrl: json['faviconUrl'],
     fontFamily: json['fontFamily'],
     darkMode: json['darkMode'] ?? false,

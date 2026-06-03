@@ -10,7 +10,7 @@ class EnvConfig {
   /// For real device: http://192.168.x.x:8080/api
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080/api',
+    defaultValue: 'http://192.168.1.66:8080/api',
   );
 
   /// Override at build time: --dart-define=WS_URL=wss://votre-serveur.com/ws

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
@@ -75,12 +76,27 @@ public class UploadService {
         try {
             Files.createDirectories(targetDir);
             Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
-            return publicUrl.replaceAll("/+$", "") + "/uploads/" + (prefix.isBlank() ? "" : prefix + "/") + fileName;
+            return resolvePublicUrl() + "/uploads/" + (prefix.isBlank() ? "" : prefix + "/") + fileName;
         } catch (FileAlreadyExistsException e) {
-            return publicUrl.replaceAll("/+$", "") + "/uploads/" + (prefix.isBlank() ? "" : prefix + "/") + fileName;
+            return resolvePublicUrl() + "/uploads/" + (prefix.isBlank() ? "" : prefix + "/") + fileName;
         } catch (IOException e) {
             throw new RuntimeException("Erreur lors de l'upload: " + e.getMessage());
         }
+    }
+
+    private String resolvePublicUrl() {
+        final String configuredUrl = publicUrl == null ? "" : publicUrl.replaceAll("/+$", "");
+        if (!configuredUrl.contains("localhost") && !configuredUrl.contains("127.0.0.1")) {
+            return configuredUrl;
+        }
+        try {
+            final String requestUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+            if (requestUrl != null && !requestUrl.isBlank()) {
+                return requestUrl.replaceAll("/+$", "");
+            }
+        } catch (IllegalStateException ignored) {
+        }
+        return configuredUrl;
     }
 
     public void deletePublicUrl(String url) {

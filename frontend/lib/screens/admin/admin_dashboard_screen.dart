@@ -276,8 +276,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(u['fullName'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
-                          Text(u['email'] ?? '', style: AppTypography.caption),
+                          Text(u['fullName'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                          Text(u['email'] ?? '', style: AppTypography.caption, overflow: TextOverflow.ellipsis),
                           Text('${u['boutiqueCount']} boutique(s)', style: AppTypography.caption),
                         ],
                       ),
@@ -358,8 +358,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(b['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
-                          Text('${b['ownerName'] ?? ""} — ${b['ownerEmail'] ?? ""}', style: AppTypography.caption),
+                          Text(b['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                          Text('${b['ownerName'] ?? ""} — ${b['ownerEmail'] ?? ""}', style: AppTypography.caption, overflow: TextOverflow.ellipsis),
                           Text('${b['productCount']} produits · ${b['orderCount']} commandes', style: AppTypography.caption),
                         ],
                       ),

@@ -21,7 +21,22 @@ public class AiController {
 
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<AiResponse>> chat(@Valid @RequestBody ChatRequest request, @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(ApiResponse.ok(aiService.chat(principal.getUserId(), request.getMessage())));
+        return ResponseEntity.ok(ApiResponse.ok(aiService.ownerChat(
+                principal.getUserId(),
+                request.getBoutiqueId(),
+                request.getMessage(),
+                request.getSessionId()
+        )));
+    }
+
+    @PostMapping("/owner/chat")
+    public ResponseEntity<ApiResponse<AiResponse>> ownerChat(@Valid @RequestBody ChatRequest request, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(aiService.ownerChat(
+                principal.getUserId(),
+                request.getBoutiqueId(),
+                request.getMessage(),
+                request.getSessionId()
+        )));
     }
 
     @GetMapping("/history")

@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../providers/public_cart_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_button.dart';
 
 class PublicProductDetailScreen extends StatefulWidget {
   final String slug;
@@ -23,6 +24,11 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
   int _currentImage = 0;
   String? _selectedColor;
   String? _selectedSize;
+  List<Map<String, dynamic>> _reviews = [];
+  double _avgRating = 0;
+  int _totalReviews = 0;
+  bool _reviewsLoading = false;
+  bool _reviewSubmitted = false;
 
   @override
   void initState() {
@@ -34,10 +40,221 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     setState(() => _loading = true);
     try {
       final res = await _api.get('/public/stores/${widget.slug}/products/${widget.productId}');
-      if (mounted) setState(() { _product = res; _loading = false; });
+      if (mounted) {
+        setState(() { _product = res; _loading = false; });
+        _loadReviews();
+      }
     } catch (e) {
       if (mounted) setState(() { _error = 'Produit introuvable'; _loading = false; });
     }
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() => _reviewsLoading = true);
+    try {
+      final res = await _api.get('/products/${widget.productId}/reviews');
+      final data = res['data'];
+      _reviews = ((data['content'] ?? []) as List).cast<Map<String, dynamic>>();
+      _avgRating = (data['averageRating'] ?? 0).toDouble();
+      _totalReviews = data['totalReviews'] ?? 0;
+    } catch (_) {}
+    if (mounted) setState(() => _reviewsLoading = false);
+  }
+
+  Future<void> _showReviewDialog() async {
+    final nameCtrl = TextEditingController();
+    final commentCtrl = TextEditingController();
+    int rating = 5;
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: StatefulBuilder(builder: (ctx, setD) => SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Text('Donner votre avis', style: AppTypography.heading4)),
+              const SizedBox(height: 20),
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Votre nom *', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (i) => IconButton(
+                    icon: Icon(i < rating ? Icons.star : Icons.star_border, color: Colors.amber, size: 36),
+                    onPressed: () => setD(() => rating = i + 1),
+                  )),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(controller: commentCtrl, decoration: const InputDecoration(labelText: 'Votre commentaire', border: OutlineInputBorder()), maxLines: 3),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: AppButton(label: 'Envoyer', onPressed: () async {
+                  if (nameCtrl.text.trim().isEmpty) return;
+                  try {
+                    final res = await _api.post('/products/${widget.productId}/reviews', data: {
+                      'customerName': nameCtrl.text.trim(),
+                      'rating': rating,
+                      'comment': commentCtrl.text.trim().isNotEmpty ? commentCtrl.text.trim() : null,
+                    });
+                    Navigator.pop(ctx, true);
+                    if (mounted) {
+                      setState(() => _reviewSubmitted = true);
+                      _loadReviews();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(res['message'] ?? 'Merci pour votre avis !'),
+                        backgroundColor: AppColors.success,
+                        duration: const Duration(seconds: 4),
+                      ));
+                    }
+                  } catch (e) {
+                    Navigator.pop(ctx, false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
+                    }
+                  }
+                }),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Annuler'),
+                ),
+              ),
+            ],
+          ),
+        )),
+      ),
+    );
+    if (saved == true) {
+      if (mounted) setState(() => _reviewSubmitted = true);
+    }
+  }
+
+  Widget _reviewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text('Avis', style: AppTypography.heading4),
+                if (_totalReviews > 0) ...[
+                  const SizedBox(width: 8),
+                  Row(
+                    children: List.generate(5, (i) => Icon(
+                      i < _avgRating.round() ? Icons.star : Icons.star_border,
+                      color: Colors.amber, size: 18,
+                    )),
+                  ),
+                  const SizedBox(width: 6),
+                  Text('$_avgRating', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                  Text(' ($_totalReviews)', style: AppTypography.caption),
+                ],
+              ],
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('Écrire'),
+              onPressed: _showReviewDialog,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_reviewSubmitted)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Votre avis a été soumis et sera visible après validation par le marchand.',
+                    style: AppTypography.body2.copyWith(color: AppColors.success),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (_reviewsLoading)
+          const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+        else if (_reviews.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.rate_review_outlined, size: 48, color: AppColors.textHint),
+                const SizedBox(height: 12),
+                Text('Soyez le premier à donner votre avis', style: AppTypography.body2),
+              ],
+            ),
+          )
+        else
+          ..._reviews.map((r) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(r['customerName'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (i) => Icon(
+                        i < (r['rating'] ?? 0) ? Icons.star : Icons.star_border,
+                        color: Colors.amber, size: 16,
+                      )),
+                    ),
+                  ],
+                ),
+                if (r['comment'] != null) ...[
+                  const SizedBox(height: 8),
+                  Text(r['comment'], style: AppTypography.body2),
+                ],
+                if (r['createdAt'] != null) ...[
+                  const SizedBox(height: 4),
+                  Text(r['createdAt'].toString().substring(0, 10), style: AppTypography.caption),
+                ],
+              ],
+            ),
+          )),
+      ],
+    );
   }
 
   List<String> _parseList(String? raw) {
@@ -244,7 +461,9 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                       child: Text(outOfStock ? 'Produit indisponible' : 'Ajouter au panier', style: AppTypography.button),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 40),
+                  _reviewsSection(),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),

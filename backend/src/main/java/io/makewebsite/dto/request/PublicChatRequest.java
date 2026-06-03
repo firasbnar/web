@@ -15,6 +15,8 @@ import java.util.UUID;
 @Builder
 public class PublicChatRequest {
     private UUID boutiqueId;
+    private String message;
+    private String sessionId;
     private String systemPrompt;
     private List<Map<String, String>> messages;
 }

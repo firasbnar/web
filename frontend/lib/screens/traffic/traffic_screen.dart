@@ -33,7 +33,9 @@ class _TrafficScreenState extends State<TrafficScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _load();
+    });
   }
 
   String? get _boutiqueId {
@@ -42,6 +44,9 @@ class _TrafficScreenState extends State<TrafficScreen> {
   }
 
   Future<void> _load() async {
+    final bp = context.read<BoutiqueProvider>();
+    await bp.ensureActiveBoutique();
+    if (!mounted) return;
     final bid = _boutiqueId;
     if (bid == null) { setState(() => _loading = false); return; }
     setState(() { _loading = true; _error = null; });

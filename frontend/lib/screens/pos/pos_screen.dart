@@ -213,10 +213,11 @@ class _PosScreenState extends State<PosScreen> {
                   Expanded(
                     child: pr.loading
                         ? const LoadingSkeleton(isGrid: true)
-                        : GridView.builder(
+                        : LayoutBuilder(
+                            builder: (_, constraints) => GridView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: constraints.maxWidth > 600 ? 4 : constraints.maxWidth > 400 ? 3 : 2,
                               crossAxisSpacing: 8,
                               mainAxisSpacing: 8,
                               childAspectRatio: 0.8,
@@ -245,42 +246,43 @@ class _PosScreenState extends State<PosScreen> {
                               );
                             },
                           ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-        ],
-      ),
-      bottomNavigationBar: pp.cartItems.isNotEmpty
-          ? Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            bottomNavigationBar: pp.cartItems.isNotEmpty
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(top: BorderSide(color: AppColors.border)),
+                    ),
+                    child: Row(
                       children: [
-                        Text('${pp.cartItems.length} article(s)', style: AppTypography.caption),
-                        Text('${pp.cartTotal.toStringAsFixed(2)} TND', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${pp.cartItems.length} article(s)', style: AppTypography.caption),
+                              Text('${pp.cartTotal.toStringAsFixed(2)} TND', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
+                            ],
+                          ),
+                        ),
+                        AppButton(
+                          label: 'Voir panier',
+                          fullWidth: false,
+                          onPressed: () => setState(() => _showCart = !_showCart),
+                        ),
                       ],
                     ),
-                  ),
-                  AppButton(
-                    label: 'Voir panier',
-                    fullWidth: false,
-                    onPressed: () => setState(() => _showCart = !_showCart),
-                  ),
-                ],
-              ),
-            )
-          : null,
-    );
-  }
+                  )
+                : null,
+          );
+        }
 
   Widget _buildCartSection(PosProvider pp) {
     return Column(

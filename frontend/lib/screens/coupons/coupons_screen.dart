@@ -17,8 +17,10 @@ class _CouponsScreenState extends State<CouponsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bp = context.read<BoutiqueProvider>();
+      await bp.ensureActiveBoutique();
+      if (!mounted) return;
       if (bp.currentBoutique != null) {
         context.read<CouponsProvider>().loadCoupons(bp.currentBoutique!.id);
       }

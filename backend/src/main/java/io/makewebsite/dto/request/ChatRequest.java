@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -13,4 +15,6 @@ import lombok.NoArgsConstructor;
 public class ChatRequest {
     @NotBlank
     private String message;
+    private UUID boutiqueId;
+    private String sessionId;
 }

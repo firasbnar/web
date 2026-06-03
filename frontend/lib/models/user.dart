@@ -1,3 +1,5 @@
+import '../core/url_utils.dart';
+
 class User {
   final String id;
   final String fullName;
@@ -18,7 +20,7 @@ class User {
     role: json['role'],
     tenantId: json['tenantId']?.toString(),
     language: json['language'],
-    avatarUrl: json['avatarUrl'],
+    avatarUrl: normalizeRemoteUrl(json['avatarUrl']),
   );
 
   User copyWith({

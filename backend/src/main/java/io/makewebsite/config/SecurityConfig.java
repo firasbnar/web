@@ -107,6 +107,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/products/*/reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/orders/public").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/coupons/validate").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/orders/*/invoice").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/boutiques/*/orders/*/invoice/print").permitAll()
                 // === AUTHENTICATED: role-restricted ===
@@ -131,6 +132,24 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:*",
             "http://127.0.0.1:*",
+            "http://192.168.*:*",
+            "http://10.*:*",
+            "http://172.16.*:*",
+            "http://172.17.*:*",
+            "http://172.18.*:*",
+            "http://172.19.*:*",
+            "http://172.20.*:*",
+            "http://172.21.*:*",
+            "http://172.22.*:*",
+            "http://172.23.*:*",
+            "http://172.24.*:*",
+            "http://172.25.*:*",
+            "http://172.26.*:*",
+            "http://172.27.*:*",
+            "http://172.28.*:*",
+            "http://172.29.*:*",
+            "http://172.30.*:*",
+            "http://172.31.*:*",
             "https://*.ngrok-free.dev",
             "https://*.ngrok-free.app"
         ));

@@ -645,12 +645,15 @@ class _TeamScreenState extends State<TeamScreen> {
   void _showMemberDetails(TeamMember member) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(24),
-        child: Column(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -705,6 +708,7 @@ class _TeamScreenState extends State<TeamScreen> {
             ],
           ],
         ),
+        ),
       ),
     );
   }
@@ -712,12 +716,15 @@ class _TeamScreenState extends State<TeamScreen> {
   void _showPermissionsSheet(TeamMember member) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(24),
-        child: Column(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -727,6 +734,12 @@ class _TeamScreenState extends State<TeamScreen> {
                 decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
               ),
             ),
+            const SizedBox(height: 16),
+            Text('Permissions — ${member.displayName}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text('Rôle: ${member.roleLabel}',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 16),
             Text('Permissions — ${member.displayName}',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -750,6 +763,7 @@ class _TeamScreenState extends State<TeamScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -758,7 +772,11 @@ class _TeamScreenState extends State<TeamScreen> {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12))),
+          SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 8),
           Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))),
         ],
       ),

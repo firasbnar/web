@@ -149,16 +149,19 @@ class _ProductManagerScreenState extends State<ProductManagerScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(v['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
-                                    Row(
+                                    Wrap(
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      spacing: 4,
+                                      runSpacing: 2,
                                       children: [
                                         if (v['price'] != null) Text('${v['price'].toString()} TND', style: AppTypography.caption),
                                         if (v['stock'] != null) ...[
                                           if (v['price'] != null) Text(' · ', style: AppTypography.caption),
-                                          Text('Stock: ${v['stock']}', style: AppTypography.caption.copyWith(color: (v['stock'] as num) <= 5 ? AppColors.danger : AppColors.textSecondary)),
+                                          Flexible(child: Text('Stock: ${v['stock']}', style: AppTypography.caption.copyWith(color: (v['stock'] as num) <= 5 ? AppColors.danger : AppColors.textSecondary), overflow: TextOverflow.ellipsis)),
                                         ],
                                         if (v['sku'] != null) ...[
                                           Text(' · ', style: AppTypography.caption),
-                                          Text('SKU: ${v['sku']}', style: AppTypography.caption),
+                                          Flexible(child: Text('SKU: ${v['sku']}', style: AppTypography.caption, overflow: TextOverflow.ellipsis)),
                                         ],
                                       ],
                                     ),

@@ -99,8 +99,10 @@ class ReviewCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              alignment: WrapAlignment.end,
               children: [
                 if (review.isPending) ...[
                   _ActionButton(
@@ -109,7 +111,6 @@ class ReviewCard extends StatelessWidget {
                     color: AppColors.success,
                     onTap: onApprove,
                   ),
-                  const SizedBox(width: 8),
                   _ActionButton(
                     icon: Icons.cancel_outlined,
                     label: 'Rejeter',
@@ -124,7 +125,6 @@ class ReviewCard extends StatelessWidget {
                     color: AppColors.primary,
                     onTap: () => _showReplyDialog(context),
                   ),
-                const SizedBox(width: 8),
                 _ActionButton(
                   icon: Icons.delete_outline,
                   label: 'Supprimer',

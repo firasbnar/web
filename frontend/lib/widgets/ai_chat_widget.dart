@@ -8,11 +8,15 @@ import '../core/storage.dart';
 class AiChatWidget extends StatefulWidget {
   final String boutiqueId;
   final String boutiqueName;
+  final String? publicSlug;
+  final bool isOwner;
 
   const AiChatWidget({
     super.key,
     required this.boutiqueId,
     required this.boutiqueName,
+    this.publicSlug,
+    this.isOwner = true,
   });
 
   @override
@@ -30,6 +34,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
   final List<_ChatMessage> _messages = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  Timer? _sendDebounce;
 
   late AnimationController _floatController;
   late AnimationController _pulseController;
@@ -78,6 +83,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
     _inputController.dispose();
     _scrollController.dispose();
     _blinkTimer?.cancel();
+    _sendDebounce?.cancel();
     super.dispose();
   }
 
@@ -107,8 +113,9 @@ class _AiChatWidgetState extends State<AiChatWidget>
         if (mounted) {
           _addBotMessage(_ChatMessage(
             role: 'assistant',
-            content:
-                'Bonjour ! Bienvenue chez **${widget.boutiqueName}**. Comment puis-je vous aider aujourd\'hui ?',
+            content: widget.isOwner
+                ? 'Bonjour ! Je suis votre assistant business pour **${widget.boutiqueName}**. Je peux analyser ventes, stock, trafic et clients.'
+                : 'Bonjour ! Bienvenue chez **${widget.boutiqueName}**. Je peux vous aider a trouver, comparer et choisir des produits.',
           ));
         }
       });
@@ -163,21 +170,40 @@ class _AiChatWidgetState extends State<AiChatWidget>
         },
       ));
 
-      final response = await dio.post('/public/chat', data: {
+      final endpoint = widget.isOwner
+          ? '/ai/owner/chat'
+          : '/public/stores/${widget.publicSlug}/ai/chat';
+      final response = await dio.post(endpoint, data: {
         'boutiqueId': widget.boutiqueId,
+        'message': t,
+        'sessionId': widget.isOwner ? 'owner-${widget.boutiqueId}' : 'public-${widget.publicSlug}',
         'messages': history,
       });
 
       final data = response.data;
+      final payload = data is Map && data['data'] is Map ? data['data'] as Map : data as Map?;
       String reply = '';
+      List<Map<String, dynamic>> products = [];
+      Map<String, dynamic>? analytics;
 
-      if (data is Map) {
-        final content = data['content'];
+      if (payload is Map) {
+        final content = payload['content'];
         if (content is List && content.isNotEmpty) {
           reply = (content[0]?['text'] as String?) ?? '';
         }
         if (reply.isEmpty) {
-          reply = (data['reply'] as String?) ?? '';
+          reply = (payload['reply'] as String?) ?? '';
+        }
+        final rawProducts = payload['products'];
+        if (rawProducts is List) {
+          products = rawProducts
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+        final rawAnalytics = payload['analytics'];
+        if (rawAnalytics is Map) {
+          analytics = Map<String, dynamic>.from(rawAnalytics);
         }
       }
 
@@ -185,7 +211,12 @@ class _AiChatWidgetState extends State<AiChatWidget>
         reply = "Desole, je n'ai pas pu obtenir une reponse. Reessayez.";
       }
 
-      _addBotMessage(_ChatMessage(role: 'assistant', content: reply));
+      _addBotMessage(_ChatMessage(
+        role: 'assistant',
+        content: reply,
+        products: products,
+        analytics: analytics,
+      ));
     } catch (_) {
       _addBotMessage(_ChatMessage(
         role: 'assistant',
@@ -198,7 +229,14 @@ class _AiChatWidgetState extends State<AiChatWidget>
 
   void _onQuickReply(String label) {
     _quickRepliesVisible = false;
-    _sendMessage(label, isQuick: true);
+    _submitMessage(label, isQuick: true);
+  }
+
+  void _submitMessage(String text, {bool isQuick = false}) {
+    _sendDebounce?.cancel();
+    _sendDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _sendMessage(text, isQuick: isQuick);
+    });
   }
 
   @override
@@ -856,7 +894,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                     color: const Color(0xFFE8D8FF),
                   ),
                 ),
-                child: _buildRichText(msg.content),
+                child: _buildAssistantContent(msg),
               ),
             ),
           ] else ...[
@@ -894,6 +932,116 @@ class _AiChatWidgetState extends State<AiChatWidget>
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildAssistantContent(_ChatMessage msg) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildRichText(msg.content),
+        if (msg.analytics != null && msg.analytics!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _buildAnalyticsSummary(msg.analytics!),
+        ],
+        if (msg.products.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ...msg.products.take(4).map(_buildProductResult),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAnalyticsSummary(Map<String, dynamic> analytics) {
+    final items = analytics.entries
+        .where((e) => e.value is num || e.value is String)
+        .take(4)
+        .toList();
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: items.map((e) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE8D8FF)),
+          ),
+          child: Text(
+            '${e.key}: ${e.value}',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF5B21B6)),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildProductResult(Map<String, dynamic> product) {
+    final image = product['image'] as String?;
+    final price = product['price'];
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE8D8FF)),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: image != null && image.isNotEmpty
+                ? Image.network(
+                    image,
+                    width: 42,
+                    height: 42,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _productPlaceholder(),
+                  )
+                : _productPlaceholder(),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${product['name'] ?? 'Produit'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  price == null ? 'Prix non disponible' : '$price TND',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF7C3AED),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _productPlaceholder() {
+    return Container(
+      width: 42,
+      height: 42,
+      color: const Color(0xFFF5F0FF),
+      child: const Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF7C3AED)),
     );
   }
 
@@ -1009,12 +1157,21 @@ class _AiChatWidgetState extends State<AiChatWidget>
   }
 
   Widget _buildQuickReplies() {
-    final chips = [
-      ('Voir les produits', 'products'),
-      ('Livraison', 'delivery'),
-      ('Paiement', 'payment'),
-      ('Contact', 'contact'),
-    ];
+    final chips = widget.isOwner
+        ? [
+            ('Best sellers', 'best'),
+            ('Revenue today', 'revenue'),
+            ('Low stock', 'stock'),
+            ('Traffic today', 'traffic'),
+            ('Orders today', 'orders'),
+          ]
+        : [
+            ('Trending products', 'trending'),
+            ('Promotions', 'promos'),
+            ('Cheapest products', 'cheap'),
+            ('New arrivals', 'new'),
+            ('Best sellers', 'best'),
+          ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Wrap(
@@ -1092,7 +1249,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                   ),
                 ),
               ),
-              onSubmitted: (_) => _sendMessage(_inputController.text),
+              onSubmitted: (_) => _submitMessage(_inputController.text),
             ),
           ),
           const SizedBox(width: 8),
@@ -1105,7 +1262,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
                 customBorder: const CircleBorder(),
                 onTap: _isLoading
                     ? null
-                    : () => _sendMessage(_inputController.text),
+                    : () => _submitMessage(_inputController.text),
                 child: Container(
                   width: 44,
                   height: 44,
@@ -1169,6 +1326,13 @@ class _AiChatWidgetState extends State<AiChatWidget>
 class _ChatMessage {
   final String role;
   final String content;
+  final List<Map<String, dynamic>> products;
+  final Map<String, dynamic>? analytics;
 
-  _ChatMessage({required this.role, required this.content});
+  _ChatMessage({
+    required this.role,
+    required this.content,
+    this.products = const [],
+    this.analytics,
+  });
 }

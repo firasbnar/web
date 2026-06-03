@@ -124,7 +124,7 @@ class _StoresBrowserScreenState extends State<StoresBrowserScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(s.name, style: AppTypography.heading4),
+                                    Text(s.name, style: AppTypography.heading4, overflow: TextOverflow.ellipsis),
                                     if (s.description != null && s.description!.isNotEmpty) ...[
                                       const SizedBox(height: 4),
                                       Text(s.description!, style: AppTypography.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
