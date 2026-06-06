@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/env_config.dart';
+import '../../core/url_utils.dart';
 import '../../providers/public_cart_provider.dart';
+import '../../providers/public_wishlist_provider.dart';
 import '../../services/social_meta.dart';
 import '../../services/web_utils.dart';
 import '../../theme/app_colors.dart';
@@ -30,6 +32,10 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
     super.initState();
     // ignore: avoid_print
     print('OPENING PUBLIC STORE SLUG: ${widget.slug}');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PublicCartProvider>().loadCart(widget.slug);
+      context.read<PublicWishlistProvider>().loadWishlist(widget.slug);
+    });
     _loadStore();
   }
 
@@ -176,6 +182,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
     final phone = s['whatsappNumber'] as String?;
     final cart = context.watch<PublicCartProvider>();
     final cartCount = cart.itemCount(widget.slug);
+    final wishlist = context.watch<PublicWishlistProvider>();
 
     final filteredProducts = products.where((p) {
       if (_selectedCategoryId != null && p['categoryId']?.toString() != _selectedCategoryId) return false;
@@ -232,11 +239,11 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
             if (banner != null && banner.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(banner, width: double.infinity, height: 140, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                child: Image.network(resolveImageUrl(banner)!, width: double.infinity, height: 140, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
               ),
             if (logo != null && logo.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Center(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(logo, height: 80, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()))),
+              Center(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(resolveImageUrl(logo)!, height: 80, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()))),
             ],
             if (description != null && description.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -312,15 +319,15 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
                 itemCount: filteredProducts.length,
                 itemBuilder: (_, i) {
                   final p = filteredProducts[i];
-                  final pid = p['id'].toString();
-                  final images = p['images'] as String?;
-                  final firstImg = _firstImage(images);
+                  final pid = (p['id']?.toString() ?? '').trim();
+                  final firstImg = resolveImageUrl(firstImageUrl(p['images']));
                   final stockStatus = p['stockStatus'] ?? 'IN_STOCK';
                   final outOfStock = stockStatus == 'OUT_OF_STOCK' || (p['stock'] ?? 0) <= 0;
+                  final inWishlist = pid.isNotEmpty ? wishlist.isInWishlist(widget.slug, pid) : false;
                   return Card(
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () => context.push('/store/${widget.slug}/product/$pid'),
+                      onTap: pid.isEmpty ? null : () => context.push('/store/${widget.slug}/product/$pid'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -335,6 +342,29 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
                                   Positioned.fill(
                                     child: Container(color: Colors.black45, child: const Center(child: Text('Indisponible', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)))),
                                   ),
+                                Positioned(
+                                  top: 4, right: 4,
+                                  child: InkWell(
+                                    onTap: () {
+                                      wishlist.toggle(widget.slug, PublicWishlistItem(
+                                        productId: pid,
+                                        name: p['name'] ?? '',
+                                        price: (p['price'] ?? 0).toDouble(),
+                                        promotionalPrice: p['promotionalPrice']?.toDouble(),
+                                        image: firstImg,
+                                        stock: p['stock'] ?? 0,
+                                      ));
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                                      child: Icon(
+                                        inWishlist ? Icons.favorite : Icons.favorite_border,
+                                        size: 18, color: inWishlist ? AppColors.danger : AppColors.textHint,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -345,15 +375,18 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
                               children: [
                                 Text(p['name'] ?? '', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text(_fmtPrice(p['price']), style: AppTypography.caption.copyWith(color: Color(int.parse(primaryColor.replaceFirst('#', '0xFF'))), fontWeight: FontWeight.w700)),
-                                    if (p['promotionalPrice'] != null && (p['promotionalPrice'] as num) > 0) ...[
-                                      const SizedBox(width: 4),
-                                      Text(_fmtPrice(p['promotionalPrice']), style: AppTypography.caption.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _fmtPrice(p['promotionalPrice'] != null && (p['promotionalPrice'] as num) > 0 ? p['promotionalPrice'] : p['price']),
+                                        style: AppTypography.caption.copyWith(color: Color(int.parse(primaryColor.replaceFirst('#', '0xFF'))), fontWeight: FontWeight.w700),
+                                      ),
+                                      if (p['promotionalPrice'] != null && (p['promotionalPrice'] as num) > 0) ...[
+                                        const SizedBox(width: 4),
+                                        Text(_fmtPrice(p['price']), style: AppTypography.caption.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
+                                      ],
                                     ],
-                                  ],
-                                ),
+                                  ),
                                 const SizedBox(height: 6),
                                 SizedBox(
                                   width: double.infinity,
@@ -399,18 +432,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
     );
   }
 
-  String? _firstImage(String? images) {
-    if (images == null || images.isEmpty || images == '[]') return null;
-    try {
-      final t = images.trim();
-      if (t.startsWith('[')) {
-        final c = t.substring(1, t.length - 1).trim();
-        if (c.startsWith('"')) return c.substring(1, c.indexOf('"', 1));
-        return c;
-      }
-      return t;
-    } catch (_) { return null; }
-  }
+
 
   String _fmtPrice(dynamic price) {
     if (price == null) return '0.00 TND';

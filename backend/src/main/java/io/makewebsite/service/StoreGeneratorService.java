@@ -33,6 +33,15 @@ public class StoreGeneratorService {
     private final ObjectMapper objectMapper;
 
     private static final String STORE_FILES_DIR = "store-files";
+    private static final String DEFAULT_PRODUCT_IMAGE = "/images/default-product.png";
+    private static final String DEFAULT_FAVICON = "/favicon.ico";
+    private static final String[] DEFAULT_COUNTRIES = {
+        "Tunisie", "France", "Alg\u00E9rie", "Maroc", "Libye",
+        "Italie", "Allemagne", "Espagne", "Canada", "\u00C9tats-Unis",
+        "Belgique", "Suisse", "Royaume-Uni", "Pays-Bas", "Su\u00E8de",
+        "Arabie Saoudite", "\u00C9mirats Arabes Unis", "Qatar", "Kowe\u00EFt", "Turquie",
+        "Autre"
+    };
 
     private static final String CHATBOT_TEMPLATE = loadChatbotTemplate();
 
@@ -50,7 +59,7 @@ public class StoreGeneratorService {
     public void regenerate(UUID boutiqueId) {
         Boutique b = boutiqueRepository.findById(boutiqueId)
                 .orElseThrow(() -> new RuntimeException("Boutique not found: " + boutiqueId));
-        List<Product> products = productRepository.findByBoutiqueIdAndIsActiveTrue(boutiqueId);
+        List<Product> products = productRepository.findPublicProductsWithCategory(boutiqueId);
         List<Category> categories = categoryRepository.findByBoutiqueIdOrderBySortOrderAsc(boutiqueId);
         String html = generateHtml(b, products, categories);
         b.setGeneratedHtml(html);
@@ -80,7 +89,7 @@ public class StoreGeneratorService {
 
     public String generateHtml(Boutique b, List<Product> products, List<Category> categories) {
         String slug = b.getSlug();
-        String currencySymbol = b.getCurrency() != null ? (b.getCurrency().equals("TND") ? "د.ت" : b.getCurrency().equals("EUR") ? "€" : "$") : "د.ت";
+        String currencySymbol = b.getCurrency() != null ? (b.getCurrency().equals("TND") ? "\u062F.\u062A" : b.getCurrency().equals("EUR") ? "\u20AC" : "$") : "\u062F.\u062A";
         String announcement = b.getAnnouncementText() != null ? b.getAnnouncementText() : "";
         String logoUrl = b.getLogoUrl() != null ? b.getLogoUrl() : "";
         String headerBg = b.getHeaderColor() != null ? b.getHeaderColor() : "#ededed";
@@ -103,25 +112,25 @@ public class StoreGeneratorService {
         String checkoutTitle = lang != null ? lang.getCheckoutTitle() : "Commande";
         String totalPriceLabel = lang != null ? lang.getTotalPriceLabel() : "Prix Total :";
         String shippingCostLabel = lang != null ? lang.getShippingCostLabel() : "Frais de livraison";
-        String grandTotalLabel = lang != null ? lang.getGrandTotalLabel() : "Total Général";
+        String grandTotalLabel = lang != null ? lang.getGrandTotalLabel() : "Total G\u00E9n\u00E9ral";
         String fullNamePlaceholder = lang != null ? lang.getFullNamePlaceholder() : "Entrez votre nom complet";
         String emailPlaceholder = lang != null ? lang.getEmailPlaceholder() : "Entrez votre e-mail";
         String billingAddressPlaceholder = lang != null ? lang.getBillingAddressPlaceholder() : "Entrez votre adresse de livraison";
-        String cityPlaceholder = lang != null ? lang.getCityPlaceholder() : "Sélectionnez votre gouvernorat";
-        String phonePlaceholder = lang != null ? lang.getPhonePlaceholder() : "Entrez votre numéro de téléphone";
-        String paymentMethodLabel = lang != null ? lang.getPaymentMethodLabel() : "Méthode de paiement :";
+        String cityPlaceholder = lang != null ? lang.getCityPlaceholder() : "S\u00E9lectionnez votre gouvernorat";
+        String phonePlaceholder = lang != null ? lang.getPhonePlaceholder() : "Entrez votre num\u00E9ro de t\u00E9l\u00E9phone";
+        String paymentMethodLabel = lang != null ? lang.getPaymentMethodLabel() : "M\u00E9thode de paiement :";
         String placeOrderButton = lang != null ? lang.getPlaceOrderButton() : "Passer la commande";
         String noProducts = lang != null ? lang.getNoProducts() : "Aucun produit disponible pour le moment.";
-        String footerText = lang != null ? lang.getFooterText() : "Tous droits réservés.";
+        String footerText = lang != null ? lang.getFooterText() : "Tous droits r\u00E9serv\u00E9s.";
         String orderConfirmationTitle = lang != null ? lang.getOrderConfirmationTitle() : "Confirmation de commande";
         String searchPlaceholder = lang != null ? lang.getSearchProducts() : "Rechercher des produits...";
         String seeAll = lang != null ? lang.getSeeAll() : "Voir tout";
-        String codLabel = lang != null ? lang.getCashOnDelivery() : "Paiement à la livraison";
+        String codLabel = lang != null ? lang.getCashOnDelivery() : "Paiement \u00E0 la livraison";
         String followUsLabel = lang != null ? lang.getFollowUs() : "Suivez-nous";
         String supportLabel = lang != null ? lang.getSupport() : "Support";
         String menuLabel = lang != null ? lang.getMenuLabel() : "Menu";
         String cartTitle = lang != null ? lang.getCartTitle() : "Panier";
-        String selectCountry = lang != null ? lang.getSelectCountry() : "Sélectionnez votre pays";
+        String selectCountry = lang != null ? lang.getSelectCountry() : "S\u00E9lectionnez votre pays";
 
         // Categories HTML
         String catHtml = categories.stream().map(c ->
@@ -131,14 +140,23 @@ public class StoreGeneratorService {
         // Sliders
         List<StoreSlider> sliders = sliderRepository.findByBoutiqueIdOrderBySortOrderAsc(b.getId());
         String slidersHtml = sliders.stream().map(s ->
-            "<div class=\"slide\"><img src=\"" + esc(s.getImageUrl()) + "\" alt=\"" + esc(b.getName()) + "\" loading=\"lazy\"></div>"
+            "<div class=\"slide\"><img src=\"" + esc(resolveImageUrl(s.getImageUrl())) + "\" alt=\"" + esc(b.getName()) + "\" loading=\"lazy\"></div>"
         ).collect(Collectors.joining("\n        "));
 
         // Countries
-        List<BoutiqueCountry> countries = countryRepository.findByBoutiqueId(b.getId());
-        String countriesHtml = countries.stream().map(c ->
-            "<option value=\"" + esc(c.getCountryCode()) + "\">" + esc(c.getCountryCode()) + "</option>"
-        ).collect(Collectors.joining("\n        "));
+        List<BoutiqueCountry> dbCountries = countryRepository.findByBoutiqueId(b.getId());
+        String countriesHtml;
+        if (dbCountries != null && !dbCountries.isEmpty()) {
+            countriesHtml = dbCountries.stream().map(c -> {
+                String name = c.getCountryName() != null && !c.getCountryName().isBlank() ? c.getCountryName() : c.getCountryCode();
+                return "<option value=\"" + esc(name) + "\">" + esc(name) + "</option>";
+            }).collect(Collectors.joining("\n        "));
+        } else {
+            countriesHtml = "";
+            for (String country : DEFAULT_COUNTRIES) {
+                countriesHtml += "<option value=\"" + esc(country) + "\">" + esc(country) + "</option>";
+            }
+        }
 
         // Products HTML
         String productsHtml;
@@ -147,20 +165,22 @@ public class StoreGeneratorService {
         } else {
             productsHtml = products.stream().map(p -> {
                 String firstImg = extractFirstImage(p.getImages());
+                String productImg = firstImg.isBlank() ? DEFAULT_PRODUCT_IMAGE : firstImg;
+                String resolvedImg = resolveImageUrl(productImg);
                 boolean hasCompare = p.getComparePrice() != null && p.getComparePrice().compareTo(BigDecimal.ZERO) > 0;
                 String price = hasCompare ?
                     "<p class=\"price\"><old>" + currencySymbol + String.format("%.2f", p.getComparePrice()) + "</old> " + currencySymbol + String.format("%.2f", p.getPrice()) + "</p>" :
                     "<p class=\"price\">" + currencySymbol + String.format("%.2f", p.getPrice()) + "</p>";
                 String badge = hasCompare ? "<div class=\"product-badges\"><span class=\"badge badge-sale\">Promo</span></div>" : "";
-                return "<article class=\"product-card\" data-product-id=\"" + p.getId() + "\">" +
+                return "<article class=\"product-card\" data-product-id=\"" + p.getId() + "\" data-product-name=\"" + esc(p.getName()) + "\" data-product-price=\"" + p.getPrice() + "\" data-product-img=\"" + esc(resolvedImg) + "\">" +
                     "<a href=\"?product_id=" + p.getId() + "\" class=\"product-card-link\" style=\"text-decoration:none;color:inherit;display:block;\">" +
                     "<div class=\"image-wrap\">" + badge +
-                    "<div class=\"quick-actions\"><button type=\"button\" class=\"quick-btn wishlist-toggle\" onclick=\"event.preventDefault();event.stopPropagation();toggleFavorite('" + p.getId() + "');\">" +
+                    "<div class=\"quick-actions\"><button type=\"button\" class=\"quick-btn wishlist-toggle\" aria-label=\"Ajouter aux favoris\">" +
                     "<i class=\"far fa-heart\"></i><i class=\"fas fa-heart\" style=\"display:none;\"></i></button></div>" +
-                    "<img src=\"" + esc(firstImg) + "\" alt=\"" + esc(p.getName()) + "\" loading=\"lazy\" onerror=\"this.src='https://via.placeholder.com/400x400?text=Image'\">" +
+                    "<img src=\"" + esc(resolvedImg) + "\" alt=\"" + esc(p.getName()) + "\" loading=\"lazy\" onerror=\"this.onerror=null;this.src='" + DEFAULT_PRODUCT_IMAGE + "'\">" +
                     "</div><div class=\"info\"><h3 class=\"name\">" + esc(p.getName()) + "</h3>" +
                     "<div class=\"price-wrap\">" + price + "</div>" +
-                    "<span class=\"add-cart\" style=\"background:" + accent + ";\"><i class=\"fas fa-cart-plus\"></i> " + esc(addToCart) + "</span>" +
+                    "<button type=\"button\" class=\"add-cart\" style=\"background:" + accent + ";\"><i class=\"fas fa-cart-plus\"></i> " + esc(addToCart) + "</button>" +
                     "</div></a></article>";
             }).collect(Collectors.joining("\n        "));
         }
@@ -186,8 +206,8 @@ public class StoreGeneratorService {
 
         String storeUrl = "/store/" + slug;
         String ogTitle = b.getSeoTitle() != null ? esc(b.getSeoTitle()) : esc(b.getName()) + " | Boutique en ligne";
-        String ogDesc = b.getSeoDescription() != null ? esc(b.getSeoDescription()) : (b.getDescription() != null ? esc(b.getDescription()) : esc(b.getName()) + " – Découvrez nos produits en ligne.");
-        String ogImage = b.getOgImageUrl() != null ? esc(b.getOgImageUrl()) : esc(logoUrl);
+        String ogDesc = b.getSeoDescription() != null ? esc(b.getSeoDescription()) : (b.getDescription() != null ? esc(b.getDescription()) : esc(b.getName()) + " \u2013 D\u00E9couvrez nos produits en ligne.");
+        String ogImage = b.getOgImageUrl() != null ? esc(resolveImageUrl(b.getOgImageUrl())) : esc(resolveImageUrl(logoUrl));
 
         String html = "<!DOCTYPE html>\n" +
         "<html lang=\"fr\">\n<head>\n" +
@@ -205,6 +225,7 @@ public class StoreGeneratorService {
         "<meta name=\"twitter:image\" content=\"" + ogImage + "\">\n" +
         "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css\">\n" +
         "<link href=\"https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">\n" +
+        "<link rel=\"icon\" href=\"" + esc(resolveImageUrl(b.getFaviconUrl() != null && !b.getFaviconUrl().isEmpty() ? b.getFaviconUrl() : DEFAULT_FAVICON)) + "\">\n" +
         "<style>\n" +
         ":root{--bg:" + bodyBg + ";--white:#ffffff;--text:" + textColor + ";--text-soft:#444444;--muted:#737373;" +
         "--accent:" + accent + ";--header-bg:" + headerBg + ";--footer-bg:" + footerBg + ";--card-bg:" + cardBg + ";--top-bar-bg:" + topBarBg + ";" +
@@ -323,23 +344,24 @@ public class StoreGeneratorService {
         ".custom-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;display:none;align-items:center;justify-content:center}\n" +
         ".custom-modal.open{display:flex}\n" +
         ".custom-modal::before{content:'';position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4)}\n" +
-        ".custom-modal-content{background:#fff;border-radius:var(--radius);padding:32px;max-width:440px;width:90%;position:relative;box-shadow:var(--shadow-lg);text-align:center}\n" +
+        ".custom-modal-content{background:#fff;border-radius:var(--radius);padding:32px;max-width:440px;width:90%;position:relative;box-shadow:var(--shadow-lg);text-align:center;color:var(--text)}\n" +
         ".modal-header{margin-bottom:20px}\n" +
         ".modal-header .success-icon{width:48px;height:48px;border-radius:50%;background:#ecfdf5;color:#16a34a;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}\n" +
         ".modal-header h2{font-size:1.25rem;font-weight:600}\n" +
         ".order-summary{text-align:left;margin:16px 0}\n" +
         ".order-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light,#f0f0f0);font-size:0.875rem}\n" +
         ".order-label{color:var(--muted)}\n" +
-        ".order-value{font-weight:500}\n" +
+        ".order-value{font-weight:600;color:#222}\n" +
         ".modal-footer{margin-top:20px}\n" +
         ".close-modal-btn{padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.875rem}\n" +
         "@media(max-width:768px){.nav{display:none}.footer-top{grid-template-columns:1fr}.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.slide img{height:240px}.trust-inner{gap:24px;flex-wrap:wrap;justify-content:center}.t2-cart-drawer{width:100vw;right:-100vw}}\n" +
+        ".product-detail-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1500;display:none;align-items:center;justify-content:center;padding:20px}.product-detail-overlay.open{display:flex}.product-detail-modal{background:#fff;border-radius:var(--radius);max-width:800px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:var(--shadow-lg)}.product-detail-close{position:absolute;top:12px;right:12px;background:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:1;color:#333}.product-detail-close:hover{background:#f0f0f0}.product-detail-inner{display:grid;grid-template-columns:1fr 1fr;gap:0}.product-detail-image-wrap{background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:300px}.product-detail-image-wrap img{width:100%;height:100%;object-fit:cover;max-height:500px}.product-detail-info{padding:32px}.product-detail-name{font-size:1.5rem;font-weight:700;margin-bottom:8px}.product-detail-price{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:12px}.product-detail-desc{color:var(--text-soft);font-size:0.9375rem;line-height:1.7;margin-bottom:16px}.product-detail-stock{font-size:0.875rem;margin-bottom:16px;padding:6px 12px;border-radius:var(--radius-sm);display:inline-block}.product-detail-stock.in-stock{background:#ecfdf5;color:#16a34a}.product-detail-stock.out-of-stock{background:#fef2f2;color:#ef4444}.product-detail-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}.product-detail-add-cart{flex:1;min-width:180px;padding:14px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:1rem;transition:var(--transition)}.product-detail-add-cart:hover{filter:brightness(1.1)}.product-detail-wishlist{width:48px;height:48px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:var(--transition)}.product-detail-wishlist:hover{border-color:var(--accent);color:var(--accent)}.product-detail-wishlist.active{color:#ef4444;border-color:#ef4444}@media(max-width:768px){.product-detail-inner{grid-template-columns:1fr}.product-detail-image-wrap{min-height:200px}}\n" +
         customCss + "\n</style>\n</head>\n<body>\n" +
 
         "<div class=\"announcement\">" + esc(announcement) + "</div>\n" +
 
         "<header class=\"header\"><div class=\"header-inner\">" +
-        "<div class=\"logo\"><a href=\"./\"><img src=\"" + esc(logoUrl) + "\" alt=\"" + esc(b.getName()) + "\"><span>" + esc(b.getName()) + "</span></a></div>" +
+        "<div class=\"logo\"><a href=\"./\"><img src=\"" + esc(resolveImageUrl(logoUrl)) + "\" alt=\"" + esc(b.getName()) + "\"><span>" + esc(b.getName()) + "</span></a></div>" +
         "<nav class=\"nav\"><a href=\"./\" class=\"active\">" + esc(seeAll) + "</a>" + navCatHtml + "</nav>" +
         "<div class=\"header-actions\"><button class=\"wishlist-btn\" id=\"wishlistNavBtn\"><i class=\"far fa-heart\"></i><span class=\"wishlist-count\" id=\"wishlistBadge\"></span></button>" +
         "<button class=\"cart-btn\" onclick=\"toggleCartSidebar()\"><i class=\"fas fa-shopping-bag\"></i><span class=\"cart-count\" id=\"cartCount\">0</span></button></div>" +
@@ -348,16 +370,16 @@ public class StoreGeneratorService {
         sliderSection +
         "<div class=\"trust-strip\"><div class=\"trust-inner\">" +
         "<div class=\"trust-item\"><i class=\"fas fa-truck-fast\"></i> Livraison 24-48h</div>" +
-        "<div class=\"trust-item\"><i class=\"fas fa-shield-halved\"></i> Paiement sécurisé</div>" +
+        "<div class=\"trust-item\"><i class=\"fas fa-shield-halved\"></i> Paiement s\u00E9curis\u00E9</div>" +
         "<div class=\"trust-item\"><i class=\"fas fa-headset\"></i> Service client 7j/7</div></div></div>\n" +
 
         "<main class=\"main\">" +
-        "<div class=\"section-head\"><h2 class=\"section-title\">Nos produits</h2><p class=\"section-subtitle\">" + esc(b.getName()) + " – Qualité et livraison rapide.</p></div>" +
+        "<div class=\"section-head\"><h2 class=\"section-title\">Nos produits</h2><p class=\"section-subtitle\">" + esc(b.getName()) + " \u2013 Qualit\u00E9 et livraison rapide.</p></div>" +
         "<div style=\"margin-bottom:24px;\"><input type=\"text\" id=\"search-input\" placeholder=\"" + esc(searchPlaceholder) + "\" style=\"width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-full);font-family:var(--font);font-size:0.9375rem;\"></div>" +
         "<div class=\"products-grid\" id=\"productsGrid\">" + productsHtml + "</div></main>\n" +
 
         "<section class=\"newsletter-section\"><div class=\"newsletter-inner\">" +
-        "<h3>Restez informé</h3><p>Inscrivez-vous pour recevoir nos nouveautés et offres exclusives.</p>" +
+        "<h3>Restez inform\u00E9</h3><p>Inscrivez-vous pour recevoir nos nouveaut\u00E9s et offres exclusives.</p>" +
         "<form class=\"newsletter-form\" action=\"/api/public/subscribe\" method=\"POST\">" +
         "<input type=\"hidden\" name=\"boutique_id\" value=\"" + b.getId() + "\">" +
         "<input type=\"email\" name=\"email\" placeholder=\"Votre adresse email\" required>" +
@@ -365,7 +387,7 @@ public class StoreGeneratorService {
 
         "<footer class=\"footer\"><div class=\"footer-inner\">" +
         "<div class=\"footer-top\">" +
-        "<div class=\"footer-brand\"><div class=\"logo\"><a href=\"./\"><img src=\"" + esc(logoUrl) + "\" alt=\"" + esc(b.getName()) + "\"><span>" + esc(b.getName()) + "</span></a></div><p>" + esc(b.getDescription()) + "</p></div>" +
+        "<div class=\"footer-brand\"><div class=\"logo\"><a href=\"./\"><img src=\"" + esc(resolveImageUrl(logoUrl)) + "\" alt=\"" + esc(b.getName()) + "\"><span>" + esc(b.getName()) + "</span></a></div><p>" + esc(b.getDescription()) + "</p></div>" +
         "<div class=\"footer-col\"><h4>" + esc(menuLabel) + "</h4><ul><li><a href=\"./\">" + esc(seeAll) + "</a></li>" + navCatHtml.replace("?menu_item_id=", "?menu_item_id=").replace("</a>", "</a></li>") + "</ul></div>" +
         "<div class=\"footer-col\"><h4>" + esc(supportLabel) + "</h4><ul>" +
         (b.getWhatsappNumber() != null && !b.getWhatsappNumber().isEmpty() ? "<li><a href=\"https://wa.me/" + b.getWhatsappNumber() + "\"><i class=\"fab fa-whatsapp\"></i> WhatsApp</a></li>" : "") +
@@ -375,8 +397,8 @@ public class StoreGeneratorService {
         (b.getInstagramUrl() != null && !b.getInstagramUrl().isEmpty() ? "<li><a href=\"" + esc(b.getInstagramUrl()) + "\" target=\"_blank\"><i class=\"fab fa-instagram\"></i> Instagram</a></li>" : "") +
         (b.getTiktokUrl() != null && !b.getTiktokUrl().isEmpty() ? "<li><a href=\"" + esc(b.getTiktokUrl()) + "\" target=\"_blank\"><i class=\"fab fa-tiktok\"></i> TikTok</a></li>" : "") +
         "</ul></div></div>" +
-        "<div class=\"footer-payments\"><span>Paiement sécurisé</span><div class=\"icons\">" + paymentIcons + "</div></div>" +
-        "<div class=\"footer-bottom\"><span>&copy; " + Year.now() + " " + esc(b.getName()) + ". " + esc(footerText) + "</span><span>Créé par <a href=\"https://makewebsite.io\" target=\"_blank\">MakeWebsite.io</a></span></div>" +
+        "<div class=\"footer-payments\"><span>Paiement s\u00E9curis\u00E9</span><div class=\"icons\">" + paymentIcons + "</div></div>" +
+        "<div class=\"footer-bottom\"><span>&copy; " + Year.now() + " " + esc(b.getName()) + ". " + esc(footerText) + "</span><span>Cr\u00E9\u00E9 par <a href=\"https://makewebsite.io\" target=\"_blank\">MakeWebsite.io</a></span></div>" +
         "</div></footer>\n" +
 
         // Cart overlay + drawer
@@ -394,11 +416,11 @@ public class StoreGeneratorService {
         "<input type=\"text\" name=\"full-name\" placeholder=\"" + esc(fullNamePlaceholder) + "\" required class=\"t2-cart-drawer__input\">" +
         "<input type=\"text\" name=\"billing-address\" placeholder=\"" + esc(billingAddressPlaceholder) + "\" required class=\"t2-cart-drawer__input\">" +
         "<select name=\"city\" required class=\"t2-cart-drawer__input\"><option value=\"\">" + esc(cityPlaceholder) + "</option>" +
-        "<option value=\"Ariana\">Ariana</option><option value=\"Béja\">Béja</option><option value=\"Ben Arous\">Ben Arous</option>" +
-        "<option value=\"Bizerte\">Bizerte</option><option value=\"Gabès\">Gabès</option><option value=\"Gafsa\">Gafsa</option>" +
-        "<option value=\"Jendouba\">Jendouba</option><option value=\"Kairouan\">Kairouan</option><option value=\"Kasserine\">Kasserine</option>" +
-        "<option value=\"Kébili\">Kébili</option><option value=\"Le Kef\">Le Kef</option><option value=\"Mahdia\">Mahdia</option>" +
-        "<option value=\"La Manouba\">La Manouba</option><option value=\"Médenine\">Médenine</option><option value=\"Monastir\">Monastir</option>" +
+         "<option value=\"Ariana\">Ariana</option><option value=\"B\u00E9ja\">B\u00E9ja</option><option value=\"Ben Arous\">Ben Arous</option>" +
+         "<option value=\"Bizerte\">Bizerte</option><option value=\"Gab\u00E8s\">Gab\u00E8s</option><option value=\"Gafsa\">Gafsa</option>" +
+         "<option value=\"Jendouba\">Jendouba</option><option value=\"Kairouan\">Kairouan</option><option value=\"Kasserine\">Kasserine</option>" +
+         "<option value=\"K\u00E9bili\">K\u00E9bili</option><option value=\"Le Kef\">Le Kef</option><option value=\"Mahdia\">Mahdia</option>" +
+         "<option value=\"La Manouba\">La Manouba</option><option value=\"M\u00E9denine\">M\u00E9denine</option><option value=\"Monastir\">Monastir</option>" +
         "<option value=\"Nabeul\">Nabeul</option><option value=\"Sfax\">Sfax</option><option value=\"Sidi Bouzid\">Sidi Bouzid</option>" +
         "<option value=\"Siliana\">Siliana</option><option value=\"Sousse\">Sousse</option><option value=\"Tataouine\">Tataouine</option>" +
         "<option value=\"Tozeur\">Tozeur</option><option value=\"Tunis\">Tunis</option><option value=\"Zaghouan\">Zaghouan</option>" +
@@ -421,45 +443,95 @@ public class StoreGeneratorService {
         "<div class=\"order-item\"><div class=\"order-label\">Nom complet :</div><div class=\"order-value\" id=\"customUserFullName\"></div></div>" +
         "<div class=\"order-item\"><div class=\"order-label\">Adresse :</div><div class=\"order-value\" id=\"customUserBillingAddress\"></div></div>" +
         "<div class=\"order-item\"><div class=\"order-label\">Ville</div><div class=\"order-value\" id=\"customUserCity\"></div></div>" +
-        "<div class=\"order-item\"><div class=\"order-label\">Téléphone</div><div class=\"order-value\" id=\"customUserPhoneNumber\"></div></div>" +
-        "<div class=\"order-item\"><div class=\"order-label\">Méthode de paiement :</div><div class=\"order-value\" id=\"customUserPaymentMethod\"></div></div></div>" +
+         "<div class=\"order-item\"><div class=\"order-label\">T\u00E9l\u00E9phone</div><div class=\"order-value\" id=\"customUserPhoneNumber\"></div></div>" +
+         "<div class=\"order-item\"><div class=\"order-label\">M\u00E9thode de paiement :</div><div class=\"order-value\" id=\"customUserPaymentMethod\"></div></div></div>" +
         "<div class=\"modal-footer\"><button class=\"close-modal-btn\" onclick=\"document.getElementById('customOrderConfirmationModal').classList.remove('open')\">Fermer</button></div></div></div>\n" +
 
+        // Product detail modal
+        "<div id=\"productDetailOverlay\" class=\"product-detail-overlay\" onclick=\"closeProductDetail(event)\">" +
+        "<div class=\"product-detail-modal\" onclick=\"event.stopPropagation()\">" +
+        "<button class=\"product-detail-close\" onclick=\"closeProductDetail()\" aria-label=\"Fermer\">&times;</button>" +
+        "<div id=\"productDetailContent\" class=\"product-detail-inner\">" +
+        "<div class=\"product-detail-image-wrap\"><img id=\"productDetailImage\" src=\"\" alt=\"\" onerror=\"this.onerror=null;this.src='" + DEFAULT_PRODUCT_IMAGE + "'\"></div>" +
+        "<div class=\"product-detail-info\">" +
+        "<h2 class=\"product-detail-name\" id=\"productDetailName\"></h2>" +
+        "<div class=\"product-detail-price\" id=\"productDetailPrice\"></div>" +
+        "<div id=\"productDetailStock\" class=\"product-detail-stock\"></div>" +
+        "<div class=\"product-detail-desc\" id=\"productDetailDesc\"></div>" +
+        "<div class=\"product-detail-actions\">" +
+        "<button class=\"product-detail-add-cart\" id=\"productDetailAddCart\"><i class=\"fas fa-cart-plus\"></i> " + esc(addToCart) + "</button>" +
+        "<button class=\"product-detail-wishlist\" id=\"productDetailWishlist\" aria-label=\"Ajouter aux favoris\"><i class=\"far fa-heart\"></i></button>" +
+        "</div></div></div></div></div>\n" +
         "{{CHATBOT_BLOCK}}\n" +
         "{{CUSTOM_JS}}\n" +
         "<script>\n" +
-        "const API_BASE='';const CURRENCY_SYMBOL='" + currencySymbol + "';const DELIVERY_FEES=" + deliveryFees + ";\n" +
-        "let cart=JSON.parse(localStorage.getItem('cart')||'[]');let wishlist=JSON.parse(localStorage.getItem('wishlist')||'[]');\n" +
-        "function saveCart(){localStorage.setItem('cart',JSON.stringify(cart));updateCartUI()}\n" +
+        "const API_BASE='';const STORE_SLUG='" + jsString(slug) + "';const CURRENCY_SYMBOL='" + jsString(currencySymbol) + "';const DELIVERY_FEES=" + deliveryFees + ";const DEFAULT_PRODUCT_IMAGE='" + DEFAULT_PRODUCT_IMAGE + "';\n" +
+        "let cart=JSON.parse(localStorage.getItem('cart_'+STORE_SLUG)||'[]');let wishlist=JSON.parse(localStorage.getItem('wishlist_'+STORE_SLUG)||'[]');\n" +
+        "function saveCart(){localStorage.setItem('cart_'+STORE_SLUG,JSON.stringify(cart));updateCartUI()}\n" +
         "function toggleCartSidebar(){document.getElementById('cartSidebar').classList.toggle('open');document.getElementById('cartOverlay').classList.toggle('show')}\n" +
-        "function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id);if(existing)existing.qty+=1;else cart.push({id,name,price,img,qty:1});saveCart()}\n" +
+        "function escHtml(v){return String(v??'').replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]})}\n" +
+        "function escAttr(v){return escHtml(v).replace(/`/g,'&#96;')}\n" +
+        "function productImg(v){return v&&String(v).trim()?v:DEFAULT_PRODUCT_IMAGE}\n" +
+        "function resolveImgUrl(v){if(!v||!String(v).trim())return DEFAULT_PRODUCT_IMAGE;var s=String(v).trim();if(s.startsWith('http://')||s.startsWith('https://')||s.startsWith('/'))return s;if(s.startsWith('images/')||s.startsWith('uploads/'))return '/'+s;return '/uploads/'+s}\n" +
+        "function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id);if(existing)existing.qty+=1;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:1});saveCart()}\n" +
         "function removeFromCart(id){cart=cart.filter(i=>i.id!==id);saveCart()}\n" +
         "function changeQty(id,delta){const item=cart.find(i=>i.id===id);if(item){item.qty=Math.max(1,item.qty+delta);saveCart()}}\n" +
         "function updateCartUI(){const count=cart.reduce((s,i)=>s+i.qty,0);document.getElementById('cartCount').textContent=count;" +
         "const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style=\"text-align:center;padding:40px;color:var(--muted)\"><i class=\"fas fa-shopping-bag\" style=\"font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px\"></i><p>Votre panier est vide</p></div>';" +
         "document.getElementById('total-price').textContent=CURRENCY_SYMBOL+'0.00';document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+'0.00';return}" +
-        "let html='';let sub=0;cart.forEach(i=>{sub+=i.price*i.qty;html+='<div class=\"t2-cart-item\">" +
-        "<img src=\"'+i.img+'\" alt=\"'+i.name+'\"><div class=\"t2-cart-item__info\">" +
-        "<div class=\"t2-cart-item__name\">'+i.name+'</div><div class=\"t2-cart-item__price\">'+CURRENCY_SYMBOL+(i.price*i.qty).toFixed(2)+'</div>" +
-        "<div class=\"t2-cart-item__qty\"><button onclick=\"changeQty(\\''+i.id+'\\',-1)\">-</button><span>'+i.qty+'</span><button onclick=\"changeQty(\\''+i.id+'\\',1)\">+</button></div></div>" +
-        "<button class=\"t2-cart-item__remove\" onclick=\"removeFromCart(\\''+i.id+'\\')\"><i class=\"fas fa-trash-alt\"></i></button></div>'});" +
-        "container.innerHTML=html;const total=sub+DELIVERY_FEES;document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);" +
+        "let html='';let sub=0;cart.forEach(i=>{const price=Number(i.price)||0;const id=escAttr(i.id);sub+=price*i.qty;html+='<div class=\"t2-cart-item\">" +
+        "<img src=\"'+escAttr(productImg(i.img))+'\" alt=\"'+escAttr(i.name)+'\" onerror=\"this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE\"><div class=\"t2-cart-item__info\">" +
+        "<div class=\"t2-cart-item__name\">'+escHtml(i.name)+'</div><div class=\"t2-cart-item__price\">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div>" +
+        "<div class=\"t2-cart-item__qty\"><button type=\"button\" data-cart-action=\"dec\" data-cart-id=\"'+id+'\">-</button><span>'+i.qty+'</span><button type=\"button\" data-cart-action=\"inc\" data-cart-id=\"'+id+'\">+</button></div></div>" +
+        "<button type=\"button\" class=\"t2-cart-item__remove\" data-cart-action=\"remove\" data-cart-id=\"'+id+'\"><i class=\"fas fa-trash-alt\"></i></button></div>'});" +
+        "container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){const id=this.dataset.cartId;if(this.dataset.cartAction==='inc')changeQty(id,1);else if(this.dataset.cartAction==='dec')changeQty(id,-1);else removeFromCart(id)})});const total=sub+DELIVERY_FEES;document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);" +
         "document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+total.toFixed(2)}\n" +
-        "function toggleFavorite(id){const idx=wishlist.indexOf(id);if(idx>-1)wishlist.splice(idx,1);else wishlist.push(id);localStorage.setItem('wishlist',JSON.stringify(wishlist));updateWishlistUI()}\n" +
-        "function updateWishlistUI(){document.getElementById('wishlistBadge').textContent=wishlist.length||''}\n" +
-        "function submitOrder(e){e.preventDefault();const f=e.target;const order={boutiqueId:'"+b.getId()+"',fullName:f['full-name'].value,email:(f['email']?f['email'].value:''),phone:f['phone_number'].value," +
-        "billingAddress:f['billing-address'].value,city:f['city'].value,country:(f['country']?f['country'].value:''),paymentMethod:f['payment-method'].value," +
+        "function toggleFavorite(id){const idx=wishlist.indexOf(id);if(idx>-1)wishlist.splice(idx,1);else wishlist.push(id);localStorage.setItem('wishlist_'+STORE_SLUG,JSON.stringify(wishlist));updateWishlistUI()}\n" +
+        "function updateWishlistUI(){document.getElementById('wishlistBadge').textContent=wishlist.length||'';document.querySelectorAll('.product-card').forEach(function(card){const active=wishlist.includes(card.dataset.productId);card.querySelectorAll('.wishlist-toggle .far').forEach(function(i){i.style.display=active?'none':''});card.querySelectorAll('.wishlist-toggle .fas').forEach(function(i){i.style.display=active?'':'none'})});" +
+        "var wb=document.getElementById('productDetailWishlist');if(wb){var pid3=wb.getAttribute('data-product-id');if(pid3){var ww2=wishlist.includes(pid3);wb.innerHTML=ww2?'<i class=\"fas fa-heart\"></i>':'<i class=\"far fa-heart\"></i>';wb.classList.toggle('active',ww2)}}}\n" +
+        "function submitOrder(e){e.preventDefault();const f=e.target;" +
+        "if(!cart.length){alert('Votre panier est vide');return false}" +
+        "const fn=f['full-name']?f['full-name'].value.trim():'';const addr=f['billing-address']?f['billing-address'].value.trim():'';" +
+        "const ph=f['phone_number']?f['phone_number'].value.trim():'';const ct=f['city']?f['city'].value:'';" +
+        "const pm=f['payment-method']?f['payment-method'].value:'';" +
+        "if(!fn){alert('Veuillez entrer votre nom complet');return false}" +
+        "if(!addr){alert('Veuillez entrer votre adresse de livraison');return false}" +
+        "if(!ph){alert('Veuillez entrer votre num\u00E9ro de t\u00E9l\u00E9phone');return false}" +
+        "if(!ct){alert('Veuillez s\u00E9lectionner votre ville');return false}" +
+        "if(!pm){alert('Veuillez s\u00E9lectionner un moyen de paiement');return false}" +
+        "const order={boutiqueId:'"+b.getId()+"',fullName:fn,email:(f['email']?f['email'].value:''),phone:ph," +
+        "billingAddress:addr,city:ct,country:(f['country']?f['country'].value:''),paymentMethod:pm," +
         "items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price}))};\n" +
         "fetch('/api/public/store/"+slug+"/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)}).then(r=>r.json()).then(d=>{" +
-        "if(d.success){document.getElementById('customUserFullName').textContent=order.fullName;document.getElementById('customUserBillingAddress').textContent=order.billingAddress;" +
-        "document.getElementById('customUserCity').textContent=order.city;document.getElementById('customUserPhoneNumber').textContent=order.phone;" +
-        "document.getElementById('customUserPaymentMethod').textContent=order.paymentMethod;" +
+        "if(d.success){document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;" +
+        "document.getElementById('customUserCity').textContent=d.city||order.city;document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;" +
+        "document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;" +
         "document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}" +
-        "else{alert('Erreur: '+d.message)}}).catch(e=>alert('Erreur réseau'));;return false}\n" +
-        "document.addEventListener('DOMContentLoaded',function(){updateCartUI();updateWishlistUI()});\n" +
+         "else{alert('Erreur: '+(d.message||'Commande non accept\u00E9e'))}}).catch(function(e){alert('Erreur r\u00E9seau. V\u00E9rifiez votre connexion.')});return false}\n" +
+        "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});document.querySelectorAll('.wishlist-toggle').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)toggleFavorite(card.dataset.productId)})});document.querySelectorAll('.add-cart').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg)})});updateCartUI();updateWishlistUI()});\n" +
+        "\n" +
+        "// Product detail from query param\n" +
+        "(function(){var p=new URLSearchParams(window.location.search).get('product_id');if(p)fetchProductDetail(p)})();\n" +
+        "function fetchProductDetail(id){fetch('/api/public/store/"+slug+"/products/'+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(p){if(p&&p.id)showProductDetail(p)}).catch(function(e){console.error('Failed to load product:',e)})}\n" +
+        "function showProductDetail(p){var img=resolveImgUrl(p.images&&p.images!=='[]'?JSON.parse(p.images)[0]:null);" +
+        "document.getElementById('productDetailImage').src=img;" +
+        "document.getElementById('productDetailName').textContent=p.name||'';" +
+        "var ph=CURRENCY_SYMBOL+(Number(p.price)||0).toFixed(2);" +
+        "if(p.comparePrice&&Number(p.comparePrice)>0)ph='<span style=\"text-decoration:line-through;color:var(--muted);margin-right:8px;font-size:1rem\">'+CURRENCY_SYMBOL+Number(p.comparePrice).toFixed(2)+'</span> '+ph;" +
+        "document.getElementById('productDetailPrice').innerHTML=ph;" +
+        "var se=document.getElementById('productDetailStock');var is=p.stock===undefined||p.stock>0;" +
+        "se.textContent=is?'En stock':'Rupture de stock';se.className='product-detail-stock '+(is?'in-stock':'out-of-stock');" +
+        "document.getElementById('productDetailDesc').textContent=p.description||'';" +
+        "var ab=document.getElementById('productDetailAddCart');var pid2=p.id;" +
+        "ab.onclick=function(){addToCart(pid2,p.name,p.price,img);closeProductDetail()};" +
+        "var wb=document.getElementById('productDetailWishlist');wb.setAttribute('data-product-id',pid2);var ww=wishlist.includes(pid2);" +
+        "wb.innerHTML=ww?'<i class=\"fas fa-heart\"></i>':'<i class=\"far fa-heart\"></i>';wb.classList.toggle('active',ww);" +
+        "wb.onclick=function(){toggleFavorite(pid2);var nw=wishlist.includes(pid2);wb.innerHTML=nw?'<i class=\"fas fa-heart\"></i>':'<i class=\"far fa-heart\"></i>';wb.classList.toggle('active',nw)};" +
+        "document.getElementById('productDetailOverlay').classList.add('open');document.body.style.overflow='hidden'}\n" +
+        "function closeProductDetail(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('productDetailOverlay').classList.remove('open');document.body.style.overflow='';var u=new URL(window.location);u.searchParams.delete('product_id');window.history.replaceState({},'',u)}\n" +
         "\n" +
         "// Slider autoplay\n" +
-        "\"!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;" +
+        "!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;" +
         "function go(i){n=(i+s.length)%s.length;t.style.transform='translateX(-'+(n*100)+'%)';" +
         "var d=document.getElementById('sliderDots');if(d)Array.from(d.children).forEach(function(e,j){e.classList.toggle('active',j===n)})}" +
         "var prev=document.getElementById('prevSlide'),next=document.getElementById('nextSlide');" +
@@ -473,7 +545,7 @@ public class StoreGeneratorService {
         "var n=c.querySelector('.name');if(n)c.style.display=n.textContent.toLowerCase().includes(q)?'':'none'})});\n" +
         "</script>\n</body>\n</html>";
 
-        // ── Chatbot block + placeholder replacements ──
+        // ---- Chatbot block + placeholder replacements ----
         html = html.replace("{{CHATBOT_BLOCK}}", CHATBOT_TEMPLATE);
         html = html.replace("{{CUSTOM_JS}}", customJs != null ? customJs : "");
         html = html.replace("{{BOUTIQUE_NAME}}", esc(b.getName()));
@@ -521,6 +593,15 @@ public class StoreGeneratorService {
         return html;
     }
 
+    private String resolveImageUrl(String url) {
+        if (url == null || url.isBlank()) return DEFAULT_PRODUCT_IMAGE;
+        String trimmed = url.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+        if (trimmed.startsWith("/")) return trimmed;
+        if (trimmed.startsWith("images/") || trimmed.startsWith("uploads/")) return "/" + trimmed;
+        return "/uploads/" + trimmed;
+    }
+
     private String extractFirstImage(String images) {
         if (images == null || images.isBlank() || images.equals("[]")) return "";
         try {
@@ -540,5 +621,15 @@ public class StoreGeneratorService {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    private String jsString(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\u2028", "\\u2028")
+                .replace("\u2029", "\\u2029");
     }
 }

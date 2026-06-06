@@ -40,8 +40,8 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    @Value("${app.public-url}")
-    private String publicUrl;
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     private final Map<String, List<Long>> rateLimitMap = new ConcurrentHashMap<>();
 
@@ -81,7 +81,8 @@ public class PasswordResetService {
             log.info("forgot-password: token saved for userId={}", user.getId());
 
             String encodedToken = URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
-            String resetLink = publicUrl + "/api/auth/reset-password/redirect?token=" + encodedToken;
+            String baseUrl = frontendUrl.replaceAll("/+$", "");
+            String resetLink = baseUrl + "/reset-password?token=" + encodedToken;
             log.info("forgot-password: resetLink={}", resetLink);
 
             emailService.sendPasswordResetEmail(user.getEmail(), rawToken, resetLink);

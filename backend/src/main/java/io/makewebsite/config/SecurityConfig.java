@@ -89,6 +89,7 @@ public class SecurityConfig {
                     "/ws/**",
                     // Static assets
                     "/uploads/**",
+                    "/images/**",
                     "/store/**",
                     "/checkout/**",
                     "/favicon*",

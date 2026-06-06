@@ -64,6 +64,9 @@ import '../models/conversation.dart';
 import '../widgets/main_scaffold.dart';
 
 GoRouter createRouter(AuthProvider auth) {
+  // Saved intended URL before splash redirect, restored after auth init completes
+  String? pendingPath;
+
   return GoRouter(
     refreshListenable: auth,
     redirect: (context, state) {
@@ -82,12 +85,19 @@ GoRouter createRouter(AuthProvider auth) {
       // --- AUTH INIT CHECK — show splash until auth state is restored from storage ---
       if (!auth.isInitialized) {
         if (path == '/splash') return null;
-        developer.log('[ROUTER] Auth not initialized, redirecting to /splash');
+        pendingPath = state.uri.toString();
+        developer.log('[ROUTER] Auth not initialized, saving pending=$pendingPath, redirecting to /splash');
         return '/splash';
       }
 
       // After init: if still on splash, always leave it
       if (path == '/splash') {
+        if (pendingPath != null) {
+          final target = pendingPath!;
+          pendingPath = null;
+          developer.log('[ROUTER] Leaving splash: restoring pending=$target');
+          return target;
+        }
         if (isLoggedIn) {
           final target = role == 'SUPER_ADMIN' ? '/super-admin' : (role == 'ADMIN' ? '/admin' : '/home');
           developer.log('[ROUTER] Leaving splash: logged in, going to $target');
@@ -113,7 +123,7 @@ GoRouter createRouter(AuthProvider auth) {
       if (isLoggedIn && role == 'SUPER_ADMIN') {
         if (path.startsWith('/super-admin')) return null;
         if (isPublic) return '/super-admin';
-        if (path == '/change-password') return null;
+        if (path == '/change-password' || path == '/reset-password') return null;
         developer.log('[ROUTER] SUPER_ADMIN redirecting to /super-admin');
         return '/super-admin';
       }

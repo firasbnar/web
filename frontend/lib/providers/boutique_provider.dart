@@ -590,6 +590,17 @@ class BoutiqueProvider extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>?> testTelegramNotification() async {
+    try {
+      final res = await _api.post('/telegram/test');
+      return res;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>> checkName(String name, {String? currentId}) async {
     try {
       return await _api.post('/boutiques/$_boutiqueId/check-name', data: {

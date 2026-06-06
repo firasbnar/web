@@ -34,7 +34,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final java.util.Set<String> PUBLIC_PATH_PREFIXES = java.util.Set.of(
         "/api/auth/", "/api/team/public/", "/api/public/", "/api/plans",
         "/api/boutiques/public", "/api/traffic/",
-        "/ws/", "/uploads/", "/store/",
+        "/ws/", "/uploads/", "/images/", "/store/",
         "/favicon",
         "/flutter/", "/assets/"
     );

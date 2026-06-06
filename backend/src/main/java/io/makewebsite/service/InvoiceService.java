@@ -60,6 +60,11 @@ public class InvoiceService {
         return buildInvoiceHtml(invoice);
     }
 
+    @Transactional(readOnly = true)
+    public Invoice findByOrderId(UUID orderId) {
+        return invoiceRepository.findByOrderId(orderId).orElse(null);
+    }
+
     @Transactional
     public String buildInvoiceHtml(UUID boutiqueId, UUID orderId) {
         Invoice invoice = findOrCreateInvoice(boutiqueId, orderId);

@@ -41,6 +41,7 @@ public class TeamService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final ActivityLogService activityLogService;
+    private final TelegramNotificationService telegramNotificationService;
     @Transactional(readOnly = true)
     public List<TeamMemberResponse> getTeamMembers(UUID boutiqueId, UUID userId) {
         requireOwnedBoutiqueOrAdmin(boutiqueId, userId);
@@ -127,6 +128,7 @@ public class TeamService {
                 .build();
         teamInvitationRepository.save(invitation);
 
+        telegramNotificationService.notifyTeamMemberInvited(boutique, email, role);
         activityLogService.record(boutique.getId(), userId, currentUser.getFullName(),
                 "INVITATION_ENVOYEE", "SUCCESS",
                 "Invitation envoyee a " + email + " (" + role + ")",

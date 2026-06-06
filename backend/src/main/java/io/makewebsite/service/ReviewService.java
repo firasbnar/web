@@ -17,6 +17,7 @@ public class ReviewService {
     private final BoutiqueRepository boutiqueRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final TelegramNotificationService telegramNotificationService;
 
     public Page<Review> getBoutiqueReviews(UUID boutiqueId, ReviewStatus status, Pageable pageable) {
         if (status != null) {
@@ -54,7 +55,9 @@ public class ReviewService {
                 .comment(comment)
                 .status(ReviewStatus.PENDING)
                 .build();
-        return reviewRepository.save(review);
+        review = reviewRepository.save(review);
+        telegramNotificationService.notifyNewReview(review);
+        return review;
     }
 
     @Transactional

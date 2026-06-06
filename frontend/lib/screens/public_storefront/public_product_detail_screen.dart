@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
+import '../../core/url_utils.dart';
 import '../../providers/public_cart_provider.dart';
+import '../../providers/public_wishlist_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
@@ -262,48 +264,10 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     return raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
   }
 
-  String? _firstImage(String? images) {
-    if (images == null || images.isEmpty || images == '[]') return null;
-    try {
-      final t = images.trim();
-      if (t.startsWith('[')) {
-        final c = t.substring(1, t.length - 1).trim();
-        if (c.startsWith('"')) return c.substring(1, c.indexOf('"', 1));
-        return c;
-      }
-      return t;
-    } catch (_) { return null; }
-  }
-
-  List<String> _imageList(String? images) {
-    if (images == null || images.isEmpty || images == '[]') return [];
-    try {
-      final t = images.trim();
-      if (t.startsWith('[')) {
-        final inner = t.substring(1, t.length - 1);
-        final items = <String>[];
-        var i = 0;
-        while (i < inner.length) {
-          if (inner[i] == '"') {
-            final end = inner.indexOf('"', i + 1);
-            if (end > i) { items.add(inner.substring(i + 1, end)); i = end + 1; }
-            else { i++; }
-          } else if (inner[i] != ',' && inner[i] != ' ') {
-            final end = inner.indexOf(',', i);
-            if (end > i) { items.add(inner.substring(i, end).trim()); i = end; }
-            else { items.add(inner.substring(i).trim()); break; }
-          } else { i++; }
-        }
-        return items;
-      }
-      return [t.trim()];
-    } catch (_) { return []; }
-  }
-
   void _addToCart() {
     final cart = context.read<PublicCartProvider>();
     final p = _product!;
-    final img = _firstImage(p['images'] as String?);
+    final img = resolveImageUrl(firstImageUrl(p['images']));
     cart.addItem(widget.slug, PublicCartItem(
       productId: widget.productId,
       name: p['name'] ?? '',
@@ -321,10 +285,10 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
-    if (_error != null) {
+    if (_error != null || _product == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Produit')),
-        body: Center(child: Text(_error!, style: AppTypography.body1)),
+        body: Center(child: Text(_error ?? 'Produit introuvable', style: AppTypography.body1)),
       );
     }
     final p = _product!;
@@ -334,10 +298,12 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     final stock = p['stock'] ?? 0;
     final stockStatus = p['stockStatus'] ?? 'IN_STOCK';
     final description = p['description'] as String?;
-    final images = _imageList(p['images'] as String?);
+    final images = parseImageUrls(p['images']).map((u) => resolveImageUrl(u) ?? u).toList();
     final colors = _parseList(p['colors'] as String?);
     final sizes = _parseList(p['sizes'] as String?);
     final outOfStock = stockStatus == 'OUT_OF_STOCK' || stock <= 0;
+    final wishlist = context.watch<PublicWishlistProvider>();
+    final inWishlist = wishlist.isInWishlist(widget.slug, widget.productId);
 
     return Scaffold(
       body: CustomScrollView(
@@ -349,6 +315,21 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
+            actions: [
+              IconButton(
+                icon: Icon(inWishlist ? Icons.favorite : Icons.favorite_border, color: inWishlist ? AppColors.danger : null),
+                onPressed: () {
+                  wishlist.toggle(widget.slug, PublicWishlistItem(
+                    productId: widget.productId,
+                    name: p['name'] ?? '',
+                    price: price,
+                    promotionalPrice: promo,
+                    image: resolveImageUrl(firstImageUrl(p['images'])),
+                    stock: stock,
+                  ));
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: images.isEmpty
                   ? Container(color: AppColors.surfaceAlt, child: const Center(child: Icon(Icons.image, size: 80, color: AppColors.textHint)))
@@ -384,10 +365,10 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('${price.toStringAsFixed(3)} TND', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
+                      Text('${(promo != null && promo > 0 ? promo : price).toStringAsFixed(3)} TND', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
                       if (promo != null && promo > 0) ...[
                         const SizedBox(width: 12),
-                        Text('${promo.toStringAsFixed(3)} TND', style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
+                        Text('${price.toStringAsFixed(3)} TND', style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

@@ -36,11 +36,21 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id")
     Optional<Product> findByIdWithCategory(@Param("id") UUID id);
 
+    @Query("SELECT p FROM Product p JOIN FETCH p.boutique WHERE p.id = :id")
+    Optional<Product> findByIdWithBoutique(@Param("id") UUID id);
+
+    @Query("SELECT p FROM Product p JOIN FETCH p.boutique LEFT JOIN FETCH p.category WHERE p.id = :id")
+    Optional<Product> findByIdWithBoutiqueAndCategory(@Param("id") UUID id);
+
     List<Product> findByCategoryId(UUID categoryId);
 
     long countByBoutiqueId(UUID boutiqueId);
 
     long countByBoutiqueIdAndCategoryId(UUID boutiqueId, UUID categoryId);
+
+    long countByBoutiqueIdAndIsActiveTrue(UUID boutiqueId);
+
+    long countByBoutiqueIdAndCategoryIdAndIsActiveTrue(UUID boutiqueId, UUID categoryId);
 
     @Query("SELECT MIN(p.price) FROM Product p WHERE p.boutique.id = :boutiqueId AND p.isActive = true")
     BigDecimal findMinPriceByBoutiqueIdAndIsActiveTrue(@Param("boutiqueId") UUID boutiqueId);

@@ -17,13 +17,26 @@ class VerificationPendingScreen extends StatefulWidget {
 
 class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
   final _api = ApiClient();
+  final _emailCtrl = TextEditingController();
   bool _resending = false;
   bool _resent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailCtrl.text = widget.email;
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _resend() async {
     setState(() => _resending = true);
     try {
-      await _api.post('/auth/resend-verification', data: {'email': widget.email});
+      await _api.post('/auth/resend-verification', data: {'email': _emailCtrl.text});
       setState(() => _resent = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,11 +77,17 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                 style: AppTypography.body1.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 4),
-              Text(
-                widget.email,
-                style: AppTypography.body1.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
                 textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  hintText: 'Entrez votre email',
+                  prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                ),
               ),
               const SizedBox(height: 24),
               Container(

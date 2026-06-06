@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -23,6 +22,7 @@ import 'providers/reviews_provider.dart';
 import 'providers/traffic_provider.dart';
 import 'providers/messages_provider.dart';
 import 'providers/public_cart_provider.dart';
+import 'providers/public_wishlist_provider.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
@@ -86,6 +86,7 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
         ChangeNotifierProvider(create: (_) => TrafficProvider()),
         ChangeNotifierProvider(create: (_) => MessagesProvider()),
         ChangeNotifierProvider(create: (_) => PublicCartProvider()),
+        ChangeNotifierProvider(create: (_) => PublicWishlistProvider()),
       ],
       builder: (context, _) {
         final auth = context.read<AuthProvider>();

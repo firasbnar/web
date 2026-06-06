@@ -15,6 +15,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
   final _chatIdCtrl = TextEditingController();
   bool _enabled = false;
   bool _saving = false;
+  bool _testing = false;
 
   @override
   void initState() {
@@ -87,6 +88,23 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
     }
   }
 
+  Future<void> _testNotification() async {
+    setState(() => _testing = true);
+    final bp = context.read<BoutiqueProvider>();
+    final res = await bp.testTelegramNotification();
+    if (mounted) {
+      setState(() => _testing = false);
+      final message = res?['message'] as String? ?? (res != null ? 'Test envoyé' : bp.error ?? 'Erreur');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: res != null ? AppColors.success : AppColors.danger,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -156,6 +174,20 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                     label: _enabled ? 'Désactiver' : 'Activer',
                     onPressed: _saving ? null : _toggleEnabled,
                     color: _enabled ? AppColors.danger : AppColors.success,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'Tester la notification',
+                    loading: _testing,
+                    onPressed: _chatIdCtrl.text.trim().isEmpty ? null : _testNotification,
+                    color: const Color(0xFF0098C7),
+                    icon: Icons.telegram,
                   ),
                 ),
               ],

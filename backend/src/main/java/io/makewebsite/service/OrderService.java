@@ -6,6 +6,7 @@ import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,9 +35,12 @@ public class OrderService {
     private final NotificationService notificationService;
     private final WebSocketService webSocketService;
     private final TelegramService telegramService;
+    private final TelegramNotificationService telegramNotificationService;
     private final InvoiceService invoiceService;
     private final CaisseService caisseService;
     private final StoreStatusGuard storeStatusGuard;
+    private final InvoicePdfService invoicePdfService;
+    private final EmailService emailService;
 
     @Transactional(readOnly = true)
     public Page<OrderResponse> getOrders(UUID boutiqueId, String status, String search,
@@ -137,13 +141,48 @@ public class OrderService {
                 product = productRepository.findById(itemReq.getProductId()).orElse(null);
             }
 
+            int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 1;
+            if (product != null && product.getStock() != null && product.getStock() < qty) {
+                throw new RuntimeException("Stock insuffisant pour " + product.getName()
+                        + " (demand\u00E9: " + qty + ", disponible: " + product.getStock() + ")");
+            }
+
             items.add(OrderItem.builder()
                     .product(product)
                     .productName(itemReq.getProductName())
                     .unitPrice(itemReq.getUnitPrice())
-                    .quantity(itemReq.getQuantity())
+                    .quantity(qty)
                     .subtotal(itemSubtotal)
                     .build());
+        }
+
+        for (OrderItemRequest itemReq : request.getItems()) {
+            if (itemReq.getProductId() != null) {
+                Product product = productRepository.findById(itemReq.getProductId()).orElse(null);
+                if (product != null && product.getStock() != null) {
+                    int qty = itemReq.getQuantity() != null ? itemReq.getQuantity() : 1;
+                    product.setStock(product.getStock() - qty);
+                    int remaining = product.getStock();
+
+                    if (remaining > 5) {
+                        product.setLowStockAlertSent(false);
+                        product.setOutOfStockAlertSent(false);
+                    } else if (remaining > 0) {
+                        if (!Boolean.TRUE.equals(product.getLowStockAlertSent())) {
+                            telegramNotificationService.notifyLowStock(product, remaining);
+                            product.setLowStockAlertSent(true);
+                        }
+                        product.setOutOfStockAlertSent(false);
+                    } else {
+                        if (!Boolean.TRUE.equals(product.getOutOfStockAlertSent())) {
+                            telegramNotificationService.notifyOutOfStock(product);
+                            product.setOutOfStockAlertSent(true);
+                        }
+                        product.setLowStockAlertSent(false);
+                    }
+                    productRepository.save(product);
+                }
+            }
         }
 
         BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
@@ -173,6 +212,46 @@ public class OrderService {
         orderItemRepository.saveAll(items);
         invoiceService.generateInvoice(order.getId());
 
+        try {
+            String customerEmail = order.getCustomerEmail() != null ? order.getCustomerEmail()
+                : (customer != null ? customer.getEmail() : request.getCustomerEmail());
+            if (customerEmail != null && !customerEmail.isBlank()
+                    && !Boolean.TRUE.equals(order.getConfirmationEmailSent())) {
+                Invoice invoice = invoiceService.findByOrderId(order.getId());
+                if (invoice != null) {
+                    byte[] pdfBytes = invoicePdfService.generatePdf(order, boutique, invoice);
+                    String subject = "Commande confirm\u00e9e - " + order.getOrderNumber();
+                    StringBuilder itemsHtml = new StringBuilder();
+                    for (OrderItem item : items) {
+                        itemsHtml.append("<tr>")
+                            .append("<td style=\"padding:8px 12px;color:#374151;font-size:13px\">").append(escapeHtml(item.getProductName())).append("</td>")
+                            .append("<td style=\"padding:8px 12px;color:#374151;font-size:13px;text-align:center\">").append(item.getQuantity()).append("</td>")
+                            .append("<td style=\"padding:8px 12px;color:#374151;font-size:13px;text-align:right\">").append(item.getUnitPrice().stripTrailingZeros().toPlainString()).append("</td>")
+                            .append("<td style=\"padding:8px 12px;color:#374151;font-size:13px;text-align:right\">").append(item.getSubtotal().stripTrailingZeros().toPlainString()).append("</td>")
+                            .append("</tr>");
+                    }
+                    String subtotalStr = order.getSubtotal().stripTrailingZeros().toPlainString();
+                    String shippingFeeStr = order.getShippingFee().stripTrailingZeros().toPlainString();
+                    String totalStr = order.getTotal().stripTrailingZeros().toPlainString();
+                    String htmlBody = emailService.buildOrderConfirmationHtml(
+                            boutique.getName(), order.getOrderNumber(),
+                            order.getCustomerName() != null ? order.getCustomerName() : (customer != null ? customer.getFullName() : "Client"),
+                            customerEmail,
+                            order.getCustomerPhone() != null ? order.getCustomerPhone() : (customer != null ? customer.getPhone() : ""),
+                            order.getShippingAddress(), order.getPaymentMethod(),
+                            boutique.getCurrency(), itemsHtml.toString(),
+                            subtotalStr, shippingFeeStr, totalStr);
+                    emailService.sendOrderConfirmation(customerEmail, subject, htmlBody, pdfBytes,
+                            "facture-" + order.getOrderNumber() + ".pdf");
+                    order.setConfirmationEmailSent(true);
+                    orderRepository.save(order);
+                    log.info("Confirmation email queued for order {}", order.getOrderNumber());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send confirmation email for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
+
         if (customer != null) {
             customerService.updateCustomerAggregation(customer, total);
         }
@@ -183,9 +262,7 @@ public class OrderService {
         OrderResponse response = mapToResponse(order);
         webSocketService.sendNewOrderNotification(boutique.getId(), response);
         webSocketService.sendCaisseOrderUpdate(boutique.getId(), response);
-        if (Boolean.TRUE.equals(owner.getTelegramEnabled()) && owner.getTelegramChatId() != null) {
-            telegramService.sendMessage(owner.getTelegramChatId(), message);
-        }
+        telegramNotificationService.notifyNewOrder(order);
 
         try {
             caisseService.recordActivity(boutique.getId(), user != null ? user.getId() : null,
@@ -213,12 +290,13 @@ public class OrderService {
                 Boutique boutique = order.getBoutique();
                 caisseService.recordActivity(boutique.getId(),
                         order.getUser() != null ? order.getUser().getId() : null,
-                        order.getUser() != null ? order.getUser().getFullName() : "Système",
+                        order.getUser() != null ? order.getUser().getFullName() : "Syst\u00E8me",
                         "ORDER_STATUS_CHANGED",
-                        "Commande " + order.getOrderNumber() + " : " + oldStatus + " → " + request.getStatus());
+                        "Commande " + order.getOrderNumber() + " : " + oldStatus + " \u2192 " + request.getStatus());
             } catch (Exception e) {
                 log.warn("Failed to record status change activity: {}", e.getMessage());
             }
+            telegramNotificationService.notifyOrderStatusChanged(order, oldStatus, request.getStatus());
         }
 
         return response;
@@ -273,6 +351,12 @@ public class OrderService {
                     .append(o.getCreatedAt()).append("\n");
         }
         return sb.toString();
+    }
+
+    private String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     private OrderResponse mapToResponse(Order o) {

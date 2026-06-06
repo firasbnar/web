@@ -390,6 +390,105 @@ public class EmailService {
         return html.formatted(link, link);
     }
 
+    @Async
+    public void sendOrderConfirmation(String to, String subject, String htmlBody, byte[] pdfBytes, String pdfFilename) {
+        try {
+            InternetAddress from = internetAddress(fromAddress, fromName);
+            InternetAddress recipient = internetAddress(to);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(recipient);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+
+            jakarta.mail.util.ByteArrayDataSource source = new jakarta.mail.util.ByteArrayDataSource(pdfBytes, "application/pdf");
+            helper.addAttachment(pdfFilename, source);
+
+            log.info("Sending order confirmation email to {} with PDF attachment {}", to, pdfFilename);
+            mailSender.send(message);
+            log.info("Order confirmation email sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send order confirmation email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public String buildOrderConfirmationHtml(String boutiqueName, String orderNumber,
+                                              String customerName, String customerEmail,
+                                              String customerPhone, String shippingAddress,
+                                              String paymentMethod, String currency,
+                                              String itemsHtml, String subtotal,
+                                              String shippingFee, String total) {
+        String currencySymbol = currency != null
+            ? (currency.equals("TND") ? "DT"
+               : currency.equals("EUR") ? "\u20AC" : currency.equals("USD") ? "$" : currency)
+            : "DT";
+        String html = """
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+            <body style="margin:0;padding:0;background-color:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+            <table width="100%%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 16px">
+            <tr><td align="center">
+            <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+            <tr><td style="padding:32px 32px 20px;text-align:center;background:#16a34a">
+            <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700">%s</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,0.88);font-size:14px;line-height:1.5">Commande confirm\u00e9e</p>
+            </td></tr>
+            <tr><td style="padding:24px 32px 8px">
+            <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6">Bonjour <strong>%s</strong>,</p>
+            <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6">Nous vous confirmons que votre commande <strong>%s</strong> a bien \u00e9t\u00e9 re\u00e7ue et est en cours de traitement.</p>
+            <p style="margin:0 0 16px;color:#374151;font-size:14px;line-height:1.6">Vous trouverez ci-joint votre facture au format PDF.</p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+            <h2 style="margin:0 0 12px;color:#111827;font-size:16px;font-weight:600">D\u00e9tails de la commande</h2>
+            <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">R\u00e9f\u00e9rence</td><td style="padding:6px 0;color:#374151;font-size:13px;text-align:right">%s</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Client</td><td style="padding:6px 0;color:#374151;font-size:13px;text-align:right">%s</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Email</td><td style="padding:6px 0;color:#374151;font-size:13px;text-align:right">%s</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">T\u00e9l\u00e9phone</td><td style="padding:6px 0;color:#374151;font-size:13px;text-align:right">%s</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Adresse</td><td style="padding:6px 0;color:#374151;font-size:13px;text-align:right">%s</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;font-size:13px">Paiement</td><td style="padding:6px 0;color:#374151;font-size:13px;text-align:right">%s</td></tr>
+            </table>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0">
+            <h2 style="margin:0 0 12px;color:#111827;font-size:16px;font-weight:600">Articles command\u00e9s</h2>
+            <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:12px">
+            <thead><tr style="background-color:#f9fafb">
+            <th style="padding:8px 12px;text-align:left;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Article</th>
+            <th style="padding:8px 12px;text-align:center;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Qt\u00e9</th>
+            <th style="padding:8px 12px;text-align:right;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Prix</th>
+            <th style="padding:8px 12px;text-align:right;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Total</th>
+            </tr></thead>
+            <tbody>%s</tbody>
+            </table>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0">
+            <table width="100%%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding:4px 0;color:#6b7280;font-size:13px">Sous-total</td><td style="padding:4px 0;color:#374151;font-size:13px;text-align:right">%s %s</td></tr>
+            <tr><td style="padding:4px 0;color:#6b7280;font-size:13px">Frais de livraison</td><td style="padding:4px 0;color:#374151;font-size:13px;text-align:right">%s %s</td></tr>
+            <tr><td style="padding:8px 0 4px;border-top:2px solid #e5e7eb;color:#111827;font-size:15px;font-weight:700">Total</td><td style="padding:8px 0 4px;border-top:2px solid #e5e7eb;color:#111827;font-size:15px;font-weight:700;text-align:right">%s %s</td></tr>
+            </table>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+            <p style="margin:0 0 8px;color:#6b7280;font-size:12px;line-height:1.5">Un r\u00e9capitulatif complet est \u00e9galement disponible dans votre espace client.</p>
+            <p style="margin:0 0 8px;color:#6b7280;font-size:12px;line-height:1.5">Merci de votre confiance !</p>
+            </td></tr>
+            <tr><td style="padding:16px 32px;background-color:#f9fafb;text-align:center">
+            <p style="margin:0;color:#9ca3af;font-size:11px">&copy; 2026 %s. Tous droits r\u00e9serv\u00e9s.</p>
+            </td></tr>
+            </table>
+            </td></tr>
+            </table>
+            </body>
+            </html>
+            """;
+        return html.formatted(boutiqueName, customerName, orderNumber,
+                orderNumber, customerName, customerEmail, customerPhone,
+                shippingAddress != null ? shippingAddress : "-",
+                paymentMethod != null ? paymentMethod : "-",
+                itemsHtml,
+                subtotal, currencySymbol, shippingFee, currencySymbol, total, currencySymbol,
+                boutiqueName);
+    }
+
     private String translateRole(String role) {
         if (role == null) return "Staff";
         return switch (role.toUpperCase()) {

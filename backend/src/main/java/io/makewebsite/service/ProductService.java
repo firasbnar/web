@@ -7,6 +7,7 @@ import io.makewebsite.dto.request.UpdateStockRequest;
 import io.makewebsite.dto.response.ProductResponse;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.security.TenantContext;
 import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,14 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final CategoryRepository categoryRepository;
+    private final CartItemRepository cartItemRepository;
+    private final WishlistItemRepository wishlistItemRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final StoreGeneratorService storeGeneratorService;
     private final ObjectMapper objectMapper;
     private final TenantAccessService tenantAccessService;
     private final StoreStatusGuard storeStatusGuard;
+    private final TelegramNotificationService telegramNotificationService;
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProducts(UUID boutiqueId, String search, UUID categoryId, Boolean isActive, Pageable pageable) {
@@ -106,16 +112,67 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(UUID id) {
+    public void deleteProduct(UUID id, UUID userId) {
         Product product = findTenantProduct(id);
-        productRepository.delete(product);
+        UUID boutiqueId = product.getBoutique().getId();
+
+        if (!TenantContext.isSuperAdmin()) {
+            boolean isOwner = boutiqueRepository.findOwnerIdByBoutiqueId(boutiqueId).equals(userId);
+            if (!isOwner) {
+                throw new SecurityException("Seul le propriétaire de la boutique peut supprimer un produit");
+            }
+        }
+
+        storeStatusGuard.requireActive(product.getBoutique());
+
+        if (!Boolean.TRUE.equals(product.getIsActive())) {
+            throw new RuntimeException("Produit déjà supprimé");
+        }
+
+        product.setIsActive(false);
+        productRepository.save(product);
+        productVariantRepository.deleteByProductId(id);
+        cartItemRepository.deleteByProductId(id);
+        wishlistItemRepository.deleteByProductId(id);
+
+        try {
+            storeGeneratorService.regenerate(boutiqueId);
+        } catch (Exception e) {
+            log.warn("Failed to regenerate storefront after product deletion: {}", e.getMessage());
+        }
+
+        log.info("Product soft-deleted: id={}, name={}, boutiqueId={}, userId={}",
+                id, product.getName(), boutiqueId, userId);
     }
 
     @Transactional
     public ProductResponse updateStock(UUID id, UpdateStockRequest request) {
         Product product = findTenantProduct(id);
-        product.setStock(request.getStock());
+        int oldStock = product.getStock() != null ? product.getStock() : 0;
+        int newStock = request.getStock() != null ? request.getStock() : 0;
+        product.setStock(newStock);
         product = productRepository.save(product);
+
+        if (newStock > 5) {
+            product.setLowStockAlertSent(false);
+            product.setOutOfStockAlertSent(false);
+        } else if (newStock > 0 && newStock <= 5) {
+            if (!Boolean.TRUE.equals(product.getLowStockAlertSent())) {
+                telegramNotificationService.notifyLowStock(product, newStock);
+                product.setLowStockAlertSent(true);
+            }
+            product.setOutOfStockAlertSent(false);
+        } else if (newStock <= 0) {
+            if (!Boolean.TRUE.equals(product.getOutOfStockAlertSent())) {
+                telegramNotificationService.notifyOutOfStock(product);
+                product.setOutOfStockAlertSent(true);
+            }
+            product.setLowStockAlertSent(false);
+        }
+        if (oldStock != newStock) {
+            productRepository.save(product);
+        }
+
         return mapToResponse(product);
     }
 

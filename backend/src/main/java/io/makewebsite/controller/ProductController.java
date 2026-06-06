@@ -2,6 +2,7 @@ package io.makewebsite.controller;
 
 import io.makewebsite.dto.request.*;
 import io.makewebsite.dto.response.*;
+import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,8 +59,8 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable UUID id) {
-        productService.deleteProduct(id);
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable UUID id, @AuthenticationPrincipal UserPrincipal principal) {
+        productService.deleteProduct(id, principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok("Produit supprimé", null));
     }
 

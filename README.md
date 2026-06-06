@@ -26,7 +26,6 @@ Built with **Flutter** (web + Android mobile) and **Spring Boot** (REST API + Po
 - **Delivery Zones** — Configure shipping zones and rates per store
 - **Super Admin Dashboard** — Platform-level management and audit logs
 - **Subscription Plans** — Free trial (3 days), 3-month (99 DT), Premium (35 DT/month)
-
 ---
 
 ## Tech Stack

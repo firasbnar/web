@@ -135,7 +135,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
     final cart = context.watch<PublicCartProvider>();
     final items = cart.items(widget.slug);
     final subtotal = cart.subtotal(widget.slug);
-    final shipping = 7.0;
+    final shipping = _store?['deliveryFees'] ?? 7.0;
     final total = subtotal + shipping;
     final providers = _store != null ? _enabledProviders(_store!) : <Map<String, dynamic>>[];
 

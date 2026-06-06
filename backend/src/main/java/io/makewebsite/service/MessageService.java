@@ -27,6 +27,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final WebSocketService webSocketService;
+    private final TelegramNotificationService telegramNotificationService;
 
     @Transactional(readOnly = true)
     public List<ConversationResponse> getConversations(UUID boutiqueId) {
@@ -96,6 +97,7 @@ public class MessageService {
         conversationRepository.save(conversation);
 
         webSocketService.sendNewMessageNotification(boutiqueId, mapToConversationResponse(conversation));
+        telegramNotificationService.notifyNewCustomerMessage(conversation, request.getContent());
 
         return mapToMessageResponse(message);
     }

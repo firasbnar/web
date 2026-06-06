@@ -21,6 +21,7 @@ import java.util.UUID;
 public class CustomerService {
     private final CustomerRepository customerRepository;
     private final BoutiqueRepository boutiqueRepository;
+    private final TelegramNotificationService telegramNotificationService;
 
     public Page<CustomerResponse> getCustomers(UUID boutiqueId, String search, Pageable pageable) {
         Page<Customer> customers;
@@ -55,6 +56,7 @@ public class CustomerService {
                 .notes(request.getNotes())
                 .build();
         customer = customerRepository.save(customer);
+        telegramNotificationService.notifyNewCustomer(customer);
         return mapToResponse(customer);
     }
 
@@ -131,7 +133,9 @@ public class CustomerService {
                 .totalOrders(0)
                 .totalSpent(BigDecimal.ZERO)
                 .build();
-        return customerRepository.save(customer);
+        customer = customerRepository.save(customer);
+        telegramNotificationService.notifyNewCustomer(customer);
+        return customer;
     }
 
     @Transactional

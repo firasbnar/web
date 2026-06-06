@@ -115,6 +115,10 @@ public class Order {
     @Column(name = "invoice_created_at")
     private LocalDateTime invoiceCreatedAt;
 
+    @Builder.Default
+    @Column(name = "confirmation_email_sent")
+    private Boolean confirmationEmailSent = false;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

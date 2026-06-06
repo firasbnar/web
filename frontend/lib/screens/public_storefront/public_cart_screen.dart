@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/url_utils.dart';
 import '../../providers/public_cart_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
-class PublicCartScreen extends StatelessWidget {
+class PublicCartScreen extends StatefulWidget {
   final String slug;
   const PublicCartScreen({super.key, required this.slug});
+  @override
+  State<PublicCartScreen> createState() => _PublicCartScreenState();
+}
+
+class _PublicCartScreenState extends State<PublicCartScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PublicCartProvider>().loadCart(widget.slug);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<PublicCartProvider>();
-    final items = cart.items(slug);
-    final total = cart.subtotal(slug);
-    final count = cart.itemCount(slug);
+    final items = cart.items(widget.slug);
+    final total = cart.subtotal(widget.slug);
+    final count = cart.itemCount(widget.slug);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,7 +46,7 @@ class PublicCartScreen extends StatelessWidget {
                   Text('Parcourez la boutique pour ajouter des articles.', style: AppTypography.caption),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () => context.go('/store/$slug'),
+                    onPressed: () => context.go('/store/${widget.slug}'),
                     style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100))),
                     child: const Text('Voir la boutique'),
                   ),
@@ -62,7 +75,7 @@ class PublicCartScreen extends StatelessWidget {
                             if (img != null)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(img, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: AppColors.surfaceAlt, child: const Icon(Icons.image, color: AppColors.textHint))),
+                                child: Image.network(resolveImageUrl(img)!, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: AppColors.surfaceAlt, child: const Icon(Icons.image, color: AppColors.textHint))),
                               )
                             else
                               Container(width: 64, height: 64, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.image, color: AppColors.textHint)),
@@ -83,12 +96,12 @@ class PublicCartScreen extends StatelessWidget {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             InkWell(
-                                              onTap: () => cart.updateQuantity(slug, item.productId, item.quantity - 1),
+                                              onTap: () => cart.updateQuantity(widget.slug, item.productId, item.quantity - 1),
                                               child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.remove, size: 16)),
                                             ),
                                             Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('${item.quantity}', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600))),
                                             InkWell(
-                                              onTap: item.quantity < item.stock ? () => cart.updateQuantity(slug, item.productId, item.quantity + 1) : null,
+                                              onTap: item.quantity < item.stock ? () => cart.updateQuantity(widget.slug, item.productId, item.quantity + 1) : null,
                                               child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.add, size: 16, color: item.quantity >= item.stock ? Colors.grey : null)),
                                             ),
                                           ],
@@ -101,7 +114,7 @@ class PublicCartScreen extends StatelessWidget {
                             ),
                             IconButton(
                               icon: const Icon(Icons.close, size: 18),
-                              onPressed: () => cart.removeItem(slug, item.productId),
+                              onPressed: () => cart.removeItem(widget.slug, item.productId),
                             ),
                           ],
                         ),
@@ -135,7 +148,7 @@ class PublicCartScreen extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                             ),
-                            onPressed: () => context.push('/store/$slug/checkout'),
+                            onPressed: () => context.push('/store/${widget.slug}/checkout'),
                             child: Text('Commander', style: AppTypography.button),
                           ),
                         ),

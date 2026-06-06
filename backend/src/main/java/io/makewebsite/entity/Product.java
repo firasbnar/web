@@ -89,6 +89,14 @@ public class Product {
     @Column(name = "seo_description", columnDefinition = "TEXT")
     private String seoDescription;
 
+    @Builder.Default
+    @Column(name = "low_stock_alert_sent")
+    private Boolean lowStockAlertSent = false;
+
+    @Builder.Default
+    @Column(name = "out_of_stock_alert_sent")
+    private Boolean outOfStockAlertSent = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

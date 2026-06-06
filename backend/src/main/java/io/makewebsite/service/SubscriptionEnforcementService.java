@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import io.makewebsite.service.TelegramService;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,8 @@ public class SubscriptionEnforcementService {
     private final SubscriptionRepository subscriptionRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final AdminAuditLogRepository auditLogRepository;
+    private final TelegramService telegramService;
+    private final TelegramNotificationService telegramNotificationService;
 
     @Transactional
     public int enforceAll() {
@@ -65,5 +68,7 @@ public class SubscriptionEnforcementService {
                 .action("AUTO_FREEZE_STORE").targetType("STORE")
                 .targetId(b.getId()).details("Gel automatique: " + reason)
                 .build());
+
+        telegramNotificationService.notifyBoutiqueFrozen(b, reason);
     }
 }

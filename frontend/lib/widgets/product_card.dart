@@ -85,6 +85,14 @@ class ProductCard extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           splashRadius: 18,
                         ),
+                      if (onDelete != null)
+                        IconButton(
+                          onPressed: onDelete,
+                          icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          padding: EdgeInsets.zero,
+                          splashRadius: 18,
+                        ),
                     ],
                   ),
                 ],

@@ -8,6 +8,7 @@ import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.entity.Order;
 import io.makewebsite.repository.OrderRepository;
 import io.makewebsite.service.PaymentService;
+import io.makewebsite.service.TelegramNotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class PaymentWebhookController {
 
     private final OrderRepository orderRepository;
     private final PaymentService paymentService;
+    private final TelegramNotificationService telegramNotificationService;
 
     @PostMapping("/stripe/webhook")
     public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
@@ -131,6 +133,7 @@ public class PaymentWebhookController {
             order.setPaymentMethod("STRIPE");
             orderRepository.save(order);
             log.info("Stripe webhook: order {} marked PAID (ref={})", orderNumber, paymentRef);
+            telegramNotificationService.notifyPaymentValidated(order, "STRIPE", paymentRef);
         }, () -> log.warn("Stripe webhook: order {} not found in database", orderNumber));
     }
 
@@ -149,6 +152,7 @@ public class PaymentWebhookController {
                 order.setPaymentMethod("D17");
                 orderRepository.save(order);
                 log.info("D17 payment confirmed for order {}", orderRef);
+                telegramNotificationService.notifyPaymentValidated(order, "D17", paymentRef);
             });
         }
         return ResponseEntity.ok(ApiResponse.ok("OK", null));
@@ -167,6 +171,7 @@ public class PaymentWebhookController {
                 order.setPaymentMethod("Konnect");
                 orderRepository.save(order);
                 log.info("Konnect payment confirmed for order {}", orderRef);
+                telegramNotificationService.notifyPaymentValidated(order, "Konnect", null);
             });
         }
         return ResponseEntity.ok(ApiResponse.ok("OK", null));

@@ -169,6 +169,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           product: product,
                             onTap: () => context.push('/products/edit/${product.id}'),
                           onToggleActive: () => pp.toggleActive(product.id),
+                          onDelete: () => _confirmDelete(product.id, product.name),
                         );
                       },
                     );
@@ -213,6 +214,32 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(String id, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le produit'),
+        content: Text('Voulez-vous vraiment supprimer « $name » ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final pp = context.read<ProductsProvider>();
+    final ok = await pp.deleteProduct(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok ? 'Produit supprimé' : 'Erreur: ${pp.error ?? "inconnue"}'),
+      backgroundColor: ok ? AppColors.success : AppColors.danger,
+    ));
   }
 
   void _search() {
