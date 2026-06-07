@@ -220,8 +220,8 @@ img{max-width:100%;display:block}
 
 <!-- Categories chips -->
 <div class="category-chips" id="categoryChips">
-<button class="chip active" data-cat="" onclick="filterByCategory(this,'')" th:text="${store.language != null and store.language.seeAll != null} ? ${store.language.seeAll} : 'Tout'">Tout</button>
-<button th:each="cat : ${store.categories}" class="chip" th:data-cat="${cat.id}" th:text="${cat.name}" th:onclick="'filterByCategory(this,\''+${cat.id}+'\')'">Category</button>
+<button class="chip active" data-cat="" th:text="${store.language != null and store.language.seeAll != null} ? ${store.language.seeAll} : 'Tout'">Tout</button>
+<button th:each="cat : ${store.categories}" class="chip" th:data-cat="${cat.id}" th:text="${cat.name}">Category</button>
 </div>
 
 <!-- Products grid -->
@@ -663,8 +663,8 @@ function updateCartUI(){const count=cart.reduce(function(s,i){return s+(i&&i.id!
 
 function submitOrder(e){e.preventDefault();const f=e.target;if(!cart.length){alert('Votre panier est vide');return false}const fn=f['full-name']?f['full-name'].value.trim():'';const addr=f['billing-address']?f['billing-address'].value.trim():'';const ph=f['phone_number']?f['phone_number'].value.trim():'';const ct=f['city']?f['city'].value:'';const pm=f['payment-method']?f['payment-method'].value:'';if(!fn){alert('Veuillez entrer votre nom complet');return false}if(!addr){alert('Veuillez entrer votre adresse de livraison');return false}if(!ph){alert('Veuillez entrer votre numéro de téléphone');return false}if(!ct){alert('Veuillez sélectionner votre ville');return false}if(!pm){alert('Veuillez sélectionner un moyen de paiement');return false}const order={boutiqueId:BOUTIQUE_ID,fullName:fn,email:(f['email']?f['email'].value:''),phone:ph,billingAddress:addr,city:ct,country:(f['country']?f['country'].value:''),paymentMethod:pm,items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price,color:i.color||'',size:i.size||''}))};fetch('/api/public/store/'+STORE_SLUG+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)}).then(r=>r.json()).then(d=>{if(d.success){document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;document.getElementById('customUserCity').textContent=d.city||order.city;document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}else{alert('Erreur: '+(d.message||'Commande non acceptée'))}}).catch(function(e){alert('Erreur réseau. Vérifiez votre connexion.')});return false}
 
-// --- Categories filter ---
-function filterByCategory(btn,catId){document.querySelectorAll('#categoryChips .chip').forEach(function(c){c.classList.remove('active')});if(btn)btn.classList.add('active');document.querySelectorAll('.product-card').forEach(function(c){var pc=c.dataset.productCategory||'';c.style.display=(!catId||pc===catId)?'':''})}
+// --- Categories filter (delegated) ---
+document.addEventListener('click',function(e){var chip=e.target.closest('#categoryChips .chip');if(!chip)return;var catId=chip.dataset.cat||'';document.querySelectorAll('#categoryChips .chip').forEach(function(c){c.classList.remove('active')});chip.classList.add('active');document.querySelectorAll('.product-card').forEach(function(c){var pc=c.dataset.productCategory||'';c.style.display=(!catId||pc===catId)?'':'none'})});
 
 // --- Search filter ---
 function filterProducts(){var q=document.getElementById('search-input').value.toLowerCase();var activeCat=document.querySelector('#categoryChips .chip.active');var catId=activeCat?activeCat.dataset.cat||'':'';document.querySelectorAll('.product-card').forEach(function(c){var n=c.querySelector('.name');var matchName=n?n.textContent.toLowerCase().includes(q):true;var matchCat=(!catId||(c.dataset.productCategory||'')===catId);c.style.display=(matchName&&matchCat)?'':'none'})}
