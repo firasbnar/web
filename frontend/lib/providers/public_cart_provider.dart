@@ -10,6 +10,8 @@ class PublicCartItem {
   final String? image;
   final int stock;
   int quantity;
+  final String? selectedColor;
+  final String? selectedSize;
 
   PublicCartItem({
     required this.productId,
@@ -19,7 +21,11 @@ class PublicCartItem {
     this.image,
     this.stock = 0,
     this.quantity = 1,
+    this.selectedColor,
+    this.selectedSize,
   });
+
+  String get variantKey => '${productId}_${selectedColor ?? ''}_${selectedSize ?? ''}';
 
   double get effectivePrice => promotionalPrice != null && promotionalPrice! > 0 ? promotionalPrice! : price;
   double get subtotal => effectivePrice * quantity;
@@ -32,6 +38,8 @@ class PublicCartItem {
     'image': image,
     'stock': stock,
     'quantity': quantity,
+    'selectedColor': selectedColor,
+    'selectedSize': selectedSize,
   };
 
   factory PublicCartItem.fromJson(Map<String, dynamic> json) => PublicCartItem(
@@ -42,6 +50,8 @@ class PublicCartItem {
     image: json['image'],
     stock: json['stock'] ?? 0,
     quantity: json['quantity'] ?? 1,
+    selectedColor: json['selectedColor'] as String?,
+    selectedSize: json['selectedSize'] as String?,
   );
 }
 
@@ -64,7 +74,7 @@ class PublicCartProvider extends ChangeNotifier {
 
   Future<void> addItem(String slug, PublicCartItem item) async {
     final list = _getOrCreate(slug);
-    final existing = list.where((i) => i.productId == item.productId).firstOrNull;
+    final existing = list.where((i) => i.variantKey == item.variantKey).firstOrNull;
     if (existing != null) {
       existing.quantity += item.quantity;
     } else {
@@ -74,9 +84,9 @@ class PublicCartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateQuantity(String slug, String productId, int quantity) async {
+  Future<void> updateQuantity(String slug, String variantKey, int quantity) async {
     final list = _getOrCreate(slug);
-    final item = list.where((i) => i.productId == productId).firstOrNull;
+    final item = list.where((i) => i.variantKey == variantKey).firstOrNull;
     if (item != null) {
       if (quantity <= 0) {
         list.remove(item);
@@ -88,9 +98,9 @@ class PublicCartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> removeItem(String slug, String productId) async {
+  Future<void> removeItem(String slug, String variantKey) async {
     final list = _getOrCreate(slug);
-    list.removeWhere((i) => i.productId == productId);
+    list.removeWhere((i) => i.variantKey == variantKey);
     await _persist(slug);
     notifyListeners();
   }

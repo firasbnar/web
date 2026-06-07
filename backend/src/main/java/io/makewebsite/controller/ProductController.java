@@ -45,11 +45,7 @@ public class ProductController {
 
     @PostMapping("/bulk-import")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> bulkImport(@Valid @RequestBody BulkImportRequest request) {
-        List<ProductResponse> created = new java.util.ArrayList<>();
-        for (CreateProductRequest productRequest : request.getProducts()) {
-            productRequest.setBoutiqueId(request.getBoutiqueId());
-            created.add(productService.createProduct(productRequest));
-        }
+        List<ProductResponse> created = productService.bulkImportProducts(request.getBoutiqueId(), request.getProducts());
         return ResponseEntity.ok(ApiResponse.ok("Produits importés", created));
     }
 

@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -83,7 +84,53 @@ public class ProductService {
                 .seoDescription(request.getSeoDescription())
                 .build();
         product = productRepository.save(product);
+        try {
+            storeGeneratorService.regenerate(product.getBoutique().getId());
+        } catch (Exception e) {
+            log.warn("Failed to regenerate storefront after product creation: {}", e.getMessage());
+        }
         return mapToResponse(product);
+    }
+
+    @Transactional
+    public List<ProductResponse> bulkImportProducts(UUID boutiqueId, List<CreateProductRequest> requests) {
+        Boutique boutique = tenantAccessService.requireBoutiqueAccess(boutiqueId);
+        storeStatusGuard.requireActive(boutique);
+        List<ProductResponse> results = new java.util.ArrayList<>();
+        for (CreateProductRequest request : requests) {
+            request.setBoutiqueId(boutiqueId);
+            Category category = null;
+            if (request.getCategoryId() != null) {
+                category = categoryRepository.findById(request.getCategoryId()).orElse(null);
+            }
+            Product product = Product.builder()
+                    .boutique(boutique)
+                    .category(category)
+                    .name(request.getName())
+                    .description(request.getDescription())
+                    .price(request.getPrice())
+                    .comparePrice(request.getComparePrice())
+                    .stock(request.getStock() != null ? request.getStock() : 0)
+                    .sku(request.getSku())
+                    .purchasePrice(request.getPurchasePrice())
+                    .colors(request.getColors())
+                    .sizes(request.getSizes())
+                    .descriptionHtml(request.getDescriptionHtml())
+                    .images(request.getImages() != null ? request.getImages() : "[]")
+                    .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                    .isFeatured(request.getIsFeatured() != null ? request.getIsFeatured() : false)
+                    .seoTitle(request.getSeoTitle())
+                    .seoDescription(request.getSeoDescription())
+                    .build();
+            product = productRepository.save(product);
+            results.add(mapToResponse(product));
+        }
+        try {
+            storeGeneratorService.regenerate(boutiqueId);
+        } catch (Exception e) {
+            log.warn("Failed to regenerate storefront after bulk import: {}", e.getMessage());
+        }
+        return results;
     }
 
     @Transactional
@@ -108,6 +155,11 @@ public class ProductService {
         if (request.getSeoTitle() != null) product.setSeoTitle(request.getSeoTitle());
         if (request.getSeoDescription() != null) product.setSeoDescription(request.getSeoDescription());
         product = productRepository.save(product);
+        try {
+            storeGeneratorService.regenerate(product.getBoutique().getId());
+        } catch (Exception e) {
+            log.warn("Failed to regenerate storefront after product update: {}", e.getMessage());
+        }
         return mapToResponse(product);
     }
 
@@ -173,6 +225,12 @@ public class ProductService {
             productRepository.save(product);
         }
 
+        try {
+            storeGeneratorService.regenerate(product.getBoutique().getId());
+        } catch (Exception e) {
+            log.warn("Failed to regenerate storefront after stock update: {}", e.getMessage());
+        }
+
         return mapToResponse(product);
     }
 
@@ -185,6 +243,15 @@ public class ProductService {
         boolean previous = product.getIsActive() != null && product.getIsActive();
         product.setIsActive(!previous);
         product = productRepository.save(product);
+
+        if (product.getBoutique() != null) {
+            try {
+                storeGeneratorService.regenerate(product.getBoutique().getId());
+            } catch (Exception e) {
+                log.warn("Failed to regenerate storefront after toggle active: {}", e.getMessage());
+            }
+        }
+
         log.info("Product toggleActive: id={}, name={}, boutiqueId={}, previous={}, new={}",
                 id, product.getName(), product.getBoutique() != null ? product.getBoutique().getId() : null,
                 previous, product.getIsActive());
@@ -197,6 +264,13 @@ public class ProductService {
         boolean previous = product.getIsFeatured() != null && product.getIsFeatured();
         product.setIsFeatured(!previous);
         product = productRepository.save(product);
+        if (product.getBoutique() != null) {
+            try {
+                storeGeneratorService.regenerate(product.getBoutique().getId());
+            } catch (Exception e) {
+                log.warn("Failed to regenerate storefront after toggle featured: {}", e.getMessage());
+            }
+        }
         log.info("Product toggleFeatured: id={}, name={}, boutiqueId={}, previous={}, new={}",
                 id, product.getName(), product.getBoutique() != null ? product.getBoutique().getId() : null,
                 previous, product.getIsFeatured());

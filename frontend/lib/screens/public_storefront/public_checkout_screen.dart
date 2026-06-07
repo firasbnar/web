@@ -91,6 +91,8 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
           'productId': i.productId,
           'quantity': i.quantity,
           'unitPrice': i.effectivePrice,
+          'color': i.selectedColor ?? '',
+          'size': i.selectedSize ?? '',
         }).toList(),
       };
       print('[Checkout] Placing order: deliveryCompany=$_deliveryProvider paymentMethod=$_paymentMethod');
@@ -192,7 +194,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                           child: Row(
                             children: [
                               Expanded(child: Text('${i.name} x${i.quantity}', style: AppTypography.body2)),
-                              Text('${i.subtotal.toStringAsFixed(3)} TND', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                              Text('DT ${i.subtotal.toStringAsFixed(2)}', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
                             ],
                           ),
                         )),
@@ -201,7 +203,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Sous-total', style: AppTypography.body2),
-                            Text('${subtotal.toStringAsFixed(3)} TND', style: AppTypography.body2),
+                            Text('DT ${subtotal.toStringAsFixed(2)}', style: AppTypography.body2),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -209,7 +211,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Livraison', style: AppTypography.body2),
-                            Text('${shipping.toStringAsFixed(3)} TND', style: AppTypography.body2),
+                            Text('DT ${shipping.toStringAsFixed(2)}', style: AppTypography.body2),
                           ],
                         ),
                         const Divider(),
@@ -217,7 +219,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Total', style: AppTypography.heading3),
-                            Text('${total.toStringAsFixed(3)} TND', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
+                            Text('DT ${total.toStringAsFixed(2)}', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
                           ],
                         ),
                       ],

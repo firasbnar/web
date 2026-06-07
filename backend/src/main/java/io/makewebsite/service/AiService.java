@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.makewebsite.dto.response.AiChatResponse;
 import io.makewebsite.dto.response.AiResponse;
 import io.makewebsite.entity.AiConversation;
 import io.makewebsite.entity.Boutique;
@@ -18,6 +19,7 @@ import io.makewebsite.repository.ProductRepository;
 import io.makewebsite.repository.StoreViewRepository;
 import io.makewebsite.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
@@ -34,7 +36,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AiService {
     private final AiConversationRepository aiConversationRepository;
     private final BoutiqueRepository boutiqueRepository;
@@ -86,7 +88,7 @@ public class AiService {
         List<AiConversation> history = limitedHistory(userId);
         Intent intent = detectOwnerIntent(message);
         AiResponse base = buildOwnerAnswer(boutique, intent, message);
-        String reply = enrichWithLlm("owner", boutique, message, base, history);
+        String reply = enrichWithLlm(boutique, message, base, history);
 
         if (reply != null && !reply.isBlank()) {
             base.setReply(reply);
@@ -97,33 +99,55 @@ public class AiService {
     }
 
     @Transactional(readOnly = true)
-    public AiResponse publicStoreChat(String slug, String message, String sessionId, List<Map<String, String>> messages) {
-        Boutique boutique = boutiqueRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Boutique introuvable"));
-        if (!Boolean.TRUE.equals(boutique.getIsPublished()) || !"ACTIVE".equalsIgnoreCase(nullToEmpty(boutique.getStoreStatus()))) {
-            return AiResponse.builder()
-                    .type("text")
-                    .reply("Cette boutique n'est pas disponible pour le moment.")
-                    .history(List.of())
-                    .build();
+    public AiChatResponse merchantChat(UUID userId, UUID requestedBoutiqueId, String message) {
+        UUID boutiqueId = resolveOwnerBoutiqueId(userId, requestedBoutiqueId);
+        Boutique boutique = tenantAccessService.requireBoutiqueAccess(boutiqueId);
+        String currency = boutique.getCurrency() != null ? boutique.getCurrency() : "TND";
+
+        StringBuilder ctx = new StringBuilder();
+        ctx.append("Store name: ").append(boutique.getName()).append("\n");
+        if (boutique.getDescription() != null)
+            ctx.append("Store description: ").append(boutique.getDescription()).append("\n");
+        ctx.append("Currency: ").append(currency).append("\n");
+
+        ctx.append("Active products: ").append(productRepository.countByBoutiqueIdAndIsActiveTrue(boutiqueId)).append("\n");
+
+        List<Map<String, Object>> lowStock = getLowStockProducts(boutiqueId);
+        if (!lowStock.isEmpty()) {
+            ctx.append("Low stock products: ");
+            for (Map<String, Object> p : lowStock)
+                ctx.append(p.get("name")).append(" (stock: ").append(p.get("stock")).append("), ");
+            ctx.append("\n");
         }
 
-        String userMessage = message;
-        if ((userMessage == null || userMessage.isBlank()) && messages != null && !messages.isEmpty()) {
-            userMessage = messages.get(messages.size() - 1).getOrDefault("content", "");
-        }
-        if (userMessage == null || userMessage.isBlank()) {
-            userMessage = "Bonjour";
+        Map<String, Object> revenue = getRevenueStats(boutiqueId);
+        ctx.append("Orders today: ").append(revenue.get("ordersToday")).append("\n");
+        ctx.append("Revenue today: ").append(revenue.get("revenueToday")).append(" ").append(currency).append("\n");
+        ctx.append("Revenue this month: ").append(revenue.get("revenueThisMonth")).append(" ").append(currency).append("\n");
+        ctx.append("Total revenue: ").append(revenue.get("totalRevenue")).append(" ").append(currency).append("\n");
+        ctx.append("Total orders: ").append(revenue.get("totalOrders")).append("\n");
+
+        Map<String, Object> traffic = getTrafficStats(boutiqueId);
+        ctx.append("Visits today: ").append(traffic.get("visitsToday")).append("\n");
+        ctx.append("Conversion rate today: ").append(traffic.get("conversionRateToday")).append("%\n");
+
+        List<Map<String, Object>> bestSellers = getBestSellingProducts(boutiqueId);
+        if (!bestSellers.isEmpty()) {
+            ctx.append("Best-selling products: ");
+            for (Map<String, Object> p : bestSellers.stream().limit(5).toList())
+                ctx.append(p.get("name")).append(" (").append(p.get("quantitySold")).append(" sold), ");
+            ctx.append("\n");
         }
 
-        Intent intent = detectCustomerIntent(userMessage);
-        AiResponse base = buildCustomerAnswer(boutique, intent, userMessage);
-        String reply = enrichWithLlm("customer", boutique, userMessage, base, List.of());
-        if (reply != null && !reply.isBlank()) {
-            base.setReply(reply);
-        }
-        base.setHistory(List.of());
-        return base;
+        String systemPrompt = "You are Merchant Copilot for MakeWebsite.io.\n"
+                + "You help the merchant understand analytics, products, orders, revenue, traffic, and business performance.\n"
+                + "Use only the provided store data.\n"
+                + "Do not invent numbers.\n"
+                + "Give short, clear, useful business advice.";
+        String answer = callOllamaSimple(systemPrompt, ctx + "\nMerchant question: " + (message != null ? message : "Bonjour"));
+        return AiChatResponse.builder()
+                .answer(answer != null ? answer : "D\u00e9sol\u00e9, je n'ai pas pu traiter votre demande pour le moment.")
+                .build();
     }
 
     @Cacheable(value = "aiBestSellingProducts", key = "#boutiqueId")
@@ -313,45 +337,48 @@ public class AiService {
                 .build();
     }
 
-    private AiResponse buildCustomerAnswer(Boutique boutique, Intent intent, String message) {
-        List<Map<String, Object>> products = switch (intent) {
-            case CHEAPEST -> cheapestProducts(boutique.getId());
-            case BEST_SELLERS, TRENDING -> customerBestSellers(boutique.getId());
-            case NEW_ARRIVALS -> newArrivals(boutique.getId());
-            default -> searchProducts(boutique.getId(), message);
-        };
-
-        String reply;
-        if (products.isEmpty()) {
-            reply = "Je n'ai pas trouve de produit correspondant dans cette boutique. Essayez avec une categorie, une couleur, une taille ou un budget.";
-        } else if (intent == Intent.CHEAPEST) {
-            reply = "Voici les produits les moins chers disponibles chez " + boutique.getName() + ".";
-        } else if (intent == Intent.BEST_SELLERS || intent == Intent.TRENDING) {
-            reply = "Voici les produits populaires chez " + boutique.getName() + ".";
-        } else {
-            reply = "J'ai trouve " + products.size() + " produit(s) qui correspondent a votre demande.";
-        }
-
-        return AiResponse.builder()
-                .type("products")
-                .reply(reply)
-                .products(products)
-                .recommendations(products)
-                .analytics(Map.of("store", boutique.getName(), "slug", boutique.getSlug()))
-                .history(List.of())
-                .build();
-    }
-
-    private String enrichWithLlm(String mode, Boutique boutique, String userMessage, AiResponse base, List<AiConversation> history) {
+    private String enrichWithLlm(Boutique boutique, String userMessage, AiResponse base, List<AiConversation> history) {
         String modelToUse = ollamaModel;
-        String responseText = callOllama(modelToUse, mode, boutique, userMessage, base, history);
+        String responseText = callOllama(modelToUse, boutique, userMessage, base, history);
         if (responseText == null && !ollamaFallbackModel.equals(modelToUse)) {
-            responseText = callOllama(ollamaFallbackModel, mode, boutique, userMessage, base, history);
+            responseText = callOllama(ollamaFallbackModel, boutique, userMessage, base, history);
         }
         return responseText;
     }
 
-    private String callOllama(String model, String mode, Boutique boutique, String userMessage, AiResponse base, List<AiConversation> history) {
+    private String callOllamaSimple(String systemPrompt, String userContent) {
+        try {
+            ObjectNode requestBody = objectMapper.createObjectNode();
+            requestBody.put("model", ollamaModel);
+            requestBody.put("stream", false);
+            ArrayNode messages = requestBody.putArray("messages");
+
+            ObjectNode systemNode = objectMapper.createObjectNode();
+            systemNode.put("role", "system");
+            systemNode.put("content", systemPrompt);
+            messages.add(systemNode);
+
+            ObjectNode userNode = objectMapper.createObjectNode();
+            userNode.put("role", "user");
+            userNode.put("content", userContent);
+            messages.add(userNode);
+
+            HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(requestBody));
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    ollamaBaseUrl + "/api/chat", request, String.class);
+            JsonNode responseJson = objectMapper.readTree(response.getBody());
+            JsonNode messageNode = responseJson.get("message");
+            if (messageNode != null && messageNode.has("content")) {
+                return messageNode.get("content").asText();
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Ollama chat failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String callOllama(String model, Boutique boutique, String userMessage, AiResponse base, List<AiConversation> history) {
         try {
             ObjectNode requestBody = objectMapper.createObjectNode();
             requestBody.put("model", model);
@@ -360,7 +387,7 @@ public class AiService {
             ArrayNode messages = requestBody.putArray("messages");
             ObjectNode systemMsg = objectMapper.createObjectNode();
             systemMsg.put("role", "system");
-            systemMsg.put("content", systemPrompt(mode));
+            systemMsg.put("content", systemPrompt());
             messages.add(systemMsg);
 
             for (AiConversation conv : history.stream().skip(Math.max(0, history.size() - MAX_HISTORY)).toList()) {
@@ -464,64 +491,6 @@ public class AiService {
         return Intent.GENERAL;
     }
 
-    private Intent detectCustomerIntent(String message) {
-        String q = normalize(message);
-        if (containsAny(q, "cheap", "cheapest", "moins cher", "pas cher", "prix bas")) return Intent.CHEAPEST;
-        if (containsAny(q, "trending", "populaire", "tendance")) return Intent.TRENDING;
-        if (containsAny(q, "best seller", "meilleur", "plus vendu")) return Intent.BEST_SELLERS;
-        if (containsAny(q, "new", "nouveau", "nouveaute")) return Intent.NEW_ARRIVALS;
-        return Intent.SEARCH;
-    }
-
-    private List<Map<String, Object>> searchProducts(UUID boutiqueId, String query) {
-        String q = normalize(query);
-        Double maxPrice = extractMaxPrice(q);
-        Set<String> terms = tokenize(q);
-        return productRepository.findPublicProductsWithCategory(boutiqueId).stream()
-                .map(p -> Map.entry(p, scoreProduct(p, terms, maxPrice, q)))
-                .filter(e -> e.getValue() > 0)
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                .limit(8)
-                .map(e -> productCard(e.getKey()))
-                .toList();
-    }
-
-    private int scoreProduct(Product product, Set<String> terms, Double maxPrice, String rawQuery) {
-        String haystack = normalize(product.getName() + " " + nullToEmpty(product.getDescription()) + " "
-                + nullToEmpty(product.getColors()) + " " + nullToEmpty(product.getSizes()) + " "
-                + (product.getCategory() != null ? product.getCategory().getName() : ""));
-        int score = 0;
-        for (String term : expandTerms(terms)) {
-            if (haystack.contains(term)) score += 4;
-            else if (fuzzyContains(haystack, term)) score += 2;
-        }
-        if (maxPrice != null && product.getPrice() != null && product.getPrice().doubleValue() <= maxPrice) score += 5;
-        if (containsAny(rawQuery, "gaming", "gamer") && containsAny(haystack, "gaming", "gamer", "pc", "laptop")) score += 6;
-        if (containsAny(rawQuery, "promotion", "promo") && product.getComparePrice() != null) score += 3;
-        return score;
-    }
-
-    private List<Map<String, Object>> cheapestProducts(UUID boutiqueId) {
-        return productRepository.findPublicProductsWithCategory(boutiqueId).stream()
-                .sorted(Comparator.comparing(Product::getPrice, Comparator.nullsLast(Comparator.naturalOrder())))
-                .limit(8)
-                .map(this::productCard)
-                .toList();
-    }
-
-    private List<Map<String, Object>> newArrivals(UUID boutiqueId) {
-        return productRepository.findByBoutiqueIdAndIsActiveTrueOrderByCreatedAtDesc(boutiqueId).stream()
-                .limit(8)
-                .map(this::productCard)
-                .toList();
-    }
-
-    private List<Map<String, Object>> customerBestSellers(UUID boutiqueId) {
-        List<Map<String, Object>> best = getBestSellingProducts(boutiqueId);
-        if (!best.isEmpty()) return best;
-        return newArrivals(boutiqueId);
-    }
-
     private List<Map<String, Object>> productsToPromote(UUID boutiqueId) {
         Set<UUID> lowStockIds = getLowStockProducts(boutiqueId).stream()
                 .map(p -> UUID.fromString(p.get("id").toString()))
@@ -552,21 +521,18 @@ public class AiService {
         return mapOf(
                 "id", p.getId(),
                 "name", p.getName(),
-                "description", truncate(p.getDescription(), 140),
+                "description", p.getDescription(),
                 "price", money(p.getPrice()),
                 "comparePrice", money(p.getComparePrice()),
                 "stock", p.getStock(),
                 "category", p.getCategory() != null ? p.getCategory().getName() : null,
                 "colors", p.getColors(),
                 "sizes", p.getSizes(),
-                "image", firstImage(p.getImages())
+                "image", p.getImages()
         );
     }
 
-    private String systemPrompt(String mode) {
-        if ("customer".equals(mode)) {
-            return "Tu es un assistant shopping pour une boutique en ligne. Reponds en francais, aide a choisir, comparer et trouver des produits. Utilise uniquement le contexte DB fourni. N'invente jamais de produit, prix, stock ou promotion.";
-        }
+    private String systemPrompt() {
         return "Tu es un assistant business e-commerce pour proprietaires de boutiques. Reponds en francais avec des chiffres clairs. Utilise uniquement le contexte DB fourni. N'expose pas de donnees privees inutiles et n'invente jamais.";
     }
 
@@ -591,62 +557,6 @@ public class AiService {
         return false;
     }
 
-    private Set<String> tokenize(String value) {
-        Set<String> stop = Set.of("je", "veux", "un", "une", "des", "de", "du", "le", "la", "les", "show", "me", "i", "want", "products", "produits");
-        return Set.of(value.split(" ")).stream()
-                .filter(t -> t.length() > 1 && !stop.contains(t))
-                .collect(Collectors.toSet());
-    }
-
-    private Set<String> expandTerms(Set<String> terms) {
-        Set<String> expanded = new HashSet<>(terms);
-        if (terms.contains("shoes") || terms.contains("sneakers") || terms.contains("chaussure")) {
-            expanded.addAll(Set.of("chaussures", "basket", "sneaker"));
-        }
-        if (terms.contains("hoodie") || terms.contains("sweat")) {
-            expanded.addAll(Set.of("capuche", "pull"));
-        }
-        if (terms.contains("phone") || terms.contains("telephone")) {
-            expanded.addAll(Set.of("smartphone", "mobile"));
-        }
-        if (terms.contains("gaming") || terms.contains("gamer")) {
-            expanded.addAll(Set.of("pc gamer", "laptop", "console"));
-        }
-        return expanded;
-    }
-
-    private boolean fuzzyContains(String haystack, String term) {
-        if (term.length() < 4) return false;
-        for (String word : haystack.split(" ")) {
-            if (levenshtein(word, term) <= 1) return true;
-        }
-        return false;
-    }
-
-    private int levenshtein(String a, String b) {
-        int[] costs = new int[b.length() + 1];
-        for (int j = 0; j < costs.length; j++) costs[j] = j;
-        for (int i = 1; i <= a.length(); i++) {
-            costs[0] = i;
-            int nw = i - 1;
-            for (int j = 1; j <= b.length(); j++) {
-                int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]), a.charAt(i - 1) == b.charAt(j - 1) ? nw : nw + 1);
-                nw = costs[j];
-                costs[j] = cj;
-            }
-        }
-        return costs[b.length()];
-    }
-
-    private Double extractMaxPrice(String value) {
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?:under|moins de|<)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:dt|tnd)?").matcher(value);
-        Double found = null;
-        while (matcher.find()) {
-            found = Double.parseDouble(matcher.group(1));
-        }
-        return found;
-    }
-
     private Object money(Object value) {
         if (value == null) return null;
         if (value instanceof BigDecimal bd) return bd.doubleValue();
@@ -662,28 +572,8 @@ public class AiService {
         return value == null ? "" : value;
     }
 
-    private String truncate(String value, int max) {
-        if (value == null || value.length() <= max) return value;
-        return value.substring(0, max) + "...";
-    }
-
-    private String firstImage(String images) {
-        if (images == null || images.isBlank() || "[]".equals(images)) return null;
-        String clean = images.trim();
-        if (clean.startsWith("[") && clean.endsWith("]")) {
-            clean = clean.substring(1, clean.length() - 1).trim();
-        }
-        if (clean.startsWith("\"")) {
-            int end = clean.indexOf("\"", 1);
-            return end > 1 ? clean.substring(1, end) : null;
-        }
-        int comma = clean.indexOf(',');
-        return comma > 0 ? clean.substring(0, comma).trim() : clean;
-    }
-
     private enum Intent {
         GENERAL,
-        SEARCH,
         BEST_SELLERS,
         LOW_STOCK,
         REVENUE,
@@ -694,9 +584,6 @@ public class AiService {
         ABANDONED,
         CATEGORY,
         DELIVERY,
-        PROMOTE,
-        CHEAPEST,
-        TRENDING,
-        NEW_ARRIVALS
+        PROMOTE
     }
 }

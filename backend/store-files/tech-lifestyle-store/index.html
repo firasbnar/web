@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tech &amp; Lifestyle Store | Boutique en ligne</title>
+<meta name="description" content="Votre boutique de référence pour les produits tech et lifestyle en Tunisie">
+<meta property="og:title" content="Tech &amp; Lifestyle Store | Boutique en ligne">
+<meta property="og:description" content="Votre boutique de référence pour les produits tech et lifestyle en Tunisie">
+<meta property="og:image" content="/images/default-product.png">
+<meta property="og:url" content="/store/tech-lifestyle-store">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tech &amp; Lifestyle Store | Boutique en ligne">
+<meta name="twitter:description" content="Votre boutique de référence pour les produits tech et lifestyle en Tunisie">
+<meta name="twitter:image" content="/images/default-product.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{--bg:#ffffff;--white:#ffffff;--text:#751515;--text-soft:#444444;--muted:#737373;--accent:#b551c2;--header-bg:#ededed;--footer-bg:#dbdbdb;--card-bg:#fafafa;--top-bar-bg:#3b0086;--border:#e5e5e5;--radius:12px;--radius-sm:8px;--radius-full:9999px;--shadow:0 4px 6px -1px rgba(0,0,0,0.06);--shadow-lg:0 10px 40px -10px rgba(0,0,0,0.1);--font:'DM Sans',-apple-system,sans-serif;--transition:0.25s cubic-bezier(0.4,0,0.2,1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.6}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+.announcement{background:var(--top-bar-bg);color:#fff;text-align:center;padding:8px 16px;font-size:0.8125rem;font-weight:500;letter-spacing:0.3px}
+.header{background:var(--header-bg);position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.header-inner{max-width:var(--max-width,1280px);margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:64px}
+.logo a{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.125rem}
+.logo img{height:36px;width:auto}
+.nav{display:flex;gap:24px}
+.nav a{font-size:0.9375rem;font-weight:500;padding:4px 0;border-bottom:2px solid transparent;transition:var(--transition)}
+.nav a:hover,.nav a.active{border-bottom-color:var(--accent);color:var(--accent)}
+.header-actions{display:flex;gap:12px;align-items:center}
+.header-actions button{background:none;border:none;cursor:pointer;position:relative;padding:8px;font-size:1.2rem;color:var(--text);border-radius:var(--radius-sm);transition:var(--transition)}
+.header-actions button:hover{background:rgba(0,0,0,0.05)}
+.cart-count,.wishlist-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:0.625rem;min-width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 4px}
+.slider-section{overflow:hidden}
+.slider-container{position:relative;max-width:1200px;margin:0 auto}
+.slider-track{display:flex;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);will-change:transform}
+.slide{min-width:100%;position:relative}
+.slide img{width:100%;height:420px;object-fit:cover}
+.slide-caption{position:absolute;bottom:40px;left:40px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.slide-caption h2{font-size:2rem;margin-bottom:8px}
+.slide-caption p{font-size:1rem;opacity:0.9}
+.slider-nav{position:absolute;top:50%;width:100%;display:flex;justify-content:space-between;transform:translateY(-50%);padding:0 16px;pointer-events:none}
+.slider-nav button{pointer-events:auto;background:rgba(255,255,255,0.9);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1rem;box-shadow:var(--shadow);transition:var(--transition)}
+.slider-nav button:hover{background:#fff;transform:scale(1.05)}
+.slider-dots{display:flex;justify-content:center;gap:8px;padding:12px 0}
+.slider-dots span{width:8px;height:8px;border-radius:50%;background:#ccc;cursor:pointer;transition:var(--transition)}
+.slider-dots span.active{background:var(--accent);width:24px;border-radius:4px}
+.trust-strip{background:var(--bg-alt,#f5f5f5);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.trust-inner{max-width:var(--max-width,1280px);margin:0 auto;display:flex;justify-content:center;gap:48px;padding:16px 20px}
+.trust-item{display:flex;align-items:center;gap:8px;font-size:0.875rem;color:var(--text-soft);font-weight:500}
+.trust-item i{color:var(--accent);font-size:1.1rem}
+.main{max-width:var(--max-width,1280px);margin:0 auto;padding:40px 20px}
+.section-head{text-align:center;margin-bottom:32px}
+.section-title{font-size:1.75rem;font-weight:700}
+.section-subtitle{color:var(--muted);margin-top:6px;font-size:0.9375rem}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.product-card{background:var(--card-bg);border-radius:var(--radius);overflow:hidden;transition:var(--transition);border:1px solid var(--border)}
+.product-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.image-wrap{position:relative;overflow:hidden;aspect-ratio:1/1;background:#f0f0f0}
+.image-wrap img{width:100%;height:100%;object-fit:cover;transition:var(--transition)}
+.product-card:hover .image-wrap img{transform:scale(1.05)}
+.product-badges{position:absolute;top:8px;left:8px;z-index:2}
+.badge{padding:4px 10px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;text-transform:uppercase}
+.badge-sale{background:#ef4444;color:#fff}
+.quick-actions{position:absolute;top:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:6px;opacity:0;transition:var(--transition)}
+.product-card:hover .quick-actions{opacity:1}
+.quick-btn{width:32px;height:32px;border-radius:50%;background:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.875rem;box-shadow:var(--shadow);transition:var(--transition);color:var(--text)}
+.quick-btn:hover{background:var(--accent);color:#fff}
+.info{padding:16px}
+.name{font-size:0.9375rem;font-weight:600;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.price-wrap{margin-bottom:12px}
+.price{font-size:1.125rem;font-weight:700;color:var(--accent)}
+.price old{font-size:0.8125rem;color:var(--muted);text-decoration:line-through;margin-right:6px;font-weight:400}
+.add-cart{display:inline-flex;align-items:center;gap:6px;color:#fff;padding:8px 16px;border-radius:var(--radius-full);font-size:0.8125rem;font-weight:600;cursor:pointer;transition:var(--transition);border:none}
+.add-cart:hover{filter:brightness(1.1)}
+.newsletter-section{background:var(--bg-alt,#f5f5f5);padding:60px 20px;text-align:center}
+.newsletter-inner{max-width:480px;margin:0 auto}
+.newsletter-inner h3{font-size:1.5rem;margin-bottom:8px}
+.newsletter-inner p{color:var(--muted);margin-bottom:20px;font-size:0.9375rem}
+.newsletter-form{display:flex;gap:8px}
+.newsletter-form input{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-full);font-family:var(--font);font-size:0.9375rem;outline:none}
+.newsletter-form input:focus{border-color:var(--accent)}
+.newsletter-form button{padding:12px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-full);font-weight:600;cursor:pointer;transition:var(--transition)}
+.newsletter-form button:hover{filter:brightness(1.1)}
+.footer{background:var(--footer-bg);padding:48px 20px 0}
+.footer-inner{max-width:var(--max-width,1280px);margin:0 auto}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;padding-bottom:32px}
+.footer-brand .logo{margin-bottom:12px}
+.footer-brand p{color:var(--text-soft);font-size:0.875rem;line-height:1.7}
+.footer-col h4{font-size:0.9375rem;font-weight:600;margin-bottom:16px}
+.footer-col ul{list-style:none;padding:0}
+.footer-col ul li{margin-bottom:10px}
+.footer-col ul a{font-size:0.875rem;color:var(--text-soft);transition:var(--transition);display:flex;align-items:center;gap:6px}
+.footer-col ul a:hover{color:var(--accent)}
+.footer-payments{display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0;border-top:1px solid var(--border);font-size:0.8125rem;color:var(--muted)}
+.footer-payments .icons{display:flex;gap:12px;font-size:1.5rem;color:var(--text-soft)}
+.footer-bottom{display:flex;justify-content:space-between;padding:16px 0;border-top:1px solid var(--border);font-size:0.8125rem;color:var(--muted)}
+.footer-bottom a{color:var(--accent)}
+.t2-cart-drawer{position:fixed;top:0;right:-420px;width:420px;max-width:100vw;height:100%;background:#fff;z-index:1000;box-shadow:-4px 0 40px rgba(0,0,0,0.1);transition:right 0.35s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
+.t2-cart-drawer.open{right:0}
+.t2-cart-drawer__header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border)}
+.t2-cart-drawer__title{font-size:1.25rem;font-weight:600}
+.t2-cart-drawer__close{background:none;border:none;cursor:pointer;padding:4px;color:var(--text);border-radius:6px;transition:var(--transition)}
+.t2-cart-drawer__close:hover{background:#f0f0f0}
+.t2-cart-drawer__body{flex:1;overflow-y:auto;padding:20px 24px}
+.t2-cart-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light,#f0f0f0)}
+.t2-cart-item img{width:64px;height:64px;object-fit:cover;border-radius:var(--radius-sm)}
+.t2-cart-item__info{flex:1}
+.t2-cart-item__name{font-weight:500;font-size:0.875rem}
+.t2-cart-item__price{color:var(--accent);font-weight:600;font-size:0.875rem;margin-top:4px}
+.t2-cart-item__qty{display:flex;align-items:center;gap:8px;margin-top:6px}
+.t2-cart-item__qty button{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:none;cursor:pointer;font-size:0.75rem;transition:var(--transition)}
+.t2-cart-item__qty button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.t2-cart-item__remove{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:0.875rem;transition:var(--transition)}
+.t2-cart-item__remove:hover{color:#ef4444}
+.t2-cart-drawer__totals{padding:16px 0;border-top:1px solid var(--border);margin-top:12px}
+.t2-cart-drawer__row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.875rem}
+.t2-cart-drawer__row--total{font-weight:700;font-size:1rem;padding-top:8px;border-top:1px solid var(--border);margin-top:8px}
+.t2-cart-drawer__form{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.t2-cart-drawer__input{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:0.875rem;outline:none;width:100%}
+.t2-cart-drawer__input:focus{border-color:var(--accent)}
+.t2-cart-drawer__submit{padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.9375rem;transition:var(--transition)}
+.t2-cart-drawer__submit:hover{filter:brightness(1.1)}
+.t2-cart-drawer__overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:999;opacity:0;pointer-events:none;transition:opacity 0.35s ease}
+.t2-cart-drawer__overlay.show{opacity:1;pointer-events:auto}
+.wishlist-sidebar{position:fixed;top:0;right:-420px;width:420px;max-width:100vw;height:100%;background:#fff;z-index:1000;box-shadow:-4px 0 40px rgba(0,0,0,0.1);transition:right 0.35s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}
+.wishlist-sidebar.open{right:0}
+.custom-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;display:none;align-items:center;justify-content:center}
+.custom-modal.open{display:flex}
+.custom-modal::before{content:'';position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4)}
+.custom-modal-content{background:#fff;border-radius:var(--radius);padding:32px;max-width:440px;width:90%;position:relative;box-shadow:var(--shadow-lg);text-align:center;color:var(--text)}
+.modal-header{margin-bottom:20px}
+.modal-header .success-icon{width:48px;height:48px;border-radius:50%;background:#ecfdf5;color:#16a34a;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.modal-header h2{font-size:1.25rem;font-weight:600}
+.order-summary{text-align:left;margin:16px 0}
+.order-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light,#f0f0f0);font-size:0.875rem}
+.order-label{color:var(--muted)}
+.order-value{font-weight:600;color:#222}
+.modal-footer{margin-top:20px}
+.close-modal-btn{padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.875rem}
+@media(max-width:768px){.nav{display:none}.footer-top{grid-template-columns:1fr}.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.slide img{height:240px}.trust-inner{gap:24px;flex-wrap:wrap;justify-content:center}.t2-cart-drawer{width:100vw;right:-100vw}}
+.product-detail-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1500;display:none;align-items:center;justify-content:center;padding:20px}.product-detail-overlay.open{display:flex}.product-detail-modal{background:#fff;border-radius:var(--radius);max-width:800px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:var(--shadow-lg)}.product-detail-close{position:absolute;top:12px;right:12px;background:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:1;color:#333}.product-detail-close:hover{background:#f0f0f0}.product-detail-inner{display:grid;grid-template-columns:1fr 1fr;gap:0}.product-detail-image-wrap{background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:300px}.product-detail-image-wrap img{width:100%;height:100%;object-fit:cover;max-height:500px}.product-detail-info{padding:32px}.product-detail-name{font-size:1.5rem;font-weight:700;margin-bottom:8px}.product-detail-price{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:12px}.product-detail-desc{color:var(--text-soft);font-size:0.9375rem;line-height:1.7;margin-bottom:16px}.product-detail-stock{font-size:0.875rem;margin-bottom:16px;padding:6px 12px;border-radius:var(--radius-sm);display:inline-block}.product-detail-stock.in-stock{background:#ecfdf5;color:#16a34a}.product-detail-stock.out-of-stock{background:#fef2f2;color:#ef4444}.product-detail-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}.product-detail-add-cart{flex:1;min-width:180px;padding:14px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:1rem;transition:var(--transition)}.product-detail-add-cart:hover{filter:brightness(1.1)}.product-detail-wishlist{width:48px;height:48px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:var(--transition)}.product-detail-wishlist:hover{border-color:var(--accent);color:var(--accent)}.product-detail-wishlist.active{color:#ef4444;border-color:#ef4444}@media(max-width:768px){.product-detail-inner{grid-template-columns:1fr}.product-detail-image-wrap{min-height:200px}}
+
+</style>
+</head>
+<body>
+<div class="announcement"></div>
+<header class="header"><div class="header-inner"><div class="logo"><a href="./"><img src="/images/default-product.png" alt="Tech &amp; Lifestyle Store"><span>Tech &amp; Lifestyle Store</span></a></div><nav class="nav"><a href="./" class="active">Voir tout</a><a href="?menu_item_id=e2493280-54db-43ad-9fba-94c944f2023d" class="">Smartphones</a>
+        <a href="?menu_item_id=9df5491d-00a1-43ea-847b-f17e5d768893" class="">Laptops &amp; Ordinateurs</a>
+        <a href="?menu_item_id=0499bd59-2be3-4219-be10-b7fe514f9e4f" class="">Tablettes</a>
+        <a href="?menu_item_id=3e6849b7-9fc7-4ea8-9545-55621c731ff7" class="">Casques &amp; Écouteurs</a>
+        <a href="?menu_item_id=22257c8a-ad4e-4ead-a324-acc1c2b59d39" class="">Montres Connectées</a>
+        <a href="?menu_item_id=929cf20e-07ff-44f9-bd38-67b77b8ff09c" class="">Appareils Photo</a>
+        <a href="?menu_item_id=2bcb373e-bc10-4b88-8650-cda37f58c3b7" class="">Gaming</a>
+        <a href="?menu_item_id=3a32bc85-3714-4c3e-8cca-36cec7ea5625" class="">Accessoires</a>
+        <a href="?menu_item_id=a403934d-87a9-41fa-a131-db5f0d830bdf" class="">Enceintes</a>
+        <a href="?menu_item_id=1e546b6f-a4b9-438a-94d5-98f285c33047" class="">Imprimantes</a></nav><div class="header-actions"><button class="wishlist-btn" id="wishlistNavBtn"><i class="far fa-heart"></i><span class="wishlist-count" id="wishlistBadge"></span></button><button class="cart-btn" onclick="toggleCartSidebar()"><i class="fas fa-shopping-bag"></i><span class="cart-count" id="cartCount">0</span></button></div></div></header>
+<div class="trust-strip"><div class="trust-inner"><div class="trust-item"><i class="fas fa-truck-fast"></i> Livraison 24-48h</div><div class="trust-item"><i class="fas fa-shield-halved"></i> Paiement sécurisé</div><div class="trust-item"><i class="fas fa-headset"></i> Service client 7j/7</div></div></div>
+<main class="main"><div class="section-head"><h2 class="section-title">Nos produits</h2><p class="section-subtitle">Tech &amp; Lifestyle Store – Qualité et livraison rapide.</p></div><div style="margin-bottom:24px;"><input type="text" id="search-input" placeholder="Rechercher des produits..." style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-full);font-family:var(--font);font-size:0.9375rem;"></div><div class="products-grid" id="productsGrid"><article class="product-card" data-product-id="c9214713-f434-4b92-9128-a9c0592e70fa" data-product-name="iPhone 15 Pro Max 256GB" data-product-price="4990.00" data-product-img="/images/default-product.png"><a href="?product_id=c9214713-f434-4b92-9128-a9c0592e70fa" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="iPhone 15 Pro Max 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">iPhone 15 Pro Max 256GB</h3><div class="price-wrap"><p class="price">د.ت4990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="6f3118c4-fe62-4163-b804-1bd39f70a84b" data-product-name="Samsung Galaxy S24 Ultra 512GB" data-product-price="4590.00" data-product-img="/images/default-product.png"><a href="?product_id=6f3118c4-fe62-4163-b804-1bd39f70a84b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Galaxy S24 Ultra 512GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Galaxy S24 Ultra 512GB</h3><div class="price-wrap"><p class="price">د.ت4590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="c4d61195-21b9-49c4-a3ae-cc4c7993c806" data-product-name="Xiaomi Redmi Note 13 Pro 256GB" data-product-price="1290.00" data-product-img="/images/default-product.png"><a href="?product_id=c4d61195-21b9-49c4-a3ae-cc4c7993c806" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Xiaomi Redmi Note 13 Pro 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Xiaomi Redmi Note 13 Pro 256GB</h3><div class="price-wrap"><p class="price">د.ت1290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="21b80ef0-26a4-4a42-869b-49f7233deeb9" data-product-name="Huawei P60 Pro 256GB" data-product-price="3490.00" data-product-img="/images/default-product.png"><a href="?product_id=21b80ef0-26a4-4a42-869b-49f7233deeb9" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Huawei P60 Pro 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Huawei P60 Pro 256GB</h3><div class="price-wrap"><p class="price">د.ت3490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b896a497-da2d-45da-9358-2d9e6ed28e6e" data-product-name="Oppo Reno 11 5G 256GB" data-product-price="1490.00" data-product-img="/images/default-product.png"><a href="?product_id=b896a497-da2d-45da-9358-2d9e6ed28e6e" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Oppo Reno 11 5G 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Oppo Reno 11 5G 256GB</h3><div class="price-wrap"><p class="price">د.ت1490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="4286feba-a657-45a4-81b4-7f1ac5878e0e" data-product-name="Google Pixel 8 Pro 128GB" data-product-price="3990.00" data-product-img="/images/default-product.png"><a href="?product_id=4286feba-a657-45a4-81b4-7f1ac5878e0e" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Google Pixel 8 Pro 128GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Google Pixel 8 Pro 128GB</h3><div class="price-wrap"><p class="price">د.ت3990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="0ddd96f6-7fb4-4686-8659-1396f864e03b" data-product-name="OnePlus 12 256GB" data-product-price="3290.00" data-product-img="/images/default-product.png"><a href="?product_id=0ddd96f6-7fb4-4686-8659-1396f864e03b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="OnePlus 12 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">OnePlus 12 256GB</h3><div class="price-wrap"><p class="price">د.ت3290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="0a46fe7b-039b-4496-8a20-72959df5a20f" data-product-name="Realme GT 5 256GB" data-product-price="1990.00" data-product-img="/images/default-product.png"><a href="?product_id=0a46fe7b-039b-4496-8a20-72959df5a20f" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Realme GT 5 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Realme GT 5 256GB</h3><div class="price-wrap"><p class="price">د.ت1990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="ea6c8f93-c080-40cf-b7d7-b354f698b36e" data-product-name="Samsung Galaxy A55 128GB" data-product-price="990.00" data-product-img="/images/default-product.png"><a href="?product_id=ea6c8f93-c080-40cf-b7d7-b354f698b36e" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Galaxy A55 128GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Galaxy A55 128GB</h3><div class="price-wrap"><p class="price">د.ت990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="9f0f0aaf-54ee-40e3-8580-236761b07bee" data-product-name="Tecno Camon 20 Pro 256GB" data-product-price="890.00" data-product-img="/images/default-product.png"><a href="?product_id=9f0f0aaf-54ee-40e3-8580-236761b07bee" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Tecno Camon 20 Pro 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Tecno Camon 20 Pro 256GB</h3><div class="price-wrap"><p class="price">د.ت890,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="ce108b9d-3209-4f45-a025-17ff9a0f0a70" data-product-name="MacBook Pro 16&quot; M3 Pro 512GB" data-product-price="8990.00" data-product-img="/images/default-product.png"><a href="?product_id=ce108b9d-3209-4f45-a025-17ff9a0f0a70" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="MacBook Pro 16&quot; M3 Pro 512GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">MacBook Pro 16&quot; M3 Pro 512GB</h3><div class="price-wrap"><p class="price">د.ت8990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b2d56e61-54fd-4b60-85fb-3049274b993c" data-product-name="Dell XPS 15 Intel i7 16GB 512GB" data-product-price="5490.00" data-product-img="/images/default-product.png"><a href="?product_id=b2d56e61-54fd-4b60-85fb-3049274b993c" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Dell XPS 15 Intel i7 16GB 512GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Dell XPS 15 Intel i7 16GB 512GB</h3><div class="price-wrap"><p class="price">د.ت5490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d238dc54-fad0-4937-95be-dc98b0163970" data-product-name="HP Spectre x360 i7 16GB 1TB" data-product-price="6290.00" data-product-img="/images/default-product.png"><a href="?product_id=d238dc54-fad0-4937-95be-dc98b0163970" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="HP Spectre x360 i7 16GB 1TB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">HP Spectre x360 i7 16GB 1TB</h3><div class="price-wrap"><p class="price">د.ت6290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="7ac7e870-3cf7-4e8c-ab3e-b846be68e349" data-product-name="Lenovo ThinkPad X1 Carbon i7 16GB" data-product-price="5890.00" data-product-img="/images/default-product.png"><a href="?product_id=7ac7e870-3cf7-4e8c-ab3e-b846be68e349" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Lenovo ThinkPad X1 Carbon i7 16GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Lenovo ThinkPad X1 Carbon i7 16GB</h3><div class="price-wrap"><p class="price">د.ت5890,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="382ebc15-267a-46dd-8b9c-f23ff5da2942" data-product-name="ASUS ROG Zephyrus G14 Ryzen 9 RTX 4060" data-product-price="6490.00" data-product-img="/images/default-product.png"><a href="?product_id=382ebc15-267a-46dd-8b9c-f23ff5da2942" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="ASUS ROG Zephyrus G14 Ryzen 9 RTX 4060" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">ASUS ROG Zephyrus G14 Ryzen 9 RTX 4060</h3><div class="price-wrap"><p class="price">د.ت6490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="7dbb85cd-2bed-4916-b5d5-bc7820bc1a47" data-product-name="Acer Swift 3 i5 8GB 256GB" data-product-price="2490.00" data-product-img="/images/default-product.png"><a href="?product_id=7dbb85cd-2bed-4916-b5d5-bc7820bc1a47" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Acer Swift 3 i5 8GB 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Acer Swift 3 i5 8GB 256GB</h3><div class="price-wrap"><p class="price">د.ت2490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="3ae4ea09-5e29-410d-bf44-e0e3324bf167" data-product-name="Microsoft Surface Laptop 5 i5 8GB 256GB" data-product-price="3990.00" data-product-img="/images/default-product.png"><a href="?product_id=3ae4ea09-5e29-410d-bf44-e0e3324bf167" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Microsoft Surface Laptop 5 i5 8GB 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Microsoft Surface Laptop 5 i5 8GB 256GB</h3><div class="price-wrap"><p class="price">د.ت3990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a4a2bfe4-7a36-4be5-b5ed-a57b43c30115" data-product-name="Xiaomi Book Pro 14 i5 16GB 512GB" data-product-price="3290.00" data-product-img="/images/default-product.png"><a href="?product_id=a4a2bfe4-7a36-4be5-b5ed-a57b43c30115" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Xiaomi Book Pro 14 i5 16GB 512GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Xiaomi Book Pro 14 i5 16GB 512GB</h3><div class="price-wrap"><p class="price">د.ت3290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="8ce5746c-f25e-4c0f-8353-ec17e9484f35" data-product-name="Lenovo IdeaPad 3 i3 8GB 256GB" data-product-price="1490.00" data-product-img="/images/default-product.png"><a href="?product_id=8ce5746c-f25e-4c0f-8353-ec17e9484f35" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Lenovo IdeaPad 3 i3 8GB 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Lenovo IdeaPad 3 i3 8GB 256GB</h3><div class="price-wrap"><p class="price">د.ت1490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d7f264c9-3de8-4719-9fe7-e7226160887a" data-product-name="HP Pavilion 15 i5 8GB 512GB" data-product-price="2690.00" data-product-img="/images/default-product.png"><a href="?product_id=d7f264c9-3de8-4719-9fe7-e7226160887a" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="HP Pavilion 15 i5 8GB 512GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">HP Pavilion 15 i5 8GB 512GB</h3><div class="price-wrap"><p class="price">د.ت2690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="e634f2ae-eba3-429f-9bfd-8651f8026afc" data-product-name="iPad Pro 12.9&quot; M2 256GB" data-product-price="4990.00" data-product-img="/images/default-product.png"><a href="?product_id=e634f2ae-eba3-429f-9bfd-8651f8026afc" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="iPad Pro 12.9&quot; M2 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">iPad Pro 12.9&quot; M2 256GB</h3><div class="price-wrap"><p class="price">د.ت4990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="358150f7-3064-4c85-abdd-7c5809d88298" data-product-name="Samsung Galaxy Tab S9 Ultra 256GB" data-product-price="4290.00" data-product-img="/images/default-product.png"><a href="?product_id=358150f7-3064-4c85-abdd-7c5809d88298" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Galaxy Tab S9 Ultra 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Galaxy Tab S9 Ultra 256GB</h3><div class="price-wrap"><p class="price">د.ت4290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="4b566aea-149c-41d9-917d-fd26dda2b7b8" data-product-name="iPad Air 10.9&quot; M1 64GB" data-product-price="2990.00" data-product-img="/images/default-product.png"><a href="?product_id=4b566aea-149c-41d9-917d-fd26dda2b7b8" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="iPad Air 10.9&quot; M1 64GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">iPad Air 10.9&quot; M1 64GB</h3><div class="price-wrap"><p class="price">د.ت2990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="24a32bd2-52ce-4e40-80be-c86e0d25349c" data-product-name="Huawei MatePad Pro 12.6 256GB" data-product-price="3190.00" data-product-img="/images/default-product.png"><a href="?product_id=24a32bd2-52ce-4e40-80be-c86e0d25349c" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Huawei MatePad Pro 12.6 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Huawei MatePad Pro 12.6 256GB</h3><div class="price-wrap"><p class="price">د.ت3190,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="2817a045-99fe-422b-a844-9badded7bf00" data-product-name="Lenovo Tab P12 Pro 256GB" data-product-price="2190.00" data-product-img="/images/default-product.png"><a href="?product_id=2817a045-99fe-422b-a844-9badded7bf00" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Lenovo Tab P12 Pro 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Lenovo Tab P12 Pro 256GB</h3><div class="price-wrap"><p class="price">د.ت2190,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="3204e893-2ce8-44ee-aab5-d44f1c501716" data-product-name="Samsung Galaxy Tab A9+ 128GB" data-product-price="990.00" data-product-img="/images/default-product.png"><a href="?product_id=3204e893-2ce8-44ee-aab5-d44f1c501716" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Galaxy Tab A9+ 128GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Galaxy Tab A9+ 128GB</h3><div class="price-wrap"><p class="price">د.ت990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b2d9cdfc-f1e7-454d-bd4f-0e0710a4bf53" data-product-name="Xiaomi Pad 6 128GB" data-product-price="1290.00" data-product-img="/images/default-product.png"><a href="?product_id=b2d9cdfc-f1e7-454d-bd4f-0e0710a4bf53" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Xiaomi Pad 6 128GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Xiaomi Pad 6 128GB</h3><div class="price-wrap"><p class="price">د.ت1290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="2fa2ae09-465f-4df9-91b7-de919fd02323" data-product-name="Amazon Fire HD 10 64GB" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=2fa2ae09-465f-4df9-91b7-de919fd02323" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Amazon Fire HD 10 64GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Amazon Fire HD 10 64GB</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="540a3463-a1ce-4d82-9ec1-e1d2723f961f" data-product-name="Realme Pad 2 128GB" data-product-price="790.00" data-product-img="/images/default-product.png"><a href="?product_id=540a3463-a1ce-4d82-9ec1-e1d2723f961f" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Realme Pad 2 128GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Realme Pad 2 128GB</h3><div class="price-wrap"><p class="price">د.ت790,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="75ebc413-ab3b-4ec9-9bab-a59eb36f20b7" data-product-name="Microsoft Surface Pro 9 i5 256GB" data-product-price="5990.00" data-product-img="/images/default-product.png"><a href="?product_id=75ebc413-ab3b-4ec9-9bab-a59eb36f20b7" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Microsoft Surface Pro 9 i5 256GB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Microsoft Surface Pro 9 i5 256GB</h3><div class="price-wrap"><p class="price">د.ت5990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b6804ad0-e29a-414a-b53b-d0254c19fc50" data-product-name="Sony WH-1000XM5 Wireless" data-product-price="1290.00" data-product-img="/images/default-product.png"><a href="?product_id=b6804ad0-e29a-414a-b53b-d0254c19fc50" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Sony WH-1000XM5 Wireless" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Sony WH-1000XM5 Wireless</h3><div class="price-wrap"><p class="price">د.ت1290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="31d8e1d4-57d4-4811-8e18-bbdddb519426" data-product-name="Apple AirPods Max" data-product-price="2590.00" data-product-img="/images/default-product.png"><a href="?product_id=31d8e1d4-57d4-4811-8e18-bbdddb519426" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Apple AirPods Max" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Apple AirPods Max</h3><div class="price-wrap"><p class="price">د.ت2590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="40563902-44c8-4f54-93de-9c0fe9bdf709" data-product-name="Bose QuietComfort Ultra" data-product-price="1490.00" data-product-img="/images/default-product.png"><a href="?product_id=40563902-44c8-4f54-93de-9c0fe9bdf709" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Bose QuietComfort Ultra" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Bose QuietComfort Ultra</h3><div class="price-wrap"><p class="price">د.ت1490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a3277a4c-392c-4e91-a6ae-6f4d5b59a7fc" data-product-name="Samsung Galaxy Buds2 Pro" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=a3277a4c-392c-4e91-a6ae-6f4d5b59a7fc" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Galaxy Buds2 Pro" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Galaxy Buds2 Pro</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="43150abc-b70f-4557-9dd7-637910bb17e4" data-product-name="JBL Tune 770NC" data-product-price="390.00" data-product-img="/images/default-product.png"><a href="?product_id=43150abc-b70f-4557-9dd7-637910bb17e4" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="JBL Tune 770NC" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">JBL Tune 770NC</h3><div class="price-wrap"><p class="price">د.ت390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d23401bf-75de-438a-b68e-3414f9bd8ef0" data-product-name="Beats Studio Buds+" data-product-price="890.00" data-product-img="/images/default-product.png"><a href="?product_id=d23401bf-75de-438a-b68e-3414f9bd8ef0" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Beats Studio Buds+" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Beats Studio Buds+</h3><div class="price-wrap"><p class="price">د.ت890,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="62d32c56-fe08-471c-9b6d-1def896a10a6" data-product-name="Sennheiser Momentum 4 Wireless" data-product-price="1190.00" data-product-img="/images/default-product.png"><a href="?product_id=62d32c56-fe08-471c-9b6d-1def896a10a6" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Sennheiser Momentum 4 Wireless" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Sennheiser Momentum 4 Wireless</h3><div class="price-wrap"><p class="price">د.ت1190,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a26a3362-e055-4bb5-bc55-fe30607c071d" data-product-name="Anker Soundcore Q45" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=a26a3362-e055-4bb5-bc55-fe30607c071d" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Anker Soundcore Q45" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Anker Soundcore Q45</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a1a7c659-0331-49b8-a200-8163b3d8b222" data-product-name="Marshall Major IV" data-product-price="390.00" data-product-img="/images/default-product.png"><a href="?product_id=a1a7c659-0331-49b8-a200-8163b3d8b222" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Marshall Major IV" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Marshall Major IV</h3><div class="price-wrap"><p class="price">د.ت390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="1df5aea8-030a-4f9b-98cd-9684c616db95" data-product-name="Logitech G733 Wireless Gaming" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=1df5aea8-030a-4f9b-98cd-9684c616db95" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Logitech G733 Wireless Gaming" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Logitech G733 Wireless Gaming</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="54215d89-fef8-4f62-8a29-60b5584dda3d" data-product-name="Apple Watch Ultra 2 49mm" data-product-price="3290.00" data-product-img="/images/default-product.png"><a href="?product_id=54215d89-fef8-4f62-8a29-60b5584dda3d" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Apple Watch Ultra 2 49mm" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Apple Watch Ultra 2 49mm</h3><div class="price-wrap"><p class="price">د.ت3290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b0a0af09-5c87-48ed-8afd-a8e66cf9fe23" data-product-name="Apple Watch Series 9 45mm" data-product-price="2190.00" data-product-img="/images/default-product.png"><a href="?product_id=b0a0af09-5c87-48ed-8afd-a8e66cf9fe23" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Apple Watch Series 9 45mm" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Apple Watch Series 9 45mm</h3><div class="price-wrap"><p class="price">د.ت2190,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="06c20425-c1a3-4498-99ad-00a72be5d41c" data-product-name="Samsung Galaxy Watch6 Classic 47mm" data-product-price="1590.00" data-product-img="/images/default-product.png"><a href="?product_id=06c20425-c1a3-4498-99ad-00a72be5d41c" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Galaxy Watch6 Classic 47mm" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Galaxy Watch6 Classic 47mm</h3><div class="price-wrap"><p class="price">د.ت1590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="cb5550a1-6f6d-40c0-bb25-1551df3b64f5" data-product-name="Huawei Watch GT 4 46mm" data-product-price="890.00" data-product-img="/images/default-product.png"><a href="?product_id=cb5550a1-6f6d-40c0-bb25-1551df3b64f5" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Huawei Watch GT 4 46mm" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Huawei Watch GT 4 46mm</h3><div class="price-wrap"><p class="price">د.ت890,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="459f4ec6-273b-4685-88c5-f9c2164d50ac" data-product-name="Garmin Forerunner 265" data-product-price="1390.00" data-product-img="/images/default-product.png"><a href="?product_id=459f4ec6-273b-4685-88c5-f9c2164d50ac" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Garmin Forerunner 265" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Garmin Forerunner 265</h3><div class="price-wrap"><p class="price">د.ت1390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a4f20f54-e56e-43c9-84f2-69737dd03469" data-product-name="Fitbit Versa 4" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=a4f20f54-e56e-43c9-84f2-69737dd03469" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Fitbit Versa 4" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Fitbit Versa 4</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="facb9b18-6f98-4650-afc6-86d77e60df34" data-product-name="Amazfit T-Rex 2" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=facb9b18-6f98-4650-afc6-86d77e60df34" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Amazfit T-Rex 2" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Amazfit T-Rex 2</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="bb8dd70d-110d-4c68-b677-c2449510cd28" data-product-name="Xiaomi Watch S1 Pro" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=bb8dd70d-110d-4c68-b677-c2449510cd28" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Xiaomi Watch S1 Pro" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Xiaomi Watch S1 Pro</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="8c080915-d93d-4521-a01e-2a124c0575fd" data-product-name="Fossil Gen 6 Wellness Edition" data-product-price="990.00" data-product-img="/images/default-product.png"><a href="?product_id=8c080915-d93d-4521-a01e-2a124c0575fd" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Fossil Gen 6 Wellness Edition" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Fossil Gen 6 Wellness Edition</h3><div class="price-wrap"><p class="price">د.ت990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="87020b91-c647-4a82-9e53-0a410479618c" data-product-name="Withings ScanWatch Horizon" data-product-price="1590.00" data-product-img="/images/default-product.png"><a href="?product_id=87020b91-c647-4a82-9e53-0a410479618c" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Withings ScanWatch Horizon" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Withings ScanWatch Horizon</h3><div class="price-wrap"><p class="price">د.ت1590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="7034f917-aee7-4190-8b4f-4c5b44fb74d0" data-product-name="Sony Alpha A7 IV 33MP" data-product-price="7290.00" data-product-img="/images/default-product.png"><a href="?product_id=7034f917-aee7-4190-8b4f-4c5b44fb74d0" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Sony Alpha A7 IV 33MP" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Sony Alpha A7 IV 33MP</h3><div class="price-wrap"><p class="price">د.ت7290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a8849385-0cc6-4207-af84-84d6fddb8f9f" data-product-name="Canon EOS R6 Mark II" data-product-price="7990.00" data-product-img="/images/default-product.png"><a href="?product_id=a8849385-0cc6-4207-af84-84d6fddb8f9f" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Canon EOS R6 Mark II" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Canon EOS R6 Mark II</h3><div class="price-wrap"><p class="price">د.ت7990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="1aff0a45-e3f2-4fdc-b606-aaf7989a2a5f" data-product-name="Nikon Z8" data-product-price="8590.00" data-product-img="/images/default-product.png"><a href="?product_id=1aff0a45-e3f2-4fdc-b606-aaf7989a2a5f" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Nikon Z8" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Nikon Z8</h3><div class="price-wrap"><p class="price">د.ت8590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="f5eadbde-7cd5-47e4-93c4-8261684aaa46" data-product-name="Fujifilm X-T5 40MP" data-product-price="5490.00" data-product-img="/images/default-product.png"><a href="?product_id=f5eadbde-7cd5-47e4-93c4-8261684aaa46" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Fujifilm X-T5 40MP" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Fujifilm X-T5 40MP</h3><div class="price-wrap"><p class="price">د.ت5490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="0ac98272-aeda-447d-9fe0-f9ee771001ac" data-product-name="GoPro Hero 12 Black" data-product-price="1590.00" data-product-img="/images/default-product.png"><a href="?product_id=0ac98272-aeda-447d-9fe0-f9ee771001ac" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="GoPro Hero 12 Black" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">GoPro Hero 12 Black</h3><div class="price-wrap"><p class="price">د.ت1590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="35a1890c-c57a-4dde-86c2-780870cfa88b" data-product-name="Sony ZV-E1 Vlogging Camera" data-product-price="4590.00" data-product-img="/images/default-product.png"><a href="?product_id=35a1890c-c57a-4dde-86c2-780870cfa88b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Sony ZV-E1 Vlogging Camera" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Sony ZV-E1 Vlogging Camera</h3><div class="price-wrap"><p class="price">د.ت4590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="fe410c66-05fa-447b-b019-6a8600a8f131" data-product-name="Canon EOS 250D" data-product-price="2490.00" data-product-img="/images/default-product.png"><a href="?product_id=fe410c66-05fa-447b-b019-6a8600a8f131" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Canon EOS 250D" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Canon EOS 250D</h3><div class="price-wrap"><p class="price">د.ت2490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="0f62ab40-dd27-4d6d-9116-8ecf9fb68e49" data-product-name="DJI Osmo Pocket 3" data-product-price="1590.00" data-product-img="/images/default-product.png"><a href="?product_id=0f62ab40-dd27-4d6d-9116-8ecf9fb68e49" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="DJI Osmo Pocket 3" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">DJI Osmo Pocket 3</h3><div class="price-wrap"><p class="price">د.ت1590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="773e1d7c-90bd-4636-8df7-3c695b2ed27b" data-product-name="Insta360 X3" data-product-price="1290.00" data-product-img="/images/default-product.png"><a href="?product_id=773e1d7c-90bd-4636-8df7-3c695b2ed27b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Insta360 X3" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Insta360 X3</h3><div class="price-wrap"><p class="price">د.ت1290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="5a239a6c-e081-4674-ac21-566937c50996" data-product-name="Panasonic Lumix GH6" data-product-price="5990.00" data-product-img="/images/default-product.png"><a href="?product_id=5a239a6c-e081-4674-ac21-566937c50996" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Panasonic Lumix GH6" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Panasonic Lumix GH6</h3><div class="price-wrap"><p class="price">د.ت5990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b269b4de-68dd-4171-81b7-0225d340f289" data-product-name="PlayStation 5 Slim 1TB" data-product-price="2990.00" data-product-img="/images/default-product.png"><a href="?product_id=b269b4de-68dd-4171-81b7-0225d340f289" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="PlayStation 5 Slim 1TB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">PlayStation 5 Slim 1TB</h3><div class="price-wrap"><p class="price">د.ت2990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="46fd3433-db41-4ae1-a173-28b45c82137d" data-product-name="Xbox Series X 1TB" data-product-price="2890.00" data-product-img="/images/default-product.png"><a href="?product_id=46fd3433-db41-4ae1-a173-28b45c82137d" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Xbox Series X 1TB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Xbox Series X 1TB</h3><div class="price-wrap"><p class="price">د.ت2890,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="eecc07aa-f1da-488b-a57b-59553df06f3b" data-product-name="Nintendo Switch OLED" data-product-price="1490.00" data-product-img="/images/default-product.png"><a href="?product_id=eecc07aa-f1da-488b-a57b-59553df06f3b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Nintendo Switch OLED" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Nintendo Switch OLED</h3><div class="price-wrap"><p class="price">د.ت1490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="eaa821b6-52c8-42bd-b2c9-919ecc6a979b" data-product-name="ASUS ROG Ally Z1 Extreme" data-product-price="3290.00" data-product-img="/images/default-product.png"><a href="?product_id=eaa821b6-52c8-42bd-b2c9-919ecc6a979b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="ASUS ROG Ally Z1 Extreme" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">ASUS ROG Ally Z1 Extreme</h3><div class="price-wrap"><p class="price">د.ت3290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d38d0d3a-2c67-4a74-af70-4db06ecb7197" data-product-name="Steam Deck 512GB LCD" data-product-price="2590.00" data-product-img="/images/default-product.png"><a href="?product_id=d38d0d3a-2c67-4a74-af70-4db06ecb7197" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Steam Deck 512GB LCD" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Steam Deck 512GB LCD</h3><div class="price-wrap"><p class="price">د.ت2590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="68c46449-97c7-4608-894f-c18ce4d1c11c" data-product-name="Logitech G Pro X Superlight" data-product-price="390.00" data-product-img="/images/default-product.png"><a href="?product_id=68c46449-97c7-4608-894f-c18ce4d1c11c" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Logitech G Pro X Superlight" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Logitech G Pro X Superlight</h3><div class="price-wrap"><p class="price">د.ت390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="14697772-3c7e-45b2-82de-746672ca4f8b" data-product-name="Razer BlackWidow V4 Pro" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=14697772-3c7e-45b2-82de-746672ca4f8b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Razer BlackWidow V4 Pro" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Razer BlackWidow V4 Pro</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="82526853-b7f1-4067-9c0a-2208040a25f8" data-product-name="SteelSeries Arctis Nova Pro" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=82526853-b7f1-4067-9c0a-2208040a25f8" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="SteelSeries Arctis Nova Pro" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">SteelSeries Arctis Nova Pro</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="9087bb53-aa7a-452c-82b9-2233e60051ea" data-product-name="Samsung Odyssey G7 32&quot; 4K 144Hz" data-product-price="2490.00" data-product-img="/images/default-product.png"><a href="?product_id=9087bb53-aa7a-452c-82b9-2233e60051ea" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung Odyssey G7 32&quot; 4K 144Hz" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung Odyssey G7 32&quot; 4K 144Hz</h3><div class="price-wrap"><p class="price">د.ت2490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b67fad76-31c6-478d-b0b7-112a3b015ef9" data-product-name="Thrustmaster T300 RS GT" data-product-price="1990.00" data-product-img="/images/default-product.png"><a href="?product_id=b67fad76-31c6-478d-b0b7-112a3b015ef9" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Thrustmaster T300 RS GT" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Thrustmaster T300 RS GT</h3><div class="price-wrap"><p class="price">د.ت1990,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="6e7a7e09-055b-48ac-bd5a-5e5e8fc7b961" data-product-name="Apple AirTag Pack of 4" data-product-price="290.00" data-product-img="/images/default-product.png"><a href="?product_id=6e7a7e09-055b-48ac-bd5a-5e5e8fc7b961" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Apple AirTag Pack of 4" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Apple AirTag Pack of 4</h3><div class="price-wrap"><p class="price">د.ت290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="6379d65a-9e20-442c-b793-1c2aa2402bbb" data-product-name="Belkin BoostCharge Pro 3-en-1" data-product-price="390.00" data-product-img="/images/default-product.png"><a href="?product_id=6379d65a-9e20-442c-b793-1c2aa2402bbb" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Belkin BoostCharge Pro 3-en-1" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Belkin BoostCharge Pro 3-en-1</h3><div class="price-wrap"><p class="price">د.ت390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d74f3cac-25cb-4a89-abd2-6dd37a4ce934" data-product-name="Anker PowerCore 26800mAh" data-product-price="190.00" data-product-img="/images/default-product.png"><a href="?product_id=d74f3cac-25cb-4a89-abd2-6dd37a4ce934" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Anker PowerCore 26800mAh" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Anker PowerCore 26800mAh</h3><div class="price-wrap"><p class="price">د.ت190,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="a5a921b5-5449-42cf-b93a-d79ead640c0a" data-product-name="Logitech MX Master 3S" data-product-price="390.00" data-product-img="/images/default-product.png"><a href="?product_id=a5a921b5-5449-42cf-b93a-d79ead640c0a" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Logitech MX Master 3S" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Logitech MX Master 3S</h3><div class="price-wrap"><p class="price">د.ت390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="3dad50b2-8c4f-4735-ba2f-20b9a6e36f0b" data-product-name="Apple Magic Keyboard" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=3dad50b2-8c4f-4735-ba2f-20b9a6e36f0b" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Apple Magic Keyboard" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Apple Magic Keyboard</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="4a723305-ef9f-401f-8491-7d25d3504040" data-product-name="Samsung T7 Portable SSD 1TB" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=4a723305-ef9f-401f-8491-7d25d3504040" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Samsung T7 Portable SSD 1TB" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Samsung T7 Portable SSD 1TB</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="dbab2954-f61a-4d7e-99b4-f050bf1f4193" data-product-name="UGREEN USB-C Hub 9-en-1" data-product-price="120.00" data-product-img="/images/default-product.png"><a href="?product_id=dbab2954-f61a-4d7e-99b4-f050bf1f4193" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="UGREEN USB-C Hub 9-en-1" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">UGREEN USB-C Hub 9-en-1</h3><div class="price-wrap"><p class="price">د.ت120,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d04ec8be-aaa1-4963-95b2-3808be73fee4" data-product-name="Spigen Ultra Hybrid iPhone Case" data-product-price="59.00" data-product-img="/images/default-product.png"><a href="?product_id=d04ec8be-aaa1-4963-95b2-3808be73fee4" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Spigen Ultra Hybrid iPhone Case" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Spigen Ultra Hybrid iPhone Case</h3><div class="price-wrap"><p class="price">د.ت59,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="f1e6e853-b068-4025-b772-0447299cd98d" data-product-name="PopSockets PopGrip" data-product-price="39.00" data-product-img="/images/default-product.png"><a href="?product_id=f1e6e853-b068-4025-b772-0447299cd98d" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="PopSockets PopGrip" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">PopSockets PopGrip</h3><div class="price-wrap"><p class="price">د.ت39,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="7bc28d22-5c24-422e-877c-d842f8ed08bc" data-product-name="Mous Limitless 5.0 Case" data-product-price="129.00" data-product-img="/images/default-product.png"><a href="?product_id=7bc28d22-5c24-422e-877c-d842f8ed08bc" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Mous Limitless 5.0 Case" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Mous Limitless 5.0 Case</h3><div class="price-wrap"><p class="price">د.ت129,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="5288ffab-1cd6-48d4-9ca4-d8545cf9bc34" data-product-name="Sonos Era 300" data-product-price="1690.00" data-product-img="/images/default-product.png"><a href="?product_id=5288ffab-1cd6-48d4-9ca4-d8545cf9bc34" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Sonos Era 300" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Sonos Era 300</h3><div class="price-wrap"><p class="price">د.ت1690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="584958c5-e939-4b3c-82be-f4b496848515" data-product-name="JBL Charge 5" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=584958c5-e939-4b3c-82be-f4b496848515" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="JBL Charge 5" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">JBL Charge 5</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d59e5c9c-c0a5-4f69-b105-e07c2b0c7176" data-product-name="Marshall Stanmore III" data-product-price="1290.00" data-product-img="/images/default-product.png"><a href="?product_id=d59e5c9c-c0a5-4f69-b105-e07c2b0c7176" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Marshall Stanmore III" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Marshall Stanmore III</h3><div class="price-wrap"><p class="price">د.ت1290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="ac16f14d-0324-45c6-b263-7f9c5160cf2d" data-product-name="Bose SoundLink Revolve+ II" data-product-price="890.00" data-product-img="/images/default-product.png"><a href="?product_id=ac16f14d-0324-45c6-b263-7f9c5160cf2d" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Bose SoundLink Revolve+ II" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Bose SoundLink Revolve+ II</h3><div class="price-wrap"><p class="price">د.ت890,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="14dac9c4-640a-40f6-88fb-385065032a43" data-product-name="Sony SRS-XB43" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=14dac9c4-640a-40f6-88fb-385065032a43" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Sony SRS-XB43" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Sony SRS-XB43</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="9c13583c-ea08-46e2-ba9c-9fa50cc50145" data-product-name="Ultimate Ears Boom 3" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=9c13583c-ea08-46e2-ba9c-9fa50cc50145" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Ultimate Ears Boom 3" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Ultimate Ears Boom 3</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="cbad443d-43c2-4ff5-999f-72354b66a565" data-product-name="Harman Kardon Onyx Studio 8" data-product-price="790.00" data-product-img="/images/default-product.png"><a href="?product_id=cbad443d-43c2-4ff5-999f-72354b66a565" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Harman Kardon Onyx Studio 8" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Harman Kardon Onyx Studio 8</h3><div class="price-wrap"><p class="price">د.ت790,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="b5deb3f8-51ef-49b0-9147-439d9520b027" data-product-name="House of Marley Get Together 2" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=b5deb3f8-51ef-49b0-9147-439d9520b027" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="House of Marley Get Together 2" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">House of Marley Get Together 2</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="95d66066-eb9b-4955-85b2-a9bcc820ee43" data-product-name="Anker Soundcore Motion+" data-product-price="290.00" data-product-img="/images/default-product.png"><a href="?product_id=95d66066-eb9b-4955-85b2-a9bcc820ee43" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Anker Soundcore Motion+" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Anker Soundcore Motion+</h3><div class="price-wrap"><p class="price">د.ت290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="4946c2f9-ef85-4d09-bcf1-0a87796eed1e" data-product-name="Bang &amp; Olufsen Beosound A1 2nd Gen" data-product-price="1290.00" data-product-img="/images/default-product.png"><a href="?product_id=4946c2f9-ef85-4d09-bcf1-0a87796eed1e" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Bang &amp; Olufsen Beosound A1 2nd Gen" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Bang &amp; Olufsen Beosound A1 2nd Gen</h3><div class="price-wrap"><p class="price">د.ت1290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="97f6e533-2ffa-43c0-83ad-c62f995988d2" data-product-name="HP LaserJet Pro M404dn" data-product-price="1590.00" data-product-img="/images/default-product.png"><a href="?product_id=97f6e533-2ffa-43c0-83ad-c62f995988d2" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="HP LaserJet Pro M404dn" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">HP LaserJet Pro M404dn</h3><div class="price-wrap"><p class="price">د.ت1590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="d2422ae4-dc26-4a9a-afe9-b8a6323e0a06" data-product-name="Canon PIXMA G3460" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=d2422ae4-dc26-4a9a-afe9-b8a6323e0a06" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Canon PIXMA G3460" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Canon PIXMA G3460</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="ee786680-8ee3-4868-8fb6-7ba240948ff2" data-product-name="Epson EcoTank L3250" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=ee786680-8ee3-4868-8fb6-7ba240948ff2" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Epson EcoTank L3250" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Epson EcoTank L3250</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="226c0220-a165-4f3c-92da-717cb0dc62a0" data-product-name="Brother HL-L2350DW" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=226c0220-a165-4f3c-92da-717cb0dc62a0" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Brother HL-L2350DW" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Brother HL-L2350DW</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="6ec06826-03a4-460e-ad3b-a973b59596b5" data-product-name="HP Envy 6455e" data-product-price="390.00" data-product-img="/images/default-product.png"><a href="?product_id=6ec06826-03a4-460e-ad3b-a973b59596b5" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="HP Envy 6455e" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">HP Envy 6455e</h3><div class="price-wrap"><p class="price">د.ت390,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="af5b071b-e15f-408d-8d7e-0a2f6e1200ef" data-product-name="Canon imageCLASS MF445dw" data-product-price="2290.00" data-product-img="/images/default-product.png"><a href="?product_id=af5b071b-e15f-408d-8d7e-0a2f6e1200ef" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Canon imageCLASS MF445dw" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Canon imageCLASS MF445dw</h3><div class="price-wrap"><p class="price">د.ت2290,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="17cc4f15-eb80-46fe-a8e4-e4a5df249fb5" data-product-name="Epson WorkForce WF-2860" data-product-price="590.00" data-product-img="/images/default-product.png"><a href="?product_id=17cc4f15-eb80-46fe-a8e4-e4a5df249fb5" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Epson WorkForce WF-2860" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Epson WorkForce WF-2860</h3><div class="price-wrap"><p class="price">د.ت590,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="60ea8654-5c24-4972-96bc-1af0533505a1" data-product-name="Brother MFC-J995DW" data-product-price="690.00" data-product-img="/images/default-product.png"><a href="?product_id=60ea8654-5c24-4972-96bc-1af0533505a1" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Brother MFC-J995DW" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Brother MFC-J995DW</h3><div class="price-wrap"><p class="price">د.ت690,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="5d816941-b4e7-47c4-af5e-e5ad20a912d4" data-product-name="HP Smart Tank 7001" data-product-price="790.00" data-product-img="/images/default-product.png"><a href="?product_id=5d816941-b4e7-47c4-af5e-e5ad20a912d4" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="HP Smart Tank 7001" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">HP Smart Tank 7001</h3><div class="price-wrap"><p class="price">د.ت790,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article>
+        <article class="product-card" data-product-id="fb6be6e3-b976-49e3-bbc4-1d74fb065e20" data-product-name="Canon PIXMA TR8620a" data-product-price="490.00" data-product-img="/images/default-product.png"><a href="?product_id=fb6be6e3-b976-49e3-bbc4-1d74fb065e20" class="product-card-link" style="text-decoration:none;color:inherit;display:block;"><div class="image-wrap"><div class="quick-actions"><button type="button" class="quick-btn wishlist-toggle" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i><i class="fas fa-heart" style="display:none;"></i></button></div><img src="/images/default-product.png" alt="Canon PIXMA TR8620a" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="info"><h3 class="name">Canon PIXMA TR8620a</h3><div class="price-wrap"><p class="price">د.ت490,00</p></div><button type="button" class="add-cart" style="background:#b551c2;"><i class="fas fa-cart-plus"></i> Ajouter au panier</button></div></a></article></div></main>
+<section class="newsletter-section"><div class="newsletter-inner"><h3>Restez informé</h3><p>Inscrivez-vous pour recevoir nos nouveautés et offres exclusives.</p><form class="newsletter-form" action="/api/public/subscribe" method="POST"><input type="hidden" name="boutique_id" value="65512316-2ff0-403d-b541-452cea226edc"><input type="email" name="email" placeholder="Votre adresse email" required><button type="submit">S'inscrire</button></form></div></section>
+<footer class="footer"><div class="footer-inner"><div class="footer-top"><div class="footer-brand"><div class="logo"><a href="./"><img src="/images/default-product.png" alt="Tech &amp; Lifestyle Store"><span>Tech &amp; Lifestyle Store</span></a></div><p>Votre boutique de référence pour les produits tech et lifestyle en Tunisie</p></div><div class="footer-col"><h4>Menu</h4><ul><li><a href="./">Voir tout</a></li><a href="?menu_item_id=e2493280-54db-43ad-9fba-94c944f2023d" class="">Smartphones</a></li>
+        <a href="?menu_item_id=9df5491d-00a1-43ea-847b-f17e5d768893" class="">Laptops &amp; Ordinateurs</a></li>
+        <a href="?menu_item_id=0499bd59-2be3-4219-be10-b7fe514f9e4f" class="">Tablettes</a></li>
+        <a href="?menu_item_id=3e6849b7-9fc7-4ea8-9545-55621c731ff7" class="">Casques &amp; Écouteurs</a></li>
+        <a href="?menu_item_id=22257c8a-ad4e-4ead-a324-acc1c2b59d39" class="">Montres Connectées</a></li>
+        <a href="?menu_item_id=929cf20e-07ff-44f9-bd38-67b77b8ff09c" class="">Appareils Photo</a></li>
+        <a href="?menu_item_id=2bcb373e-bc10-4b88-8650-cda37f58c3b7" class="">Gaming</a></li>
+        <a href="?menu_item_id=3a32bc85-3714-4c3e-8cca-36cec7ea5625" class="">Accessoires</a></li>
+        <a href="?menu_item_id=a403934d-87a9-41fa-a131-db5f0d830bdf" class="">Enceintes</a></li>
+        <a href="?menu_item_id=1e546b6f-a4b9-438a-94d5-98f285c33047" class="">Imprimantes</a></li></ul></div><div class="footer-col"><h4>Support</h4><ul></ul></div><div class="footer-col"><h4>Suivez-nous</h4><ul></ul></div></div><div class="footer-payments"><span>Paiement sécurisé</span><div class="icons"><i class="fas fa-money-bill-wave" title="COD"></i></div></div><div class="footer-bottom"><span>&copy; 2026 Tech &amp; Lifestyle Store. Tous droits réservés.</span><span>Créé par <a href="https://makewebsite.io" target="_blank">MakeWebsite.io</a></span></div></div></footer>
+<div class="t2-cart-drawer__overlay" id="cartOverlay" onclick="toggleCartSidebar()"></div>
+<div id="cartSidebar" class="t2-cart-drawer"><div class="t2-cart-drawer__header"><h2 class="t2-cart-drawer__title">Panier</h2><button id="closeCartSidebar" class="t2-cart-drawer__close" onclick="toggleCartSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="t2-cart-drawer__body"><div id="cartItems"></div><div class="t2-cart-drawer__totals"><div class="t2-cart-drawer__row"><span>Prix Total :</span><span id="total-price">د.ت0.00</span></div><div class="t2-cart-drawer__row"><span>Frais de livraison</span><span id="shipping-cost">د.ت7,00</span></div><div class="t2-cart-drawer__row t2-cart-drawer__row--total"><span>Total Général</span><span id="grand-total">د.ت0.00</span></div></div><form id="checkout-form" class="t2-cart-drawer__form" onsubmit="return submitOrder(event)"><input type="text" name="full-name" placeholder="Entrez votre nom complet" required class="t2-cart-drawer__input"><input type="text" name="billing-address" placeholder="Entrez votre adresse de livraison" required class="t2-cart-drawer__input"><select name="city" required class="t2-cart-drawer__input"><option value="">Sélectionnez votre gouvernorat</option><option value="Ariana">Ariana</option><option value="Béja">Béja</option><option value="Ben Arous">Ben Arous</option><option value="Bizerte">Bizerte</option><option value="Gabès">Gabès</option><option value="Gafsa">Gafsa</option><option value="Jendouba">Jendouba</option><option value="Kairouan">Kairouan</option><option value="Kasserine">Kasserine</option><option value="Kébili">Kébili</option><option value="Le Kef">Le Kef</option><option value="Mahdia">Mahdia</option><option value="La Manouba">La Manouba</option><option value="Médenine">Médenine</option><option value="Monastir">Monastir</option><option value="Nabeul">Nabeul</option><option value="Sfax">Sfax</option><option value="Sidi Bouzid">Sidi Bouzid</option><option value="Siliana">Siliana</option><option value="Sousse">Sousse</option><option value="Tataouine">Tataouine</option><option value="Tozeur">Tozeur</option><option value="Tunis">Tunis</option><option value="Zaghouan">Zaghouan</option></select><input type="email" name="email" placeholder="Entrez votre e-mail" class="t2-cart-drawer__input"><select name="country" class="t2-cart-drawer__input"><option value="">Sélectionnez votre pays</option><option value="Tunisie">Tunisie</option><option value="France">France</option><option value="Algérie">Algérie</option><option value="Maroc">Maroc</option><option value="Libye">Libye</option><option value="Italie">Italie</option><option value="Allemagne">Allemagne</option><option value="Espagne">Espagne</option><option value="Canada">Canada</option><option value="États-Unis">États-Unis</option><option value="Belgique">Belgique</option><option value="Suisse">Suisse</option><option value="Royaume-Uni">Royaume-Uni</option><option value="Pays-Bas">Pays-Bas</option><option value="Suède">Suède</option><option value="Arabie Saoudite">Arabie Saoudite</option><option value="Émirats Arabes Unis">Émirats Arabes Unis</option><option value="Qatar">Qatar</option><option value="Koweït">Koweït</option><option value="Turquie">Turquie</option><option value="Autre">Autre</option></select><input type="tel" name="phone_number" placeholder="Entrez votre numéro de téléphone" required class="t2-cart-drawer__input"><div><label>Méthode de paiement :</label><select name="payment-method" required class="t2-cart-drawer__input"><option value="cash-on-delivery">Paiement à la livraison</option></select></div><button type="submit" class="t2-cart-drawer__submit" style="background:#b551c2;">Passer la commande</button></form></div></div>
+<div id="customOrderConfirmationModal" class="custom-modal"><div class="custom-modal-content"><div class="modal-header"><div class="success-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h2>Confirmation de commande</h2></div><div class="order-summary"><div class="order-item"><div class="order-label">Nom complet :</div><div class="order-value" id="customUserFullName"></div></div><div class="order-item"><div class="order-label">Adresse :</div><div class="order-value" id="customUserBillingAddress"></div></div><div class="order-item"><div class="order-label">Ville</div><div class="order-value" id="customUserCity"></div></div><div class="order-item"><div class="order-label">Téléphone</div><div class="order-value" id="customUserPhoneNumber"></div></div><div class="order-item"><div class="order-label">Méthode de paiement :</div><div class="order-value" id="customUserPaymentMethod"></div></div></div><div class="modal-footer"><button class="close-modal-btn" onclick="document.getElementById('customOrderConfirmationModal').classList.remove('open')">Fermer</button></div></div></div>
+<div id="productDetailOverlay" class="product-detail-overlay" onclick="closeProductDetail(event)"><div class="product-detail-modal" onclick="event.stopPropagation()"><button class="product-detail-close" onclick="closeProductDetail()" aria-label="Fermer">&times;</button><div id="productDetailContent" class="product-detail-inner"><div class="product-detail-image-wrap"><img id="productDetailImage" src="" alt="" onerror="this.onerror=null;this.src='/images/default-product.png'"></div><div class="product-detail-info"><h2 class="product-detail-name" id="productDetailName"></h2><div class="product-detail-price" id="productDetailPrice"></div><div id="productDetailStock" class="product-detail-stock"></div><div class="product-detail-desc" id="productDetailDesc"></div><div class="product-detail-actions"><button class="product-detail-add-cart" id="productDetailAddCart"><i class="fas fa-cart-plus"></i> Ajouter au panier</button><button class="product-detail-wishlist" id="productDetailWishlist" aria-label="Ajouter aux favoris"><i class="far fa-heart"></i></button></div></div></div></div></div>
+<!-- ═══════════════════════════════════════════════
+     FLOATING 3D AI CHATBOT
+     ═══════════════════════════════════════════ -->
+
+<style>
+  /* ── ORB BUTTON ── */
+  .chat-orb-wrapper {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Tooltip bubble above orb */
+  .chat-orb-tooltip {
+    background: #1a1a2e;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    position: relative;
+  }
+  .chat-orb-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1a1a2e;
+    border-bottom: none;
+  }
+  .chat-orb-tooltip.hidden {
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+  }
+
+  /* The 3D glowing orb */
+  .chat-orb {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* 3D sphere effect using layered box-shadows + radial gradient */
+    background:
+      radial-gradient(circle at 35% 30%,
+        rgba(255,255,255,0.55) 0%,
+        rgba(180,100,255,0.7)  30%,
+        rgba(90,0,180,0.95)    65%,
+        rgba(40,0,80,1)        100%
+      );
+
+    box-shadow:
+      /* outer glow */
+      0 0 0 2px rgba(180,100,255,0.3),
+      0 0 20px rgba(150,50,255,0.5),
+      0 0 45px rgba(120,0,255,0.35),
+      0 0 80px rgba(100,0,200,0.2),
+      /* inner depth */
+      inset 0 -8px 20px rgba(0,0,0,0.5),
+      inset 0 8px 16px rgba(255,255,255,0.15);
+
+    animation: orbFloat 3s ease-in-out infinite,
+               orbPulse 2.5s ease-in-out infinite;
+
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .chat-orb:hover {
+    transform: scale(1.1) translateY(-3px);
+    box-shadow:
+      0 0 0 3px rgba(180,100,255,0.5),
+      0 0 30px rgba(150,50,255,0.7),
+      0 0 60px rgba(120,0,255,0.5),
+      0 0 100px rgba(100,0,200,0.3),
+      inset 0 -8px 20px rgba(0,0,0,0.5),
+      inset 0 8px 16px rgba(255,255,255,0.2);
+  }
+
+  /* Shine highlight on top of orb */
+  .chat-orb::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    width: 22px;
+    height: 14px;
+    background: radial-gradient(ellipse,
+      rgba(255,255,255,0.7) 0%,
+      rgba(255,255,255,0) 100%
+    );
+    border-radius: 50%;
+    transform: rotate(-25deg);
+    pointer-events: none;
+  }
+
+  /* Ring ripple around orb */
+  .chat-orb::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(180,100,255,0.4);
+    animation: orbRing 2.5s ease-out infinite;
+    pointer-events: none;
+  }
+
+  /* AI icon inside orb */
+  .chat-orb-icon {
+    font-size: 26px;
+    color: rgba(255,255,255,0.92);
+    line-height: 1;
+    text-shadow: 0 0 12px rgba(255,255,255,0.6);
+    pointer-events: none;
+    z-index: 1;
+    position: relative;
+  }
+
+  /* Floating animation */
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-8px); }
+  }
+  @keyframes orbPulse {
+    0%, 100% {
+      box-shadow:
+        0 0 0 2px rgba(180,100,255,0.3),
+        0 0 20px rgba(150,50,255,0.5),
+        0 0 45px rgba(120,0,255,0.35),
+        0 0 80px rgba(100,0,200,0.2),
+        inset 0 -8px 20px rgba(0,0,0,0.5),
+        inset 0 8px 16px rgba(255,255,255,0.15);
+    }
+    50% {
+      box-shadow:
+        0 0 0 3px rgba(200,130,255,0.5),
+        0 0 30px rgba(170,80,255,0.7),
+        0 0 60px rgba(140,20,255,0.5),
+        0 0 100px rgba(120,0,220,0.3),
+        inset 0 -8px 20px rgba(0,0,0,0.5),
+        inset 0 8px 20px rgba(255,255,255,0.2);
+    }
+  }
+  @keyframes orbRing {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    100% { transform: scale(1.7); opacity: 0;   }
+  }
+
+  /* Particle dots orbiting the orb */
+  .orb-particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(200,150,255,0.8);
+    pointer-events: none;
+  }
+  .orb-particle:nth-child(1) { animation: orbit1 4s linear infinite; }
+  .orb-particle:nth-child(2) { animation: orbit2 5s linear infinite; }
+  .orb-particle:nth-child(3) { animation: orbit3 3.5s linear infinite; }
+
+  @keyframes orbit1 {
+    from { transform: rotate(0deg)   translateX(38px) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(38px) rotate(-360deg); }
+  }
+  @keyframes orbit2 {
+    from { transform: rotate(120deg) translateX(42px) rotate(-120deg); }
+    to   { transform: rotate(480deg) translateX(42px) rotate(-480deg); }
+  }
+  @keyframes orbit3 {
+    from { transform: rotate(240deg) translateX(35px) rotate(-240deg); }
+    to   { transform: rotate(600deg) translateX(35px) rotate(-600deg); }
+  }
+
+  /* ── CHAT PANEL ── */
+  .chat-panel {
+    position: fixed;
+    bottom: 108px;
+    right: 28px;
+    width: 370px;
+    max-height: 540px;
+    background: #0f0f1a;
+    border-radius: 20px;
+    border: 1px solid rgba(180,100,255,0.3);
+    box-shadow:
+      0 0 0 1px rgba(180,100,255,0.1),
+      0 20px 60px rgba(0,0,0,0.6),
+      0 0 40px rgba(120,0,255,0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9998;
+    transform: scale(0.85) translateY(20px);
+    transform-origin: bottom right;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .chat-panel.open {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* Panel header */
+  .chat-panel-header {
+    padding: 16px 18px;
+    background: linear-gradient(135deg,
+      rgba(100,0,200,0.8) 0%,
+      rgba(60,0,140,0.9)  100%
+    );
+    border-bottom: 1px solid rgba(180,100,255,0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%,
+      rgba(255,255,255,0.5) 0%,
+      rgba(160,80,255,0.8)  40%,
+      rgba(80,0,160,1)      100%
+    );
+    box-shadow: 0 0 12px rgba(180,100,255,0.6);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .chat-header-info { flex: 1; }
+  .chat-header-name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: var(--font);
+  }
+  .chat-header-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: rgba(200,180,255,0.8);
+    font-family: var(--font);
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 6px #4ade80;
+    animation: statusPulse 2s ease-in-out infinite;
+  }
+  @keyframes statusPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  .chat-close-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: rgba(255,255,255,0.7);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.2s;
+    font-family: var(--font);
+  }
+  .chat-close-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+  /* Messages area */
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180,100,255,0.3) transparent;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(180,100,255,0.3);
+    border-radius: 4px;
+  }
+
+  /* Message bubbles */
+  .chat-msg {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    max-width: 88%;
+    animation: msgIn 0.3s ease;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .chat-msg.bot  { align-self: flex-start; }
+  .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%,
+      rgba(255,255,255,0.4) 0%,
+      rgba(140,60,240,0.8)  40%,
+      rgba(70,0,140,1)      100%
+    );
+    box-shadow: 0 0 8px rgba(180,100,255,0.4);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-family: var(--font);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 100%;
+    word-break: break-word;
+  }
+  .chat-msg.bot .msg-bubble {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(180,100,255,0.2);
+    color: rgba(255,255,255,0.9);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg.user .msg-bubble {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(124,58,237,0.4);
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+  }
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(180,100,255,0.2);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+  }
+  .typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: rgba(180,100,255,0.7);
+    border-radius: 50%;
+    animation: typingDot 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingDot {
+    0%, 60%, 100% { transform: translateY(0);   opacity: 0.4; }
+    30%           { transform: translateY(-6px); opacity: 1;   }
+  }
+
+  /* Quick reply chips */
+  .quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 16px 8px;
+  }
+  .quick-chip {
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(180,100,255,0.3);
+    border-radius: 20px;
+    font-family: var(--font);
+    font-size: 0.75rem;
+    color: rgba(200,180,255,0.9);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .quick-chip:hover {
+    background: rgba(180,100,255,0.2);
+    border-color: rgba(180,100,255,0.6);
+    color: #fff;
+  }
+
+  /* Input area */
+  .chat-input-row {
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.04);
+    border-top: 1px solid rgba(180,100,255,0.15);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(180,100,255,0.2);
+    border-radius: 24px;
+    padding: 10px 16px;
+    font-family: var(--font);
+    font-size: 0.875rem;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .chat-input::placeholder { color: rgba(255,255,255,0.3); }
+  .chat-input:focus {
+    border-color: rgba(180,100,255,0.6);
+    box-shadow: 0 0 0 3px rgba(180,100,255,0.1);
+  }
+  .chat-send-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: #fff;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(124,58,237,0.4);
+  }
+  .chat-send-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.6);
+  }
+  .chat-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Powered by footer */
+  .chat-powered {
+    text-align: center;
+    padding: 6px;
+    font-family: var(--font);
+    font-size: 0.6875rem;
+    color: rgba(255,255,255,0.2);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .chat-panel {
+      width: calc(100vw - 24px);
+      right: 12px;
+      bottom: 96px;
+      max-height: 70vh;
+    }
+    .chat-orb-wrapper { right: 16px; bottom: 20px; }
+  }
+</style>
+
+<!-- ORB BUTTON -->
+<div class="chat-orb-wrapper" id="chatOrbWrapper">
+  <div class="chat-orb-tooltip" id="chatTooltip">
+    Besoin d'aide ?
+  </div>
+  <div class="chat-orb" id="chatOrb" onclick="toggleChatPanel()" role="button"
+      aria-label="Ouvrir le chat" tabindex="0">
+    <div class="orb-particle"></div>
+    <div class="orb-particle"></div>
+    <div class="orb-particle"></div>
+    <span class="chat-orb-icon">✦</span>
+  </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="chat-panel" id="chatPanel">
+
+  <!-- Header -->
+  <div class="chat-panel-header">
+    <div class="chat-avatar">✦</div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Assistant Tech &amp; Lifestyle Store</div>
+      <div class="chat-header-status">
+        <span class="status-dot"></span>
+        En ligne · Respond instantanement
+      </div>
+    </div>
+    <button class="chat-close-btn" onclick="toggleChatPanel()" aria-label="Fermer">✕</button>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-messages" id="chatMessages"></div>
+
+  <!-- Quick replies -->
+  <div class="quick-replies" id="quickReplies">
+    <button class="quick-chip" onclick="sendQuick(this)"> Voir les produits</button>
+    <button class="quick-chip" onclick="sendQuick(this)"> Livraison</button>
+    <button class="quick-chip" onclick="sendQuick(this)"> Paiement</button>
+    <button class="quick-chip" onclick="sendQuick(this)"> Contact</button>
+  </div>
+
+  <!-- Input -->
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" type="text"
+      placeholder="Posez votre question..."
+      onkeydown="if(event.key==='Enter')sendChatMessage()"
+      maxlength="500">
+    <button class="chat-send-btn" id="chatSendBtn"
+      onclick="sendChatMessage()" aria-label="Envoyer">
+
+    </button>
+  </div>
+  <div class="chat-powered">Propulsé par MakeWebsite.io AI</div>
+</div>
+
+<script>
+(function() {
+
+  // ── STORE CONTEXT (injected by StoreGeneratorService) ──
+  const STORE_CONTEXT = {
+    name:          'Tech &amp; Lifestyle Store',
+    description:   'Votre boutique de référence pour les produits tech et lifestyle en Tunisie',
+    currency:      'د.ت',
+    deliveryFees:  '7.0',
+    cashOnDelivery: 'true',
+    konnectActive:  'false',
+    d17Active:      'false',
+    whatsapp:      '',
+    products: '[{"id":"c9214713-f434-4b92-9128-a9c0592e70fa","name":"iPhone 15 Pro Max 256GB","price":4990.00,"comparePrice":null,"category":"Smartphones"},{"id":"6f3118c4-fe62-4163-b804-1bd39f70a84b","name":"Samsung Galaxy S24 Ultra 512GB","price":4590.00,"comparePrice":null,"category":"Smartphones"},{"id":"c4d61195-21b9-49c4-a3ae-cc4c7993c806","name":"Xiaomi Redmi Note 13 Pro 256GB","price":1290.00,"comparePrice":null,"category":"Smartphones"},{"id":"21b80ef0-26a4-4a42-869b-49f7233deeb9","name":"Huawei P60 Pro 256GB","price":3490.00,"comparePrice":null,"category":"Smartphones"},{"id":"b896a497-da2d-45da-9358-2d9e6ed28e6e","name":"Oppo Reno 11 5G 256GB","price":1490.00,"comparePrice":null,"category":"Smartphones"},{"id":"4286feba-a657-45a4-81b4-7f1ac5878e0e","name":"Google Pixel 8 Pro 128GB","price":3990.00,"comparePrice":null,"category":"Smartphones"},{"id":"0ddd96f6-7fb4-4686-8659-1396f864e03b","name":"OnePlus 12 256GB","price":3290.00,"comparePrice":null,"category":"Smartphones"},{"id":"0a46fe7b-039b-4496-8a20-72959df5a20f","name":"Realme GT 5 256GB","price":1990.00,"comparePrice":null,"category":"Smartphones"},{"id":"ea6c8f93-c080-40cf-b7d7-b354f698b36e","name":"Samsung Galaxy A55 128GB","price":990.00,"comparePrice":null,"category":"Smartphones"},{"id":"9f0f0aaf-54ee-40e3-8580-236761b07bee","name":"Tecno Camon 20 Pro 256GB","price":890.00,"comparePrice":null,"category":"Smartphones"},{"id":"ce108b9d-3209-4f45-a025-17ff9a0f0a70","name":"MacBook Pro 16\" M3 Pro 512GB","price":8990.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"b2d56e61-54fd-4b60-85fb-3049274b993c","name":"Dell XPS 15 Intel i7 16GB 512GB","price":5490.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"d238dc54-fad0-4937-95be-dc98b0163970","name":"HP Spectre x360 i7 16GB 1TB","price":6290.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"7ac7e870-3cf7-4e8c-ab3e-b846be68e349","name":"Lenovo ThinkPad X1 Carbon i7 16GB","price":5890.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"382ebc15-267a-46dd-8b9c-f23ff5da2942","name":"ASUS ROG Zephyrus G14 Ryzen 9 RTX 4060","price":6490.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"7dbb85cd-2bed-4916-b5d5-bc7820bc1a47","name":"Acer Swift 3 i5 8GB 256GB","price":2490.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"3ae4ea09-5e29-410d-bf44-e0e3324bf167","name":"Microsoft Surface Laptop 5 i5 8GB 256GB","price":3990.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"a4a2bfe4-7a36-4be5-b5ed-a57b43c30115","name":"Xiaomi Book Pro 14 i5 16GB 512GB","price":3290.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"8ce5746c-f25e-4c0f-8353-ec17e9484f35","name":"Lenovo IdeaPad 3 i3 8GB 256GB","price":1490.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"d7f264c9-3de8-4719-9fe7-e7226160887a","name":"HP Pavilion 15 i5 8GB 512GB","price":2690.00,"comparePrice":null,"category":"Laptops & Ordinateurs"},{"id":"e634f2ae-eba3-429f-9bfd-8651f8026afc","name":"iPad Pro 12.9\" M2 256GB","price":4990.00,"comparePrice":null,"category":"Tablettes"},{"id":"358150f7-3064-4c85-abdd-7c5809d88298","name":"Samsung Galaxy Tab S9 Ultra 256GB","price":4290.00,"comparePrice":null,"category":"Tablettes"},{"id":"4b566aea-149c-41d9-917d-fd26dda2b7b8","name":"iPad Air 10.9\" M1 64GB","price":2990.00,"comparePrice":null,"category":"Tablettes"},{"id":"24a32bd2-52ce-4e40-80be-c86e0d25349c","name":"Huawei MatePad Pro 12.6 256GB","price":3190.00,"comparePrice":null,"category":"Tablettes"},{"id":"2817a045-99fe-422b-a844-9badded7bf00","name":"Lenovo Tab P12 Pro 256GB","price":2190.00,"comparePrice":null,"category":"Tablettes"},{"id":"3204e893-2ce8-44ee-aab5-d44f1c501716","name":"Samsung Galaxy Tab A9+ 128GB","price":990.00,"comparePrice":null,"category":"Tablettes"},{"id":"b2d9cdfc-f1e7-454d-bd4f-0e0710a4bf53","name":"Xiaomi Pad 6 128GB","price":1290.00,"comparePrice":null,"category":"Tablettes"},{"id":"2fa2ae09-465f-4df9-91b7-de919fd02323","name":"Amazon Fire HD 10 64GB","price":590.00,"comparePrice":null,"category":"Tablettes"},{"id":"540a3463-a1ce-4d82-9ec1-e1d2723f961f","name":"Realme Pad 2 128GB","price":790.00,"comparePrice":null,"category":"Tablettes"},{"id":"75ebc413-ab3b-4ec9-9bab-a59eb36f20b7","name":"Microsoft Surface Pro 9 i5 256GB","price":5990.00,"comparePrice":null,"category":"Tablettes"},{"id":"b6804ad0-e29a-414a-b53b-d0254c19fc50","name":"Sony WH-1000XM5 Wireless","price":1290.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"31d8e1d4-57d4-4811-8e18-bbdddb519426","name":"Apple AirPods Max","price":2590.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"40563902-44c8-4f54-93de-9c0fe9bdf709","name":"Bose QuietComfort Ultra","price":1490.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"a3277a4c-392c-4e91-a6ae-6f4d5b59a7fc","name":"Samsung Galaxy Buds2 Pro","price":590.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"43150abc-b70f-4557-9dd7-637910bb17e4","name":"JBL Tune 770NC","price":390.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"d23401bf-75de-438a-b68e-3414f9bd8ef0","name":"Beats Studio Buds+","price":890.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"62d32c56-fe08-471c-9b6d-1def896a10a6","name":"Sennheiser Momentum 4 Wireless","price":1190.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"a26a3362-e055-4bb5-bc55-fe30607c071d","name":"Anker Soundcore Q45","price":490.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"a1a7c659-0331-49b8-a200-8163b3d8b222","name":"Marshall Major IV","price":390.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"1df5aea8-030a-4f9b-98cd-9684c616db95","name":"Logitech G733 Wireless Gaming","price":490.00,"comparePrice":null,"category":"Casques & Écouteurs"},{"id":"54215d89-fef8-4f62-8a29-60b5584dda3d","name":"Apple Watch Ultra 2 49mm","price":3290.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"b0a0af09-5c87-48ed-8afd-a8e66cf9fe23","name":"Apple Watch Series 9 45mm","price":2190.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"06c20425-c1a3-4498-99ad-00a72be5d41c","name":"Samsung Galaxy Watch6 Classic 47mm","price":1590.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"cb5550a1-6f6d-40c0-bb25-1551df3b64f5","name":"Huawei Watch GT 4 46mm","price":890.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"459f4ec6-273b-4685-88c5-f9c2164d50ac","name":"Garmin Forerunner 265","price":1390.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"a4f20f54-e56e-43c9-84f2-69737dd03469","name":"Fitbit Versa 4","price":690.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"facb9b18-6f98-4650-afc6-86d77e60df34","name":"Amazfit T-Rex 2","price":490.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"bb8dd70d-110d-4c68-b677-c2449510cd28","name":"Xiaomi Watch S1 Pro","price":690.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"8c080915-d93d-4521-a01e-2a124c0575fd","name":"Fossil Gen 6 Wellness Edition","price":990.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"87020b91-c647-4a82-9e53-0a410479618c","name":"Withings ScanWatch Horizon","price":1590.00,"comparePrice":null,"category":"Montres Connectées"},{"id":"7034f917-aee7-4190-8b4f-4c5b44fb74d0","name":"Sony Alpha A7 IV 33MP","price":7290.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"a8849385-0cc6-4207-af84-84d6fddb8f9f","name":"Canon EOS R6 Mark II","price":7990.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"1aff0a45-e3f2-4fdc-b606-aaf7989a2a5f","name":"Nikon Z8","price":8590.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"f5eadbde-7cd5-47e4-93c4-8261684aaa46","name":"Fujifilm X-T5 40MP","price":5490.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"0ac98272-aeda-447d-9fe0-f9ee771001ac","name":"GoPro Hero 12 Black","price":1590.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"35a1890c-c57a-4dde-86c2-780870cfa88b","name":"Sony ZV-E1 Vlogging Camera","price":4590.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"fe410c66-05fa-447b-b019-6a8600a8f131","name":"Canon EOS 250D","price":2490.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"0f62ab40-dd27-4d6d-9116-8ecf9fb68e49","name":"DJI Osmo Pocket 3","price":1590.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"773e1d7c-90bd-4636-8df7-3c695b2ed27b","name":"Insta360 X3","price":1290.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"5a239a6c-e081-4674-ac21-566937c50996","name":"Panasonic Lumix GH6","price":5990.00,"comparePrice":null,"category":"Appareils Photo"},{"id":"b269b4de-68dd-4171-81b7-0225d340f289","name":"PlayStation 5 Slim 1TB","price":2990.00,"comparePrice":null,"category":"Gaming"},{"id":"46fd3433-db41-4ae1-a173-28b45c82137d","name":"Xbox Series X 1TB","price":2890.00,"comparePrice":null,"category":"Gaming"},{"id":"eecc07aa-f1da-488b-a57b-59553df06f3b","name":"Nintendo Switch OLED","price":1490.00,"comparePrice":null,"category":"Gaming"},{"id":"eaa821b6-52c8-42bd-b2c9-919ecc6a979b","name":"ASUS ROG Ally Z1 Extreme","price":3290.00,"comparePrice":null,"category":"Gaming"},{"id":"d38d0d3a-2c67-4a74-af70-4db06ecb7197","name":"Steam Deck 512GB LCD","price":2590.00,"comparePrice":null,"category":"Gaming"},{"id":"68c46449-97c7-4608-894f-c18ce4d1c11c","name":"Logitech G Pro X Superlight","price":390.00,"comparePrice":null,"category":"Gaming"},{"id":"14697772-3c7e-45b2-82de-746672ca4f8b","name":"Razer BlackWidow V4 Pro","price":590.00,"comparePrice":null,"category":"Gaming"},{"id":"82526853-b7f1-4067-9c0a-2208040a25f8","name":"SteelSeries Arctis Nova Pro","price":690.00,"comparePrice":null,"category":"Gaming"},{"id":"9087bb53-aa7a-452c-82b9-2233e60051ea","name":"Samsung Odyssey G7 32\" 4K 144Hz","price":2490.00,"comparePrice":null,"category":"Gaming"},{"id":"b67fad76-31c6-478d-b0b7-112a3b015ef9","name":"Thrustmaster T300 RS GT","price":1990.00,"comparePrice":null,"category":"Gaming"},{"id":"6e7a7e09-055b-48ac-bd5a-5e5e8fc7b961","name":"Apple AirTag Pack of 4","price":290.00,"comparePrice":null,"category":"Accessoires"},{"id":"6379d65a-9e20-442c-b793-1c2aa2402bbb","name":"Belkin BoostCharge Pro 3-en-1","price":390.00,"comparePrice":null,"category":"Accessoires"},{"id":"d74f3cac-25cb-4a89-abd2-6dd37a4ce934","name":"Anker PowerCore 26800mAh","price":190.00,"comparePrice":null,"category":"Accessoires"},{"id":"a5a921b5-5449-42cf-b93a-d79ead640c0a","name":"Logitech MX Master 3S","price":390.00,"comparePrice":null,"category":"Accessoires"},{"id":"3dad50b2-8c4f-4735-ba2f-20b9a6e36f0b","name":"Apple Magic Keyboard","price":590.00,"comparePrice":null,"category":"Accessoires"},{"id":"4a723305-ef9f-401f-8491-7d25d3504040","name":"Samsung T7 Portable SSD 1TB","price":490.00,"comparePrice":null,"category":"Accessoires"},{"id":"dbab2954-f61a-4d7e-99b4-f050bf1f4193","name":"UGREEN USB-C Hub 9-en-1","price":120.00,"comparePrice":null,"category":"Accessoires"},{"id":"d04ec8be-aaa1-4963-95b2-3808be73fee4","name":"Spigen Ultra Hybrid iPhone Case","price":59.00,"comparePrice":null,"category":"Accessoires"},{"id":"f1e6e853-b068-4025-b772-0447299cd98d","name":"PopSockets PopGrip","price":39.00,"comparePrice":null,"category":"Accessoires"},{"id":"7bc28d22-5c24-422e-877c-d842f8ed08bc","name":"Mous Limitless 5.0 Case","price":129.00,"comparePrice":null,"category":"Accessoires"},{"id":"5288ffab-1cd6-48d4-9ca4-d8545cf9bc34","name":"Sonos Era 300","price":1690.00,"comparePrice":null,"category":"Enceintes"},{"id":"584958c5-e939-4b3c-82be-f4b496848515","name":"JBL Charge 5","price":590.00,"comparePrice":null,"category":"Enceintes"},{"id":"d59e5c9c-c0a5-4f69-b105-e07c2b0c7176","name":"Marshall Stanmore III","price":1290.00,"comparePrice":null,"category":"Enceintes"},{"id":"ac16f14d-0324-45c6-b263-7f9c5160cf2d","name":"Bose SoundLink Revolve+ II","price":890.00,"comparePrice":null,"category":"Enceintes"},{"id":"14dac9c4-640a-40f6-88fb-385065032a43","name":"Sony SRS-XB43","price":690.00,"comparePrice":null,"category":"Enceintes"},{"id":"9c13583c-ea08-46e2-ba9c-9fa50cc50145","name":"Ultimate Ears Boom 3","price":490.00,"comparePrice":null,"category":"Enceintes"},{"id":"cbad443d-43c2-4ff5-999f-72354b66a565","name":"Harman Kardon Onyx Studio 8","price":790.00,"comparePrice":null,"category":"Enceintes"},{"id":"b5deb3f8-51ef-49b0-9147-439d9520b027","name":"House of Marley Get Together 2","price":690.00,"comparePrice":null,"category":"Enceintes"},{"id":"95d66066-eb9b-4955-85b2-a9bcc820ee43","name":"Anker Soundcore Motion+","price":290.00,"comparePrice":null,"category":"Enceintes"},{"id":"4946c2f9-ef85-4d09-bcf1-0a87796eed1e","name":"Bang & Olufsen Beosound A1 2nd Gen","price":1290.00,"comparePrice":null,"category":"Enceintes"},{"id":"97f6e533-2ffa-43c0-83ad-c62f995988d2","name":"HP LaserJet Pro M404dn","price":1590.00,"comparePrice":null,"category":"Imprimantes"},{"id":"d2422ae4-dc26-4a9a-afe9-b8a6323e0a06","name":"Canon PIXMA G3460","price":490.00,"comparePrice":null,"category":"Imprimantes"},{"id":"ee786680-8ee3-4868-8fb6-7ba240948ff2","name":"Epson EcoTank L3250","price":590.00,"comparePrice":null,"category":"Imprimantes"},{"id":"226c0220-a165-4f3c-92da-717cb0dc62a0","name":"Brother HL-L2350DW","price":690.00,"comparePrice":null,"category":"Imprimantes"},{"id":"6ec06826-03a4-460e-ad3b-a973b59596b5","name":"HP Envy 6455e","price":390.00,"comparePrice":null,"category":"Imprimantes"},{"id":"af5b071b-e15f-408d-8d7e-0a2f6e1200ef","name":"Canon imageCLASS MF445dw","price":2290.00,"comparePrice":null,"category":"Imprimantes"},{"id":"17cc4f15-eb80-46fe-a8e4-e4a5df249fb5","name":"Epson WorkForce WF-2860","price":590.00,"comparePrice":null,"category":"Imprimantes"},{"id":"60ea8654-5c24-4972-96bc-1af0533505a1","name":"Brother MFC-J995DW","price":690.00,"comparePrice":null,"category":"Imprimantes"},{"id":"5d816941-b4e7-47c4-af5e-e5ad20a912d4","name":"HP Smart Tank 7001","price":790.00,"comparePrice":null,"category":"Imprimantes"},{"id":"fb6be6e3-b976-49e3-bbc4-1d74fb065e20","name":"Canon PIXMA TR8620a","price":490.00,"comparePrice":null,"category":"Imprimantes"}]',
+    categories: '[{"id":"e2493280-54db-43ad-9fba-94c944f2023d","name":"Smartphones"},{"id":"9df5491d-00a1-43ea-847b-f17e5d768893","name":"Laptops & Ordinateurs"},{"id":"0499bd59-2be3-4219-be10-b7fe514f9e4f","name":"Tablettes"},{"id":"3e6849b7-9fc7-4ea8-9545-55621c731ff7","name":"Casques & Écouteurs"},{"id":"22257c8a-ad4e-4ead-a324-acc1c2b59d39","name":"Montres Connectées"},{"id":"929cf20e-07ff-44f9-bd38-67b77b8ff09c","name":"Appareils Photo"},{"id":"2bcb373e-bc10-4b88-8650-cda37f58c3b7","name":"Gaming"},{"id":"3a32bc85-3714-4c3e-8cca-36cec7ea5625","name":"Accessoires"},{"id":"a403934d-87a9-41fa-a131-db5f0d830bdf","name":"Enceintes"},{"id":"1e546b6f-a4b9-438a-94d5-98f285c33047","name":"Imprimantes"}]',
+    language:   'fr',
+    boutiqueId: '65512316-2ff0-403d-b541-452cea226edc',
+    slug:       'tech-lifestyle-store',
+  };
+
+  // ── STATE ──
+  let chatOpen   = false;
+  let isLoading  = false;
+  let msgHistory = [];
+
+  // ── SYSTEM PROMPT ──
+  function buildSystemPrompt() {
+    const products = STORE_CONTEXT.products
+      .slice(0, 30)
+      .map(p => '- ' + p.name + ': ' + STORE_CONTEXT.currency + p.price + (p.comparePrice ? ' (etait ' + STORE_CONTEXT.currency + p.comparePrice + ')' : '') + (p.category ? ' [' + p.category + ']' : ''))
+      .join('\n');
+
+    const cats = STORE_CONTEXT.categories.map(c => c.name).join(', ');
+
+    const paymentMethods = [
+      STORE_CONTEXT.cashOnDelivery ? 'Paiement a la livraison (Cash on Delivery)' : null,
+      STORE_CONTEXT.konnectActive  ? 'Konnect (paiement par carte bancaire en ligne)' : null,
+      STORE_CONTEXT.d17Active      ? 'D17 (paiement mobile)' : null,
+    ].filter(Boolean).join(', ');
+
+    return 'Tu es l\'assistant virtuel de la boutique en ligne "' + STORE_CONTEXT.name + '".\n' +
+      'Tu reponds uniquement en francais (ou en arabe si le client ecrit en arabe).\n' +
+      'Tu es serviable, chaleureux, concis et professionnel.\n\n' +
+      'INFORMATIONS SUR LA BOUTIQUE :\n' +
+      '- Nom : ' + STORE_CONTEXT.name + '\n' +
+      '- Description : ' + (STORE_CONTEXT.description || 'Boutique en ligne tunisienne') + '\n' +
+      '- Frais de livraison : ' + STORE_CONTEXT.currency + STORE_CONTEXT.deliveryFees + '\n' +
+      '- Delai de livraison : 24 a 48 heures partout en Tunisie\n' +
+      '- Methodes de paiement : ' + (paymentMethods || 'Paiement a la livraison') + '\n' +
+      (STORE_CONTEXT.whatsapp ? '- WhatsApp : ' + STORE_CONTEXT.whatsapp + '\n' : '') +
+      '\nCATEGORIES DISPONIBLES :\n' +
+      (cats || 'Non specifiees') + '\n\n' +
+      'PRODUITS DISPONIBLES :\n' +
+      (products || 'Aucun produit liste') + '\n\n' +
+      'REGLES IMPORTANTES :\n' +
+      '1. Si un client demande un produit, donne le prix exact et propose d\'ajouter au panier.\n' +
+      '2. Pour les questions de livraison, explique les frais et le delai.\n' +
+      '3. Pour le paiement, liste les methodes disponibles.\n' +
+      '4. Si tu ne sais pas quelque chose, dis-le honnetement.\n' +
+      '5. Ne mentionne jamais d\'autres boutiques ou concurrents.\n' +
+      '6. Reponds en 1-3 phrases maximum sauf si une liste est necessaire.\n' +
+      '7. Si le client veut commander, encourage-le a utiliser le panier sur la page.';
+  }
+
+  // ── TOGGLE PANEL ──
+  window.toggleChatPanel = function() {
+    chatOpen = !chatOpen;
+    var panel   = document.getElementById('chatPanel');
+    var tooltip = document.getElementById('chatTooltip');
+    panel.classList.toggle('open', chatOpen);
+    tooltip.classList.toggle('hidden', chatOpen);
+
+    if (chatOpen && msgHistory.length === 0) {
+      setTimeout(function() {
+        addBotMessage('Bonjour ! Bienvenue chez **' + STORE_CONTEXT.name + '**. Comment puis-je vous aider aujourd\'hui ?');
+      }, 300);
+    }
+    if (chatOpen) {
+      setTimeout(function() { document.getElementById('chatInput').focus(); }, 400);
+    }
+  };
+
+  // ── QUICK REPLY ──
+  window.sendQuick = function(btn) {
+    var text = btn.textContent.replace(/^[^\w]+/, '').trim();
+    document.getElementById('quickReplies').style.display = 'none';
+    processUserMessage(text);
+  };
+
+  // ── SEND MESSAGE ──
+  window.sendChatMessage = function() {
+    var input = document.getElementById('chatInput');
+    var text  = input.value.trim();
+    if (!text || isLoading) return;
+    input.value = '';
+    document.getElementById('quickReplies').style.display = 'none';
+    processUserMessage(text);
+  };
+
+  function processUserMessage(text) {
+    addUserMessage(text);
+    msgHistory.push({ role: 'user', content: text });
+    showTyping();
+    callClaudeAPI();
+  }
+
+  // ── CALL AI API (Ollama via backend) ──
+  async function callClaudeAPI() {
+    isLoading = true;
+    document.getElementById('chatSendBtn').disabled = true;
+
+    var lastMsg = msgHistory.length > 0 ? msgHistory[msgHistory.length - 1].content : '';
+
+    try {
+      var res = await fetch('/api/public/stores/' + STORE_CONTEXT.slug + '/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: lastMsg,
+          messages: msgHistory.slice(-10).map(function(m) {
+            return { role: m.role, content: m.content };
+          }),
+        }),
+      });
+
+      var body = await res.json();
+      hideTyping();
+
+      var reply = body.data && body.data.reply
+        ? body.data.reply
+        : "Desole, je n'ai pas pu obtenir une reponse. Reessayez.";
+
+      msgHistory.push({ role: 'assistant', content: reply });
+      addBotMessage(reply);
+
+    } catch (err) {
+      hideTyping();
+      addBotMessage("Erreur de connexion. Veuillez reessayer.");
+      console.error('[Chatbot]', err);
+    } finally {
+      isLoading = false;
+      document.getElementById('chatSendBtn').disabled = false;
+    }
+  }
+
+  // ── MESSAGE RENDERING ──
+  function addUserMessage(text) {
+    var msgs = document.getElementById('chatMessages');
+    var div  = document.createElement('div');
+    div.className = 'chat-msg user';
+    div.innerHTML = '<div class="msg-bubble">' + escHtml(text) + '</div>';
+    msgs.appendChild(div);
+    scrollBottom();
+  }
+
+  function addBotMessage(text) {
+    var msgs = document.getElementById('chatMessages');
+    var div  = document.createElement('div');
+    div.className = 'chat-msg bot';
+    var rendered = escHtml(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    div.innerHTML = '<div class="msg-avatar">*</div><div class="msg-bubble">' + rendered + '</div>';
+    msgs.appendChild(div);
+    scrollBottom();
+  }
+
+  function showTyping() {
+    var msgs = document.getElementById('chatMessages');
+    var div  = document.createElement('div');
+    div.className = 'typing-indicator';
+    div.id = 'typingIndicator';
+    div.innerHTML = '<div class="msg-avatar">*</div><div class="typing-dots"><span></span><span></span><span></span></div>';
+    msgs.appendChild(div);
+    scrollBottom();
+  }
+
+  function hideTyping() {
+    var el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  function scrollBottom() {
+    var msgs = document.getElementById('chatMessages');
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── AUTO-HIDE TOOLTIP after 5s ──
+  setTimeout(function() {
+    var el = document.getElementById('chatTooltip');
+    if (el) el.classList.add('hidden');
+  }, 5000);
+
+  // ── Keyboard support on orb ──
+  document.getElementById('chatOrb').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') toggleChatPanel();
+  });
+
+})();
+</script>
+
+<script>
+const API_BASE='';const STORE_SLUG='tech-lifestyle-store';const CURRENCY_SYMBOL='د.ت';const DELIVERY_FEES=7.0;const DEFAULT_PRODUCT_IMAGE='/images/default-product.png';
+let cart=JSON.parse(localStorage.getItem('cart_'+STORE_SLUG)||'[]');let wishlist=JSON.parse(localStorage.getItem('wishlist_'+STORE_SLUG)||'[]');
+function saveCart(){localStorage.setItem('cart_'+STORE_SLUG,JSON.stringify(cart));updateCartUI()}
+function toggleCartSidebar(){document.getElementById('cartSidebar').classList.toggle('open');document.getElementById('cartOverlay').classList.toggle('show')}
+function escHtml(v){return String(v??'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function escAttr(v){return escHtml(v).replace(/`/g,'&#96;')}
+function productImg(v){return v&&String(v).trim()?v:DEFAULT_PRODUCT_IMAGE}
+function resolveImgUrl(v){if(!v||!String(v).trim())return DEFAULT_PRODUCT_IMAGE;var s=String(v).trim();if(s.startsWith('http://')||s.startsWith('https://')||s.startsWith('/'))return s;if(s.startsWith('images/')||s.startsWith('uploads/'))return '/'+s;return '/uploads/'+s}
+function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id);if(existing)existing.qty+=1;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:1});saveCart()}
+function removeFromCart(id){cart=cart.filter(i=>i.id!==id);saveCart()}
+function changeQty(id,delta){const item=cart.find(i=>i.id===id);if(item){item.qty=Math.max(1,item.qty+delta);saveCart()}}
+function updateCartUI(){const count=cart.reduce((s,i)=>s+i.qty,0);document.getElementById('cartCount').textContent=count;const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-shopping-bag" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i><p>Votre panier est vide</p></div>';document.getElementById('total-price').textContent=CURRENCY_SYMBOL+'0.00';document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+'0.00';return}let html='';let sub=0;cart.forEach(i=>{const price=Number(i.price)||0;const id=escAttr(i.id);sub+=price*i.qty;html+='<div class="t2-cart-item"><img src="'+escAttr(productImg(i.img))+'" alt="'+escAttr(i.name)+'" onerror="this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE"><div class="t2-cart-item__info"><div class="t2-cart-item__name">'+escHtml(i.name)+'</div><div class="t2-cart-item__price">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div><div class="t2-cart-item__qty"><button type="button" data-cart-action="dec" data-cart-id="'+id+'">-</button><span>'+i.qty+'</span><button type="button" data-cart-action="inc" data-cart-id="'+id+'">+</button></div></div><button type="button" class="t2-cart-item__remove" data-cart-action="remove" data-cart-id="'+id+'"><i class="fas fa-trash-alt"></i></button></div>'});container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){const id=this.dataset.cartId;if(this.dataset.cartAction==='inc')changeQty(id,1);else if(this.dataset.cartAction==='dec')changeQty(id,-1);else removeFromCart(id)})});const total=sub+DELIVERY_FEES;document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+total.toFixed(2)}
+function toggleFavorite(id){const idx=wishlist.indexOf(id);if(idx>-1)wishlist.splice(idx,1);else wishlist.push(id);localStorage.setItem('wishlist_'+STORE_SLUG,JSON.stringify(wishlist));updateWishlistUI()}
+function updateWishlistUI(){document.getElementById('wishlistBadge').textContent=wishlist.length||'';document.querySelectorAll('.product-card').forEach(function(card){const active=wishlist.includes(card.dataset.productId);card.querySelectorAll('.wishlist-toggle .far').forEach(function(i){i.style.display=active?'none':''});card.querySelectorAll('.wishlist-toggle .fas').forEach(function(i){i.style.display=active?'':'none'})});var wb=document.getElementById('productDetailWishlist');if(wb){var pid3=wb.getAttribute('data-product-id');if(pid3){var ww2=wishlist.includes(pid3);wb.innerHTML=ww2?'<i class="fas fa-heart"></i>':'<i class="far fa-heart"></i>';wb.classList.toggle('active',ww2)}}}
+function submitOrder(e){e.preventDefault();const f=e.target;if(!cart.length){alert('Votre panier est vide');return false}const fn=f['full-name']?f['full-name'].value.trim():'';const addr=f['billing-address']?f['billing-address'].value.trim():'';const ph=f['phone_number']?f['phone_number'].value.trim():'';const ct=f['city']?f['city'].value:'';const pm=f['payment-method']?f['payment-method'].value:'';if(!fn){alert('Veuillez entrer votre nom complet');return false}if(!addr){alert('Veuillez entrer votre adresse de livraison');return false}if(!ph){alert('Veuillez entrer votre numéro de téléphone');return false}if(!ct){alert('Veuillez sélectionner votre ville');return false}if(!pm){alert('Veuillez sélectionner un moyen de paiement');return false}const order={boutiqueId:'65512316-2ff0-403d-b541-452cea226edc',fullName:fn,email:(f['email']?f['email'].value:''),phone:ph,billingAddress:addr,city:ct,country:(f['country']?f['country'].value:''),paymentMethod:pm,items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price}))};
+fetch('/api/public/store/tech-lifestyle-store/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)}).then(r=>r.json()).then(d=>{if(d.success){document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;document.getElementById('customUserCity').textContent=d.city||order.city;document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}else{alert('Erreur: '+(d.message||'Commande non acceptée'))}}).catch(function(e){alert('Erreur réseau. Vérifiez votre connexion.')});return false}
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});document.querySelectorAll('.wishlist-toggle').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)toggleFavorite(card.dataset.productId)})});document.querySelectorAll('.add-cart').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg)})});updateCartUI();updateWishlistUI()});
+
+// Product detail from query param
+(function(){var p=new URLSearchParams(window.location.search).get('product_id');if(p)fetchProductDetail(p)})();
+function fetchProductDetail(id){fetch('/api/public/store/tech-lifestyle-store/products/'+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(p){if(p&&p.id)showProductDetail(p)}).catch(function(e){console.error('Failed to load product:',e)})}
+function showProductDetail(p){var img=resolveImgUrl(p.images&&p.images!=='[]'?JSON.parse(p.images)[0]:null);document.getElementById('productDetailImage').src=img;document.getElementById('productDetailName').textContent=p.name||'';var ph=CURRENCY_SYMBOL+(Number(p.price)||0).toFixed(2);if(p.comparePrice&&Number(p.comparePrice)>0)ph='<span style="text-decoration:line-through;color:var(--muted);margin-right:8px;font-size:1rem">'+CURRENCY_SYMBOL+Number(p.comparePrice).toFixed(2)+'</span> '+ph;document.getElementById('productDetailPrice').innerHTML=ph;var se=document.getElementById('productDetailStock');var is=p.stock===undefined||p.stock>0;se.textContent=is?'En stock':'Rupture de stock';se.className='product-detail-stock '+(is?'in-stock':'out-of-stock');document.getElementById('productDetailDesc').textContent=p.description||'';var ab=document.getElementById('productDetailAddCart');var pid2=p.id;ab.onclick=function(){addToCart(pid2,p.name,p.price,img);closeProductDetail()};var wb=document.getElementById('productDetailWishlist');wb.setAttribute('data-product-id',pid2);var ww=wishlist.includes(pid2);wb.innerHTML=ww?'<i class="fas fa-heart"></i>':'<i class="far fa-heart"></i>';wb.classList.toggle('active',ww);wb.onclick=function(){toggleFavorite(pid2);var nw=wishlist.includes(pid2);wb.innerHTML=nw?'<i class="fas fa-heart"></i>':'<i class="far fa-heart"></i>';wb.classList.toggle('active',nw)};document.getElementById('productDetailOverlay').classList.add('open');document.body.style.overflow='hidden'}
+function closeProductDetail(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('productDetailOverlay').classList.remove('open');document.body.style.overflow='';var u=new URL(window.location);u.searchParams.delete('product_id');window.history.replaceState({},'',u)}
+
+// Slider autoplay
+!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;function go(i){n=(i+s.length)%s.length;t.style.transform='translateX(-'+(n*100)+'%)';var d=document.getElementById('sliderDots');if(d)Array.from(d.children).forEach(function(e,j){e.classList.toggle('active',j===n)})}var prev=document.getElementById('prevSlide'),next=document.getElementById('nextSlide');if(prev)prev.onclick=function(){go(n-1)};if(next)next.onclick=function(){go(n+1)};var dots=document.getElementById('sliderDots');if(dots&&s.length>1){for(var i=0;i<s.length;i++){var dot=document.createElement('span');dot.onclick=function(j){return function(){go(j)}}(i);dots.appendChild(dot)}dots.children[0].classList.add('active')}if(s.length>1)setInterval(function(){go(n+1)},5000)}();
+
+// Search
+document.getElementById('search-input')&&document.getElementById('search-input').addEventListener('input',function(){var q=this.value.toLowerCase();document.querySelectorAll('.product-card').forEach(function(c){var n=c.querySelector('.name');if(n)c.style.display=n.textContent.toLowerCase().includes(q)?'':'none'})});
+</script>
+</body>
+</html>

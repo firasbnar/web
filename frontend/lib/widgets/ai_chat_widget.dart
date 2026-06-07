@@ -8,15 +8,11 @@ import '../core/storage.dart';
 class AiChatWidget extends StatefulWidget {
   final String boutiqueId;
   final String boutiqueName;
-  final String? publicSlug;
-  final bool isOwner;
 
   const AiChatWidget({
     super.key,
     required this.boutiqueId,
     required this.boutiqueName,
-    this.publicSlug,
-    this.isOwner = true,
   });
 
   @override
@@ -113,9 +109,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
         if (mounted) {
           _addBotMessage(_ChatMessage(
             role: 'assistant',
-            content: widget.isOwner
-                ? 'Bonjour ! Je suis votre assistant business pour **${widget.boutiqueName}**. Je peux analyser ventes, stock, trafic et clients.'
-                : 'Bonjour ! Bienvenue chez **${widget.boutiqueName}**. Je peux vous aider a trouver, comparer et choisir des produits.',
+            content: 'Bonjour ! Je suis votre assistant business pour **${widget.boutiqueName}**. Je peux analyser ventes, stock, trafic et clients.',
           ));
         }
       });
@@ -170,13 +164,11 @@ class _AiChatWidgetState extends State<AiChatWidget>
         },
       ));
 
-      final endpoint = widget.isOwner
-          ? '/ai/owner/chat'
-          : '/public/stores/${widget.publicSlug}/ai/chat';
+      final endpoint = '/ai/owner/chat';
       final response = await dio.post(endpoint, data: {
         'boutiqueId': widget.boutiqueId,
         'message': t,
-        'sessionId': widget.isOwner ? 'owner-${widget.boutiqueId}' : 'public-${widget.publicSlug}',
+        'sessionId': 'owner-${widget.boutiqueId}',
         'messages': history,
       });
 
@@ -1157,21 +1149,13 @@ class _AiChatWidgetState extends State<AiChatWidget>
   }
 
   Widget _buildQuickReplies() {
-    final chips = widget.isOwner
-        ? [
-            ('Best sellers', 'best'),
-            ('Revenue today', 'revenue'),
-            ('Low stock', 'stock'),
-            ('Traffic today', 'traffic'),
-            ('Orders today', 'orders'),
-          ]
-        : [
-            ('Trending products', 'trending'),
-            ('Promotions', 'promos'),
-            ('Cheapest products', 'cheap'),
-            ('New arrivals', 'new'),
-            ('Best sellers', 'best'),
-          ];
+    final chips = [
+      ('Best sellers', 'best'),
+      ('Revenue today', 'revenue'),
+      ('Low stock', 'stock'),
+      ('Traffic today', 'traffic'),
+      ('Orders today', 'orders'),
+    ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Wrap(

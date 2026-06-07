@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
-import '../../core/url_utils.dart';
+import '../../utils/image_utils.dart';
 import '../../providers/public_cart_provider.dart';
 import '../../providers/public_wishlist_provider.dart';
 import '../../theme/app_colors.dart';
@@ -36,6 +36,9 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
   void initState() {
     super.initState();
     _loadProduct();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PublicWishlistProvider>().loadWishlist(widget.slug);
+    });
   }
 
   Future<void> _loadProduct() async {
@@ -44,6 +47,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
       final res = await _api.get('/public/stores/${widget.slug}/products/${widget.productId}');
       if (mounted) {
         setState(() { _product = res; _loading = false; });
+        debugPrint('PUBLIC PRODUCT LOADED: ${res['name']} colors=${res['colors']} sizes=${res['sizes']} availableColors=${res['availableColors']} availableSizes=${res['availableSizes']}');
         _loadReviews();
       }
     } catch (e) {
@@ -259,12 +263,65 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     );
   }
 
-  List<String> _parseList(String? raw) {
-    if (raw == null || raw.isEmpty) return [];
-    return raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  List<String> _parseVariantList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) {
+      return value.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
+    }
+    if (value is String) {
+      final s = value.trim();
+      if (s.isEmpty) return [];
+      if (s.startsWith('[')) {
+        try {
+          return s.substring(1, s.length - 1)
+              .split(',')
+              .map((e) => e.trim().replaceAll('"', '').replaceAll("'", ''))
+              .where((e) => e.isNotEmpty)
+              .toList();
+        } catch (_) {}
+      }
+      return s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    return [value.toString()];
+  }
+
+  List<String> _getColors(Map<String, dynamic> p) {
+    for (final key in ['colors', 'availableColors', 'color']) {
+      final val = p[key];
+      if (val != null) {
+        final parsed = _parseVariantList(val);
+        if (parsed.isNotEmpty) return parsed;
+      }
+    }
+    return [];
+  }
+
+  List<String> _getSizes(Map<String, dynamic> p) {
+    for (final key in ['sizes', 'availableSizes', 'size']) {
+      final val = p[key];
+      if (val != null) {
+        final parsed = _parseVariantList(val);
+        if (parsed.isNotEmpty) return parsed;
+      }
+    }
+    return [];
   }
 
   void _addToCart() {
+    final colors = _getColors(_product!);
+    final sizes = _getSizes(_product!);
+    if (colors.isNotEmpty && _selectedColor == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez choisir une couleur.'), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+    if (sizes.isNotEmpty && _selectedSize == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez choisir une taille.'), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
     final cart = context.read<PublicCartProvider>();
     final p = _product!;
     final img = resolveImageUrl(firstImageUrl(p['images']));
@@ -276,6 +333,8 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
       image: img,
       stock: p['stock'] ?? 0,
       quantity: _quantity,
+      selectedColor: _selectedColor,
+      selectedSize: _selectedSize,
     ));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$_quantity x ${p['name']} ajouté au panier'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
@@ -292,6 +351,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
       );
     }
     final p = _product!;
+    debugPrint('PUBLIC PRODUCT DETAIL: $p');
     final name = p['name'] ?? '';
     final price = (p['price'] ?? 0).toDouble();
     final promo = p['promotionalPrice']?.toDouble();
@@ -299,8 +359,8 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     final stockStatus = p['stockStatus'] ?? 'IN_STOCK';
     final description = p['description'] as String?;
     final images = parseImageUrls(p['images']).map((u) => resolveImageUrl(u) ?? u).toList();
-    final colors = _parseList(p['colors'] as String?);
-    final sizes = _parseList(p['sizes'] as String?);
+    final colors = _getColors(p);
+    final sizes = _getSizes(p);
     final outOfStock = stockStatus == 'OUT_OF_STOCK' || stock <= 0;
     final wishlist = context.watch<PublicWishlistProvider>();
     final inWishlist = wishlist.isInWishlist(widget.slug, widget.productId);
@@ -365,10 +425,10 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('${(promo != null && promo > 0 ? promo : price).toStringAsFixed(3)} TND', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
+                      Text('DT ${(promo != null && promo > 0 ? promo : price).toStringAsFixed(2)}', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
                       if (promo != null && promo > 0) ...[
                         const SizedBox(width: 12),
-                        Text('${price.toStringAsFixed(3)} TND', style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
+                        Text('DT ${price.toStringAsFixed(2)}', style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

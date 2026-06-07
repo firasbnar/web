@@ -1,16 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/env_config.dart';
-import '../../core/url_utils.dart';
+import '../../utils/image_utils.dart';
 import '../../providers/public_cart_provider.dart';
 import '../../providers/public_wishlist_provider.dart';
 import '../../services/social_meta.dart';
 import '../../services/web_utils.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
-import '../../widgets/ai_chat_widget.dart';
 
 class PublicStorefrontScreen extends StatefulWidget {
   final String slug;
@@ -19,17 +20,19 @@ class PublicStorefrontScreen extends StatefulWidget {
   State<PublicStorefrontScreen> createState() => _PublicStorefrontScreenState();
 }
 
-class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
+class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> with WidgetsBindingObserver {
   final _api = ApiClient();
   Map<String, dynamic>? _store;
   bool _loading = true;
   String? _error;
   String _searchQuery = '';
   String? _selectedCategoryId;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // ignore: avoid_print
     print('OPENING PUBLIC STORE SLUG: ${widget.slug}');
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -37,6 +40,26 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
       context.read<PublicWishlistProvider>().loadWishlist(widget.slug);
     });
     _loadStore();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadStore();
+    }
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) => _silentRefresh());
   }
 
   Future<void> _trackVisit(double? lat, double? lng) async {
@@ -73,6 +96,14 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
 
   Future<void> _loadStore() async {
     setState(() { _loading = true; _error = null; });
+    await _fetchStore();
+  }
+
+  Future<void> _silentRefresh() async {
+    await _fetchStore();
+  }
+
+  Future<void> _fetchStore() async {
     try {
       final res = await _api.get('/public/stores/${widget.slug}');
       if (mounted) {
@@ -200,7 +231,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
             IconButton(
               icon: const Icon(Icons.phone),
               tooltip: 'Nous contacter',
-              onPressed: () {},
+              onPressed: () => launchUrl(Uri.parse('tel:$phone')),
             ),
           Stack(
             children: [
@@ -222,12 +253,6 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
           ),
         ],
       ),
-      floatingActionButton: AiChatWidget(
-        boutiqueId: s['id'].toString(),
-        boutiqueName: name,
-        publicSlug: widget.slug,
-        isOwner: false,
-      ),
       body: RefreshIndicator(
         onRefresh: _loadStore,
         child: SingleChildScrollView(
@@ -239,11 +264,11 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
             if (banner != null && banner.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(resolveImageUrl(banner)!, width: double.infinity, height: 140, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                child: Image.network(resolveImageUrl(banner) ?? '', width: double.infinity, height: 140, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
               ),
             if (logo != null && logo.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Center(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(resolveImageUrl(logo)!, height: 80, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()))),
+              Center(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(resolveImageUrl(logo) ?? '', height: 80, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink()))),
             ],
             if (description != null && description.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -435,8 +460,8 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> {
 
 
   String _fmtPrice(dynamic price) {
-    if (price == null) return '0.00 TND';
+    if (price == null) return 'DT 0.00';
     final n = (price is num) ? price.toDouble() : double.tryParse(price.toString()) ?? 0.0;
-    return '${n.toStringAsFixed(3)} TND';
+    return 'DT ${n.toStringAsFixed(2)}';
   }
 }

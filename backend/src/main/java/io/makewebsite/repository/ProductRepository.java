@@ -33,11 +33,17 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.boutique.id = :boutiqueId AND (p.isActive = true OR p.isActive IS NULL)")
     List<Product> findPublicProductsWithCategory(@Param("boutiqueId") UUID boutiqueId);
 
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.boutique.id = :boutiqueId")
+    List<Product> findAllByBoutiqueIdSafe(@Param("boutiqueId") UUID boutiqueId);
+
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :id")
     Optional<Product> findByIdWithCategory(@Param("id") UUID id);
 
     @Query("SELECT p FROM Product p JOIN FETCH p.boutique WHERE p.id = :id")
     Optional<Product> findByIdWithBoutique(@Param("id") UUID id);
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.id = :productId AND p.boutique.slug = :slug")
+    Optional<Product> findPublicProductDetails(@Param("slug") String slug, @Param("productId") UUID productId);
 
     @Query("SELECT p FROM Product p JOIN FETCH p.boutique LEFT JOIN FETCH p.category WHERE p.id = :id")
     Optional<Product> findByIdWithBoutiqueAndCategory(@Param("id") UUID id);

@@ -5,18 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PublicChatRequest {
-    private UUID boutiqueId;
+public class AiChatRequest {
     private String message;
-    private String sessionId;
-    private String systemPrompt;
-    private List<Map<String, String>> messages;
+    private UUID boutiqueId;
 }

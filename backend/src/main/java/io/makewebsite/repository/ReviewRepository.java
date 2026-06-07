@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -16,6 +17,8 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     Page<Review> findByProductIdOrderByCreatedAtDesc(UUID productId, Pageable pageable);
 
     Page<Review> findByProductIdAndStatusOrderByCreatedAtDesc(UUID productId, ReviewStatus status, Pageable pageable);
+
+    List<Review> findByProductIdAndStatusOrderByCreatedAtDesc(UUID productId, ReviewStatus status);
 
     Page<Review> findByBoutiqueIdOrderByCreatedAtDesc(UUID boutiqueId, Pageable pageable);
 

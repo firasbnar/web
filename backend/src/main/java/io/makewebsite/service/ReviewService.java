@@ -3,6 +3,7 @@ package io.makewebsite.service;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
@@ -67,8 +69,11 @@ public class ReviewService {
         if (!review.getBoutique().getId().equals(boutiqueId)) {
             throw new RuntimeException("Vous n'êtes pas autorisé à modérer cet avis");
         }
+        ReviewStatus oldStatus = review.getStatus();
         review.setStatus(ReviewStatus.APPROVED);
-        return reviewRepository.save(review);
+        review = reviewRepository.save(review);
+        log.info("Review approved: id={}, oldStatus={}, newStatus={}", reviewId, oldStatus, ReviewStatus.APPROVED);
+        return review;
     }
 
     @Transactional

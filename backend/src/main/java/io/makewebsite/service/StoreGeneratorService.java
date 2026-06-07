@@ -1,6 +1,7 @@
 package io.makewebsite.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.makewebsite.dto.response.PublicProductDto;
+import io.makewebsite.dto.response.StoreData;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -14,9 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Year;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -30,7 +29,6 @@ public class StoreGeneratorService {
     private final StoreSliderRepository sliderRepository;
     private final StoreLanguageRepository languageRepository;
     private final BoutiqueCountryRepository countryRepository;
-    private final ObjectMapper objectMapper;
 
     private static final String STORE_FILES_DIR = "store-files";
     private static final String DEFAULT_PRODUCT_IMAGE = "/images/default-product.png";
@@ -43,16 +41,23 @@ public class StoreGeneratorService {
         "Autre"
     };
 
-    private static final String CHATBOT_TEMPLATE = loadChatbotTemplate();
-
-    private static String loadChatbotTemplate() {
-        try {
-            var is = StoreGeneratorService.class.getResourceAsStream("/chatbot-template.html");
-            if (is == null) throw new RuntimeException("chatbot-template.html not found on classpath");
-            return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load chatbot-template.html", e);
-        }
+    @Transactional(readOnly = true)
+    public StoreData loadStoreData(String slug) {
+        Boutique b = boutiqueRepository.findBySlug(slug)
+                .orElseThrow(() -> new RuntimeException("Boutique not found: " + slug));
+        List<Product> products = productRepository.findAllByBoutiqueIdSafe(b.getId());
+        List<Category> categories = categoryRepository.findByBoutiqueIdOrderBySortOrderAsc(b.getId());
+        List<StoreSlider> sliders = sliderRepository.findByBoutiqueIdOrderBySortOrderAsc(b.getId());
+        StoreLanguage lang = languageRepository.findByBoutiqueId(b.getId()).orElse(null);
+        List<BoutiqueCountry> countries = countryRepository.findByBoutiqueId(b.getId());
+        return StoreData.builder()
+                .boutique(b)
+                .products(StoreData.toProductDtoList(products))
+                .categories(StoreData.toCategoryDtoList(categories))
+                .sliders(sliders != null ? sliders : List.of())
+                .language(lang)
+                .countries(countries != null ? countries : List.of())
+                .build();
     }
 
     @Transactional
@@ -175,8 +180,7 @@ public class StoreGeneratorService {
                 return "<article class=\"product-card\" data-product-id=\"" + p.getId() + "\" data-product-name=\"" + esc(p.getName()) + "\" data-product-price=\"" + p.getPrice() + "\" data-product-img=\"" + esc(resolvedImg) + "\">" +
                     "<a href=\"?product_id=" + p.getId() + "\" class=\"product-card-link\" style=\"text-decoration:none;color:inherit;display:block;\">" +
                     "<div class=\"image-wrap\">" + badge +
-                    "<div class=\"quick-actions\"><button type=\"button\" class=\"quick-btn wishlist-toggle\" aria-label=\"Ajouter aux favoris\">" +
-                    "<i class=\"far fa-heart\"></i><i class=\"fas fa-heart\" style=\"display:none;\"></i></button></div>" +
+"" +
                     "<img src=\"" + esc(resolvedImg) + "\" alt=\"" + esc(p.getName()) + "\" loading=\"lazy\" onerror=\"this.onerror=null;this.src='" + DEFAULT_PRODUCT_IMAGE + "'\">" +
                     "</div><div class=\"info\"><h3 class=\"name\">" + esc(p.getName()) + "</h3>" +
                     "<div class=\"price-wrap\">" + price + "</div>" +
@@ -246,7 +250,7 @@ public class StoreGeneratorService {
         ".header-actions{display:flex;gap:12px;align-items:center}\n" +
         ".header-actions button{background:none;border:none;cursor:pointer;position:relative;padding:8px;font-size:1.2rem;color:var(--text);border-radius:var(--radius-sm);transition:var(--transition)}\n" +
         ".header-actions button:hover{background:rgba(0,0,0,0.05)}\n" +
-        ".cart-count,.wishlist-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:0.625rem;min-width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 4px}\n" +
+        ".cart-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:0.625rem;min-width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 4px}\n" +
         ".slider-section{overflow:hidden}\n" +
         ".slider-container{position:relative;max-width:1200px;margin:0 auto}\n" +
         ".slider-track{display:flex;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);will-change:transform}\n" +
@@ -278,10 +282,7 @@ public class StoreGeneratorService {
         ".product-badges{position:absolute;top:8px;left:8px;z-index:2}\n" +
         ".badge{padding:4px 10px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;text-transform:uppercase}\n" +
         ".badge-sale{background:#ef4444;color:#fff}\n" +
-        ".quick-actions{position:absolute;top:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:6px;opacity:0;transition:var(--transition)}\n" +
-        ".product-card:hover .quick-actions{opacity:1}\n" +
-        ".quick-btn{width:32px;height:32px;border-radius:50%;background:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.875rem;box-shadow:var(--shadow);transition:var(--transition);color:var(--text)}\n" +
-        ".quick-btn:hover{background:var(--accent);color:#fff}\n" +
+
         ".info{padding:16px}\n" +
         ".name{font-size:0.9375rem;font-weight:600;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}\n" +
         ".price-wrap{margin-bottom:12px}\n" +
@@ -339,8 +340,7 @@ public class StoreGeneratorService {
         ".t2-cart-drawer__submit:hover{filter:brightness(1.1)}\n" +
         ".t2-cart-drawer__overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:999;opacity:0;pointer-events:none;transition:opacity 0.35s ease}\n" +
         ".t2-cart-drawer__overlay.show{opacity:1;pointer-events:auto}\n" +
-        ".wishlist-sidebar{position:fixed;top:0;right:-420px;width:420px;max-width:100vw;height:100%;background:#fff;z-index:1000;box-shadow:-4px 0 40px rgba(0,0,0,0.1);transition:right 0.35s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;overflow:hidden}\n" +
-        ".wishlist-sidebar.open{right:0}\n" +
+
         ".custom-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;display:none;align-items:center;justify-content:center}\n" +
         ".custom-modal.open{display:flex}\n" +
         ".custom-modal::before{content:'';position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4)}\n" +
@@ -355,7 +355,7 @@ public class StoreGeneratorService {
         ".modal-footer{margin-top:20px}\n" +
         ".close-modal-btn{padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.875rem}\n" +
         "@media(max-width:768px){.nav{display:none}.footer-top{grid-template-columns:1fr}.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.slide img{height:240px}.trust-inner{gap:24px;flex-wrap:wrap;justify-content:center}.t2-cart-drawer{width:100vw;right:-100vw}}\n" +
-        ".product-detail-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1500;display:none;align-items:center;justify-content:center;padding:20px}.product-detail-overlay.open{display:flex}.product-detail-modal{background:#fff;border-radius:var(--radius);max-width:800px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:var(--shadow-lg)}.product-detail-close{position:absolute;top:12px;right:12px;background:#fff;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);z-index:1;color:#333}.product-detail-close:hover{background:#f0f0f0}.product-detail-inner{display:grid;grid-template-columns:1fr 1fr;gap:0}.product-detail-image-wrap{background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:300px}.product-detail-image-wrap img{width:100%;height:100%;object-fit:cover;max-height:500px}.product-detail-info{padding:32px}.product-detail-name{font-size:1.5rem;font-weight:700;margin-bottom:8px}.product-detail-price{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:12px}.product-detail-desc{color:var(--text-soft);font-size:0.9375rem;line-height:1.7;margin-bottom:16px}.product-detail-stock{font-size:0.875rem;margin-bottom:16px;padding:6px 12px;border-radius:var(--radius-sm);display:inline-block}.product-detail-stock.in-stock{background:#ecfdf5;color:#16a34a}.product-detail-stock.out-of-stock{background:#fef2f2;color:#ef4444}.product-detail-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}.product-detail-add-cart{flex:1;min-width:180px;padding:14px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:1rem;transition:var(--transition)}.product-detail-add-cart:hover{filter:brightness(1.1)}.product-detail-wishlist{width:48px;height:48px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:var(--transition)}.product-detail-wishlist:hover{border-color:var(--accent);color:var(--accent)}.product-detail-wishlist.active{color:#ef4444;border-color:#ef4444}@media(max-width:768px){.product-detail-inner{grid-template-columns:1fr}.product-detail-image-wrap{min-height:200px}}\n" +
+
         customCss + "\n</style>\n</head>\n<body>\n" +
 
         "<div class=\"announcement\">" + esc(announcement) + "</div>\n" +
@@ -363,7 +363,7 @@ public class StoreGeneratorService {
         "<header class=\"header\"><div class=\"header-inner\">" +
         "<div class=\"logo\"><a href=\"./\"><img src=\"" + esc(resolveImageUrl(logoUrl)) + "\" alt=\"" + esc(b.getName()) + "\"><span>" + esc(b.getName()) + "</span></a></div>" +
         "<nav class=\"nav\"><a href=\"./\" class=\"active\">" + esc(seeAll) + "</a>" + navCatHtml + "</nav>" +
-        "<div class=\"header-actions\"><button class=\"wishlist-btn\" id=\"wishlistNavBtn\"><i class=\"far fa-heart\"></i><span class=\"wishlist-count\" id=\"wishlistBadge\"></span></button>" +
+        "<div class=\"header-actions\">" +
         "<button class=\"cart-btn\" onclick=\"toggleCartSidebar()\"><i class=\"fas fa-shopping-bag\"></i><span class=\"cart-count\" id=\"cartCount\">0</span></button></div>" +
         "</div></header>\n" +
 
@@ -447,48 +447,32 @@ public class StoreGeneratorService {
          "<div class=\"order-item\"><div class=\"order-label\">M\u00E9thode de paiement :</div><div class=\"order-value\" id=\"customUserPaymentMethod\"></div></div></div>" +
         "<div class=\"modal-footer\"><button class=\"close-modal-btn\" onclick=\"document.getElementById('customOrderConfirmationModal').classList.remove('open')\">Fermer</button></div></div></div>\n" +
 
-        // Product detail modal
-        "<div id=\"productDetailOverlay\" class=\"product-detail-overlay\" onclick=\"closeProductDetail(event)\">" +
-        "<div class=\"product-detail-modal\" onclick=\"event.stopPropagation()\">" +
-        "<button class=\"product-detail-close\" onclick=\"closeProductDetail()\" aria-label=\"Fermer\">&times;</button>" +
-        "<div id=\"productDetailContent\" class=\"product-detail-inner\">" +
-        "<div class=\"product-detail-image-wrap\"><img id=\"productDetailImage\" src=\"\" alt=\"\" onerror=\"this.onerror=null;this.src='" + DEFAULT_PRODUCT_IMAGE + "'\"></div>" +
-        "<div class=\"product-detail-info\">" +
-        "<h2 class=\"product-detail-name\" id=\"productDetailName\"></h2>" +
-        "<div class=\"product-detail-price\" id=\"productDetailPrice\"></div>" +
-        "<div id=\"productDetailStock\" class=\"product-detail-stock\"></div>" +
-        "<div class=\"product-detail-desc\" id=\"productDetailDesc\"></div>" +
-        "<div class=\"product-detail-actions\">" +
-        "<button class=\"product-detail-add-cart\" id=\"productDetailAddCart\"><i class=\"fas fa-cart-plus\"></i> " + esc(addToCart) + "</button>" +
-        "<button class=\"product-detail-wishlist\" id=\"productDetailWishlist\" aria-label=\"Ajouter aux favoris\"><i class=\"far fa-heart\"></i></button>" +
-        "</div></div></div></div></div>\n" +
-        "{{CHATBOT_BLOCK}}\n" +
+        // Cart overlay + drawer placeholder (no product detail modal needed)
         "{{CUSTOM_JS}}\n" +
         "<script>\n" +
         "const API_BASE='';const STORE_SLUG='" + jsString(slug) + "';const CURRENCY_SYMBOL='" + jsString(currencySymbol) + "';const DELIVERY_FEES=" + deliveryFees + ";const DEFAULT_PRODUCT_IMAGE='" + DEFAULT_PRODUCT_IMAGE + "';\n" +
-        "let cart=JSON.parse(localStorage.getItem('cart_'+STORE_SLUG)||'[]');let wishlist=JSON.parse(localStorage.getItem('wishlist_'+STORE_SLUG)||'[]');\n" +
+        "let cart=JSON.parse(localStorage.getItem('cart_'+STORE_SLUG)||'[]');(function(){var _c=cart.filter(function(i){return i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null});if(_c.length!==cart.length){cart=_c;localStorage.setItem('cart_'+STORE_SLUG,JSON.stringify(cart))}})();\n" +
         "function saveCart(){localStorage.setItem('cart_'+STORE_SLUG,JSON.stringify(cart));updateCartUI()}\n" +
         "function toggleCartSidebar(){document.getElementById('cartSidebar').classList.toggle('open');document.getElementById('cartOverlay').classList.toggle('show')}\n" +
         "function escHtml(v){return String(v??'').replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]})}\n" +
         "function escAttr(v){return escHtml(v).replace(/`/g,'&#96;')}\n" +
         "function productImg(v){return v&&String(v).trim()?v:DEFAULT_PRODUCT_IMAGE}\n" +
         "function resolveImgUrl(v){if(!v||!String(v).trim())return DEFAULT_PRODUCT_IMAGE;var s=String(v).trim();if(s.startsWith('http://')||s.startsWith('https://')||s.startsWith('/'))return s;if(s.startsWith('images/')||s.startsWith('uploads/'))return '/'+s;return '/uploads/'+s}\n" +
-        "function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id);if(existing)existing.qty+=1;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:1});saveCart()}\n" +
-        "function removeFromCart(id){cart=cart.filter(i=>i.id!==id);saveCart()}\n" +
+        "function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id&&!i.color&&!i.size);if(existing)existing.qty+=1;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:1});saveCart()}\n" +
+        "function addToCartOptions(id,name,price,img,color,size){const key=(color||'')+'|'+(size||'');const existing=cart.find(i=>i.id===id&&(i.color||'')===(color||'')&&(i.size||'')===(size||''));if(existing)existing.qty+=1;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:1,color:color||'',size:size||''});saveCart()}\n" +
+        "function removeFromCart(id,color,size){cart=cart.filter(i=>!(i.id===id&&(i.color||'')===(color||'')&&(i.size||'')===(size||'')));saveCart()}\n" +
         "function changeQty(id,delta){const item=cart.find(i=>i.id===id);if(item){item.qty=Math.max(1,item.qty+delta);saveCart()}}\n" +
-        "function updateCartUI(){const count=cart.reduce((s,i)=>s+i.qty,0);document.getElementById('cartCount').textContent=count;" +
+        "function updateCartUI(){const count=cart.reduce(function(s,i){return s+(i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null?i.qty:0)},0);document.getElementById('cartCount').textContent=count;" +
         "const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style=\"text-align:center;padding:40px;color:var(--muted)\"><i class=\"fas fa-shopping-bag\" style=\"font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px\"></i><p>Votre panier est vide</p></div>';" +
         "document.getElementById('total-price').textContent=CURRENCY_SYMBOL+'0.00';document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+'0.00';return}" +
-        "let html='';let sub=0;cart.forEach(i=>{const price=Number(i.price)||0;const id=escAttr(i.id);sub+=price*i.qty;html+='<div class=\"t2-cart-item\">" +
+        "let html='';let sub=0;cart.forEach(i=>{if(!i||!i.id||!String(i.id).trim()||!i.name||!String(i.name).trim()||i.price==null)return;const price=Number(i.price)||0;const ck=escAttr(i.id+'||'+(i.color||'')+'||'+(i.size||''));sub+=price*i.qty;var opt='';if(i.color)opt+='<div style=\"font-size:0.75rem;color:var(--muted)\">Couleur: '+escHtml(i.color)+'</div>';if(i.size)opt+='<div style=\"font-size:0.75rem;color:var(--muted)\">Taille: '+escHtml(i.size)+'</div>';html+='<div class=\"t2-cart-item\">" +
         "<img src=\"'+escAttr(productImg(i.img))+'\" alt=\"'+escAttr(i.name)+'\" onerror=\"this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE\"><div class=\"t2-cart-item__info\">" +
-        "<div class=\"t2-cart-item__name\">'+escHtml(i.name)+'</div><div class=\"t2-cart-item__price\">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div>" +
-        "<div class=\"t2-cart-item__qty\"><button type=\"button\" data-cart-action=\"dec\" data-cart-id=\"'+id+'\">-</button><span>'+i.qty+'</span><button type=\"button\" data-cart-action=\"inc\" data-cart-id=\"'+id+'\">+</button></div></div>" +
-        "<button type=\"button\" class=\"t2-cart-item__remove\" data-cart-action=\"remove\" data-cart-id=\"'+id+'\"><i class=\"fas fa-trash-alt\"></i></button></div>'});" +
-        "container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){const id=this.dataset.cartId;if(this.dataset.cartAction==='inc')changeQty(id,1);else if(this.dataset.cartAction==='dec')changeQty(id,-1);else removeFromCart(id)})});const total=sub+DELIVERY_FEES;document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);" +
+        "<div class=\"t2-cart-item__name\">'+escHtml(i.name)+'</div>'+opt+'<div class=\"t2-cart-item__price\">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div>" +
+        "<div class=\"t2-cart-item__qty\"><button type=\"button\" data-cart-action=\"dec\" data-cart-key=\"'+ck+'\">-</button><span>'+i.qty+'</span><button type=\"button\" data-cart-action=\"inc\" data-cart-key=\"'+ck+'\">+</button></div></div>" +
+        "<button type=\"button\" class=\"t2-cart-item__remove\" data-cart-action=\"remove\" data-cart-key=\"'+ck+'\"><i class=\"fas fa-trash-alt\"></i></button></div>'});" +
+        "container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){var k=this.dataset.cartKey;var parts=k.split('||');var id=parts[0],col=parts[1]||'',sz=parts[2]||'';if(this.dataset.cartAction==='inc'){var item=cart.find(i=>i.id===id&&(i.color||'')===col&&(i.size||'')===sz);if(item)item.qty+=1;saveCart()}else if(this.dataset.cartAction==='dec'){var item=cart.find(i=>i.id===id&&(i.color||'')===col&&(i.size||'')===sz);if(item){item.qty=Math.max(1,item.qty-1);saveCart()}}else cart=cart.filter(i=>!(i.id===id&&(i.color||'')===col&&(i.size||'')===sz));saveCart()})});const total=sub+DELIVERY_FEES;document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);" +
         "document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+total.toFixed(2)}\n" +
-        "function toggleFavorite(id){const idx=wishlist.indexOf(id);if(idx>-1)wishlist.splice(idx,1);else wishlist.push(id);localStorage.setItem('wishlist_'+STORE_SLUG,JSON.stringify(wishlist));updateWishlistUI()}\n" +
-        "function updateWishlistUI(){document.getElementById('wishlistBadge').textContent=wishlist.length||'';document.querySelectorAll('.product-card').forEach(function(card){const active=wishlist.includes(card.dataset.productId);card.querySelectorAll('.wishlist-toggle .far').forEach(function(i){i.style.display=active?'none':''});card.querySelectorAll('.wishlist-toggle .fas').forEach(function(i){i.style.display=active?'':'none'})});" +
-        "var wb=document.getElementById('productDetailWishlist');if(wb){var pid3=wb.getAttribute('data-product-id');if(pid3){var ww2=wishlist.includes(pid3);wb.innerHTML=ww2?'<i class=\"fas fa-heart\"></i>':'<i class=\"far fa-heart\"></i>';wb.classList.toggle('active',ww2)}}}\n" +
+
         "function submitOrder(e){e.preventDefault();const f=e.target;" +
         "if(!cart.length){alert('Votre panier est vide');return false}" +
         "const fn=f['full-name']?f['full-name'].value.trim():'';const addr=f['billing-address']?f['billing-address'].value.trim():'';" +
@@ -501,34 +485,14 @@ public class StoreGeneratorService {
         "if(!pm){alert('Veuillez s\u00E9lectionner un moyen de paiement');return false}" +
         "const order={boutiqueId:'"+b.getId()+"',fullName:fn,email:(f['email']?f['email'].value:''),phone:ph," +
         "billingAddress:addr,city:ct,country:(f['country']?f['country'].value:''),paymentMethod:pm," +
-        "items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price}))};\n" +
+        "items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price,color:i.color||'',size:i.size||''}))};\n" +
         "fetch('/api/public/store/"+slug+"/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)}).then(r=>r.json()).then(d=>{" +
         "if(d.success){document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;" +
         "document.getElementById('customUserCity').textContent=d.city||order.city;document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;" +
         "document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;" +
         "document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}" +
          "else{alert('Erreur: '+(d.message||'Commande non accept\u00E9e'))}}).catch(function(e){alert('Erreur r\u00E9seau. V\u00E9rifiez votre connexion.')});return false}\n" +
-        "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});document.querySelectorAll('.wishlist-toggle').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)toggleFavorite(card.dataset.productId)})});document.querySelectorAll('.add-cart').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg)})});updateCartUI();updateWishlistUI()});\n" +
-        "\n" +
-        "// Product detail from query param\n" +
-        "(function(){var p=new URLSearchParams(window.location.search).get('product_id');if(p)fetchProductDetail(p)})();\n" +
-        "function fetchProductDetail(id){fetch('/api/public/store/"+slug+"/products/'+encodeURIComponent(id)).then(function(r){return r.json()}).then(function(p){if(p&&p.id)showProductDetail(p)}).catch(function(e){console.error('Failed to load product:',e)})}\n" +
-        "function showProductDetail(p){var img=resolveImgUrl(p.images&&p.images!=='[]'?JSON.parse(p.images)[0]:null);" +
-        "document.getElementById('productDetailImage').src=img;" +
-        "document.getElementById('productDetailName').textContent=p.name||'';" +
-        "var ph=CURRENCY_SYMBOL+(Number(p.price)||0).toFixed(2);" +
-        "if(p.comparePrice&&Number(p.comparePrice)>0)ph='<span style=\"text-decoration:line-through;color:var(--muted);margin-right:8px;font-size:1rem\">'+CURRENCY_SYMBOL+Number(p.comparePrice).toFixed(2)+'</span> '+ph;" +
-        "document.getElementById('productDetailPrice').innerHTML=ph;" +
-        "var se=document.getElementById('productDetailStock');var is=p.stock===undefined||p.stock>0;" +
-        "se.textContent=is?'En stock':'Rupture de stock';se.className='product-detail-stock '+(is?'in-stock':'out-of-stock');" +
-        "document.getElementById('productDetailDesc').textContent=p.description||'';" +
-        "var ab=document.getElementById('productDetailAddCart');var pid2=p.id;" +
-        "ab.onclick=function(){addToCart(pid2,p.name,p.price,img);closeProductDetail()};" +
-        "var wb=document.getElementById('productDetailWishlist');wb.setAttribute('data-product-id',pid2);var ww=wishlist.includes(pid2);" +
-        "wb.innerHTML=ww?'<i class=\"fas fa-heart\"></i>':'<i class=\"far fa-heart\"></i>';wb.classList.toggle('active',ww);" +
-        "wb.onclick=function(){toggleFavorite(pid2);var nw=wishlist.includes(pid2);wb.innerHTML=nw?'<i class=\"fas fa-heart\"></i>':'<i class=\"far fa-heart\"></i>';wb.classList.toggle('active',nw)};" +
-        "document.getElementById('productDetailOverlay').classList.add('open');document.body.style.overflow='hidden'}\n" +
-        "function closeProductDetail(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('productDetailOverlay').classList.remove('open');document.body.style.overflow='';var u=new URL(window.location);u.searchParams.delete('product_id');window.history.replaceState({},'',u)}\n" +
+         "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});document.querySelectorAll('.add-cart').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg);else addToCart(this.dataset.productId,this.dataset.productName,this.dataset.productPrice,this.dataset.productImg)})});updateCartUI()});\n" +
         "\n" +
         "// Slider autoplay\n" +
         "!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;" +
@@ -545,50 +509,7 @@ public class StoreGeneratorService {
         "var n=c.querySelector('.name');if(n)c.style.display=n.textContent.toLowerCase().includes(q)?'':'none'})});\n" +
         "</script>\n</body>\n</html>";
 
-        // ---- Chatbot block + placeholder replacements ----
-        html = html.replace("{{CHATBOT_BLOCK}}", CHATBOT_TEMPLATE);
         html = html.replace("{{CUSTOM_JS}}", customJs != null ? customJs : "");
-        html = html.replace("{{BOUTIQUE_NAME}}", esc(b.getName()));
-        html = html.replace("{{BOUTIQUE_DESCRIPTION}}", esc(b.getDescription() != null ? b.getDescription() : ""));
-        html = html.replace("{{CURRENCY_SYMBOL}}", esc(currencySymbol));
-        html = html.replace("{{DELIVERY_FEES}}", String.valueOf(deliveryFees));
-        html = html.replace("{{CASH_ON_DELIVERY_BOOL}}", cashOnDelivery ? "true" : "false");
-        html = html.replace("{{KONNECT_ACTIVE_BOOL}}", konnectActive ? "true" : "false");
-        html = html.replace("{{D17_ACTIVE_BOOL}}", d17Active ? "true" : "false");
-        html = html.replace("{{WHATSAPP_NUMBER}}", b.getWhatsappNumber() != null ? esc(b.getWhatsappNumber()) : "");
-        html = html.replace("{{STORE_LANGUAGE}}", b.getLanguage() != null ? esc(b.getLanguage()) : "fr");
-        html = html.replace("{{BOUTIQUE_ID}}", b.getId().toString());
-        html = html.replace("{{BOUTIQUE_SLUG}}", esc(b.getSlug()));
-
-        // Products JSON for chatbot context
-        List<Map<String,Object>> productsMini = products.stream()
-                .map(p -> {
-                    Map<String,Object> m = new LinkedHashMap<>();
-                    m.put("id",           p.getId());
-                    m.put("name",         p.getName());
-                    m.put("price",        p.getPrice());
-                    m.put("comparePrice", p.getComparePrice());
-                    m.put("category",     p.getCategory() != null ? p.getCategory().getName() : null);
-                    return m;
-                }).collect(Collectors.toList());
-        try {
-            html = html.replace("{{PRODUCTS_JSON}}", objectMapper.writeValueAsString(productsMini));
-        } catch (Exception e) {
-            html = html.replace("{{PRODUCTS_JSON}}", "[]");
-        }
-
-        List<Map<String,Object>> catsMini = categories.stream()
-                .map(c -> {
-                    Map<String,Object> m = new LinkedHashMap<>();
-                    m.put("id", c.getId());
-                    m.put("name", c.getName());
-                    return m;
-                }).collect(Collectors.toList());
-        try {
-            html = html.replace("{{CATEGORIES_JSON}}", objectMapper.writeValueAsString(catsMini));
-        } catch (Exception e) {
-            html = html.replace("{{CATEGORIES_JSON}}", "[]");
-        }
 
         return html;
     }

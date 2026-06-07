@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/url_utils.dart';
+import '../../utils/image_utils.dart';
 import '../../providers/public_cart_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -75,7 +75,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                             if (img != null)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(resolveImageUrl(img)!, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: AppColors.surfaceAlt, child: const Icon(Icons.image, color: AppColors.textHint))),
+                                child: Image.network(resolveImageUrl(img) ?? '', width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: AppColors.surfaceAlt, child: const Icon(Icons.image, color: AppColors.textHint))),
                               )
                             else
                               Container(width: 64, height: 64, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.image, color: AppColors.textHint)),
@@ -85,8 +85,15 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(item.name, style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                  if (item.selectedColor != null || item.selectedSize != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${item.selectedColor != null ? 'Couleur: ${item.selectedColor}' : ''}${item.selectedColor != null && item.selectedSize != null ? ' | ' : ''}${item.selectedSize != null ? 'Taille: ${item.selectedSize}' : ''}',
+                                      style: AppTypography.caption.copyWith(color: AppColors.textHint),
+                                    ),
+                                  ],
                                   const SizedBox(height: 4),
-                                  Text('${item.effectivePrice.toStringAsFixed(3)} TND', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                                  Text('DT ${item.effectivePrice.toStringAsFixed(2)}', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
@@ -96,12 +103,12 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             InkWell(
-                                              onTap: () => cart.updateQuantity(widget.slug, item.productId, item.quantity - 1),
+                                              onTap: () => cart.updateQuantity(widget.slug, item.variantKey, item.quantity - 1),
                                               child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.remove, size: 16)),
                                             ),
                                             Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('${item.quantity}', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600))),
                                             InkWell(
-                                              onTap: item.quantity < item.stock ? () => cart.updateQuantity(widget.slug, item.productId, item.quantity + 1) : null,
+                                              onTap: item.quantity < item.stock ? () => cart.updateQuantity(widget.slug, item.variantKey, item.quantity + 1) : null,
                                               child: Padding(padding: const EdgeInsets.all(6), child: Icon(Icons.add, size: 16, color: item.quantity >= item.stock ? Colors.grey : null)),
                                             ),
                                           ],
@@ -114,7 +121,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.close, size: 18),
-                              onPressed: () => cart.removeItem(widget.slug, item.productId),
+                              onPressed: () => cart.removeItem(widget.slug, item.variantKey),
                             ),
                           ],
                         ),
@@ -135,7 +142,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Sous-total', style: AppTypography.body1),
-                            Text('${total.toStringAsFixed(3)} TND', style: AppTypography.heading3),
+                            Text('DT ${total.toStringAsFixed(2)}', style: AppTypography.heading3),
                           ],
                         ),
                         const SizedBox(height: 16),

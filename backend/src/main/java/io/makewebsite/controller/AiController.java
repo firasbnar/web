@@ -1,5 +1,6 @@
 package io.makewebsite.controller;
 
+import io.makewebsite.dto.request.AiChatRequest;
 import io.makewebsite.dto.request.ChatRequest;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.security.UserPrincipal;
@@ -26,6 +27,15 @@ public class AiController {
                 request.getBoutiqueId(),
                 request.getMessage(),
                 request.getSessionId()
+        )));
+    }
+
+    @PostMapping("/merchant-chat")
+    public ResponseEntity<ApiResponse<AiChatResponse>> merchantChat(@Valid @RequestBody AiChatRequest request, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(aiService.merchantChat(
+                principal.getUserId(),
+                request.getBoutiqueId(),
+                request.getMessage()
         )));
     }
 

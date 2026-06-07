@@ -10,24 +10,11 @@ import io.makewebsite.entity.*;
 import io.makewebsite.exception.StoreFrozenException;
 import io.makewebsite.repository.*;
 import io.makewebsite.security.UserPrincipal;
-import io.makewebsite.service.BoutiqueVisitService;
-import io.makewebsite.service.CaisseService;
-import io.makewebsite.service.CustomerService;
-import io.makewebsite.service.EmailService;
-import io.makewebsite.service.InvoicePdfService;
-import io.makewebsite.service.InvoiceService;
-import io.makewebsite.service.NotificationService;
-import io.makewebsite.service.PaymentService;
-import io.makewebsite.service.StoreGeneratorService;
-import io.makewebsite.service.StoreStatusGuard;
-import io.makewebsite.service.TelegramNotificationService;
-import io.makewebsite.service.TelegramService;
-import io.makewebsite.service.WebSocketService;
+import io.makewebsite.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,8 +28,6 @@ import java.util.*;
 @RequestMapping("/api/public")
 @RequiredArgsConstructor
 public class PublicStoreController {
-
-    private static final String DEFAULT_PRODUCT_IMAGE = "/images/default-product.png";
 
     private static final Set<String> RESERVED_SLUGS = Set.of(
         "login", "register", "signup", "error", "api", "store", "stores",
@@ -60,10 +45,10 @@ public class PublicStoreController {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final OrderRepository orderRepository;
-    private final StoreGeneratorService storeGeneratorService;
     private final StoreStatusGuard storeStatusGuard;
     private final BoutiqueVisitService boutiqueVisitService;
     private final StoreViewRepository storeViewRepository;
+    private final ReviewRepository reviewRepository;
     private final PaymentService paymentService;
     private final CustomerService customerService;
     private final InvoiceService invoiceService;
@@ -74,51 +59,23 @@ public class PublicStoreController {
     private final CaisseService caisseService;
     private final InvoicePdfService invoicePdfService;
     private final EmailService emailService;
+    private final ReviewService reviewService;
     private final ObjectMapper objectMapper;
     private final TrafficRepository trafficRepository;
     private final io.makewebsite.service.GeoLocationService geoLocationService;
 
-    // Serve full generated store HTML, or product detail if product_id query param is present
+    // Redirect HTML serving to the shared template endpoint
     @GetMapping("/store/{slug}")
-    public ResponseEntity<String> serveStore(
+    public ResponseEntity<Void> serveStore(
             @PathVariable String slug,
-            @RequestParam(value = "product_id", required = false) String productId,
-            HttpServletRequest request) {
+            @RequestParam(value = "product_id", required = false) String productId) {
         Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
         if (b == null) return ResponseEntity.notFound().build();
-
-        // If product_id is present, serve product detail page
+        String redirectUrl = "/store/" + slug;
         if (productId != null && !productId.isBlank()) {
-            try {
-                UUID pid = UUID.fromString(productId);
-                Product p = productRepository.findByIdWithBoutique(pid).orElse(null);
-                if (p == null || !p.getIsActive() || !p.getBoutique().getId().equals(b.getId())) {
-                    return ResponseEntity.notFound().build();
-                }
-                String html = buildProductDetailHtml(slug, b, p);
-                if (html == null) return ResponseEntity.notFound().build();
-                trackStoreVisit(b, request);
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
-                        .body(html);
-            } catch (IllegalArgumentException e) {
-                // Invalid UUID — fall through to normal store page
-            }
+            redirectUrl += "?product_id=" + productId;
         }
-
-        // Normal store listing page
-        String html = storeGeneratorService.loadHtml(slug);
-        if (html == null) {
-            storeGeneratorService.regenerate(b.getId());
-            b = boutiqueRepository.findBySlug(slug).orElse(null);
-            if (b == null) return ResponseEntity.notFound().build();
-            html = b.getGeneratedHtml();
-            if (html == null) return ResponseEntity.notFound().build();
-        }
-        trackStoreVisit(b, request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
-                .body(html);
+        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, redirectUrl).build();
     }
 
     // ---- Clean JSON API (plural /stores/) ----
@@ -213,6 +170,85 @@ public class PublicStoreController {
         if (p == null || !p.getIsActive() || !p.getBoutique().getId().equals(b.getId())) return ResponseEntity.notFound().build();
         log.info("getProductJson: slug={} productId={} name={}", slug, productId, p.getName());
         return ResponseEntity.ok(toPublicProductResponse(p));
+    }
+
+    @Transactional(readOnly = true)
+    @GetMapping("/stores/{slug}/products/{productId}/reviews")
+    public ResponseEntity<Map<String, Object>> getProductReviews(
+            @PathVariable String slug, @PathVariable UUID productId) {
+        log.info("getProductReviews: slug={} productId={}", slug, productId);
+
+        Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
+        if (b == null) return ResponseEntity.notFound().build();
+
+        Product p = productRepository.findById(productId).orElse(null);
+        if (p == null || !p.getBoutique().getId().equals(b.getId()) || Boolean.FALSE.equals(p.getIsActive())) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Produit introuvable"));
+        }
+
+        List<Review> reviews = reviewRepository.findByProductIdAndStatusOrderByCreatedAtDesc(productId, ReviewStatus.APPROVED);
+        double averageRating = reviews.isEmpty() ? 0 : reviews.stream().mapToInt(Review::getRating).average().orElse(0);
+
+        log.info("getProductReviews: slug={} productId={} count={} avg={}", slug, productId, reviews.size(), averageRating);
+
+        List<Map<String, Object>> list = reviews.stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.getId());
+            m.put("customerName", r.getCustomerName() != null ? r.getCustomerName() : "");
+            m.put("rating", r.getRating());
+            m.put("comment", r.getComment() != null ? r.getComment() : "");
+            m.put("createdAt", r.getCreatedAt());
+            return m;
+        }).toList();
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("content", list);
+        data.put("totalReviews", reviews.size());
+        data.put("averageRating", averageRating);
+
+        return ResponseEntity.ok(Map.of("success", true, "data", data));
+    }
+
+    @Transactional
+    @PostMapping("/stores/{slug}/products/{productId}/reviews")
+    public ResponseEntity<Map<String, Object>> submitProductReview(
+            @PathVariable String slug, @PathVariable UUID productId,
+            @RequestBody Map<String, Object> body) {
+        log.info("submitProductReview: slug={} productId={}", slug, productId);
+
+        Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
+        if (b == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Boutique introuvable"));
+        }
+        try {
+            storeStatusGuard.requireActive(b);
+        } catch (StoreFrozenException e) {
+            return ResponseEntity.status(423).body(Map.of("success", false, "message", e.getMessage(), "code", "STORE_FROZEN"));
+        }
+
+        Product product = productRepository.findById(productId).orElse(null);
+        if (product == null || !product.getBoutique().getId().equals(b.getId()) || Boolean.FALSE.equals(product.getIsActive())) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Produit introuvable"));
+        }
+
+        String customerName = (String) body.get("customerName");
+        Integer rating = body.get("rating") != null ? ((Number) body.get("rating")).intValue() : null;
+        String comment = (String) body.get("comment");
+
+        if (customerName == null || customerName.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Veuillez entrer votre nom"));
+        }
+        if (rating == null || rating < 1 || rating > 5) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Note invalide (1-5)"));
+        }
+
+        Review r = reviewService.createReview(productId, null, customerName, rating, comment);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("id", r.getId());
+        result.put("message", "Merci pour votre avis. Il sera affiché après validation par le marchand.");
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/stores/{slug}/categories")
@@ -698,112 +734,4 @@ public class PublicStoreController {
                 request.getHeader("Referer"), null, null);
     }
 
-    /**
-     * Build a full product detail HTML page by taking the store's generated HTML
-     * and replacing the &lt;main&gt; section with product detail content.
-     * Reuses the store's CSS, header, footer, cart/wishlist JS as-is.
-     */
-    private String buildProductDetailHtml(String slug, Boutique b, Product p) {
-        String html = storeGeneratorService.loadHtml(slug);
-        if (html == null) return null;
-
-        String currencySymbol = b.getCurrency() != null
-            ? (b.getCurrency().equals("TND") ? "DT"
-               : b.getCurrency().equals("EUR") ? "\u20AC" : "$")
-            : "DT";
-
-        // First product image
-        String firstImg = extractFirstImage(p.getImages());
-        String productImg = resolveImageUrl(firstImg.isBlank() ? null : firstImg);
-
-        // Price display
-        boolean hasCompare = p.getComparePrice() != null
-            && p.getComparePrice().compareTo(BigDecimal.ZERO) > 0;
-        String priceHtml = hasCompare
-            ? "<old style=\"text-decoration:line-through;color:var(--muted);margin-right:8px\">"
-                + currencySymbol + String.format("%.2f", p.getComparePrice()) + "</old> "
-                + currencySymbol + String.format("%.2f", p.getPrice())
-            : currencySymbol + String.format("%.2f", p.getPrice());
-
-        // Stock
-        boolean inStock = p.getStock() == null || p.getStock() > 0;
-        String stockHtml = inStock
-            ? "<span style=\"color:#16a34a;font-weight:500\">\u2713 En stock</span>"
-            : "<span style=\"color:#ef4444;font-weight:500\">\u2717 Rupture de stock</span>";
-
-        // Product detail grid
-        String detailContent =
-            "<style>" +
-            ".pd-wrap{display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:1000px;margin:0 auto;padding:20px}" +
-            "@media(max-width:768px){.pd-wrap{grid-template-columns:1fr}}" +
-            ".pd-img{width:100%;border-radius:12px;max-height:500px;object-fit:cover}" +
-            ".pd-name{font-size:1.75rem;font-weight:700;margin-bottom:12px}" +
-            ".pd-price{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:16px}" +
-            ".pd-stock{font-size:0.9375rem;margin-bottom:16px}" +
-            ".pd-desc{color:var(--text-soft);font-size:0.9375rem;line-height:1.7;margin-bottom:24px}" +
-            ".pd-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}" +
-            ".pd-actions .add-cart{padding:14px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:1rem;transition:0.25s ease}" +
-            ".pd-actions .add-cart:hover{filter:brightness(1.1)}" +
-            ".pd-actions .wishlist-toggle{width:48px;height:48px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center}" +
-            ".pd-actions .wishlist-toggle:hover{border-color:var(--accent);color:var(--accent)}" +
-            ".pd-back{text-align:center;margin-top:24px}" +
-            ".pd-back a{color:var(--accent);text-decoration:none;font-weight:500}" +
-            ".pd-back a:hover{text-decoration:underline}" +
-            "</style>" +
-            "<div class=\"pd-wrap\">" +
-            "<div><img class=\"pd-img\" src=\"" + esc(productImg) + "\" alt=\"" + esc(p.getName()) + "\" onerror=\"this.onerror=null;this.src='" + DEFAULT_PRODUCT_IMAGE + "'\"></div>" +
-            "<div>" +
-            "<h1 class=\"pd-name\">" + esc(p.getName()) + "</h1>" +
-            "<div class=\"pd-price\">" + priceHtml + "</div>" +
-            "<div class=\"pd-stock\">" + stockHtml + "</div>" +
-            "<div class=\"pd-desc\">" + esc(p.getDescription()) + "</div>" +
-            "<div class=\"pd-actions\">" +
-            "<button type=\"button\" class=\"add-cart\" data-product-id=\"" + p.getId() + "\" data-product-name=\"" + esc(p.getName()) + "\" data-product-price=\"" + p.getPrice() + "\" data-product-img=\"" + esc(productImg) + "\"><i class=\"fas fa-cart-plus\"></i> Ajouter au panier</button>" +
-            "<button type=\"button\" class=\"wishlist-toggle\" aria-label=\"Favoris\"><i class=\"far fa-heart\"></i><i class=\"fas fa-heart\" style=\"display:none\"></i></button>" +
-            "</div></div></div>" +
-            "<div class=\"pd-back\"><a href=\"/store/" + slug + "\">\u2190 Retour aux produits</a></div>";
-
-        int mainStart = html.indexOf("<main class=\"main\">");
-        int mainEnd = html.indexOf("</main>", mainStart);
-        if (mainStart == -1 || mainEnd == -1) {
-            // Fallback: if <main> not found, just return the HTML as-is (product not found)
-            return html;
-        }
-
-        html = html.substring(0, mainStart + "<main class=\"main\">".length())
-             + detailContent
-             + html.substring(mainEnd);
-        return html;
-    }
-
-    /** Extract the first image URL from a JSON-style image array string. */
-    private String extractFirstImage(String images) {
-        if (images == null || images.isBlank() || images.equals("[]")) return "";
-        try {
-            String trimmed = images.trim();
-            if (trimmed.startsWith("[")) {
-                String content = trimmed.substring(1, trimmed.length() - 1).trim();
-                if (content.startsWith("\"")) {
-                    return content.substring(1, content.indexOf("\"", 1));
-                }
-                return content;
-            }
-            return trimmed;
-        } catch (Exception e) { return ""; }
-    }
-
-    private String esc(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                .replace("\"", "&quot;").replace("'", "&#39;");
-    }
-
-    private String resolveImageUrl(String url) {
-        if (url == null || url.isBlank()) return DEFAULT_PRODUCT_IMAGE;
-        String trimmed = url.trim();
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-        if (trimmed.startsWith("/")) return trimmed;
-        if (trimmed.startsWith("images/") || trimmed.startsWith("uploads/")) return "/" + trimmed;
-        return "/uploads/" + trimmed;
-    }
 }
