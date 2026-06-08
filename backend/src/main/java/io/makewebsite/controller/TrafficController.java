@@ -3,6 +3,8 @@ package io.makewebsite.controller;
 import io.makewebsite.dto.request.TrackVisitRequest;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.service.TrafficService;
+import io.makewebsite.util.NetworkUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +42,12 @@ public class TrafficController {
     @GetMapping("/{boutiqueId}/overview")
     public ResponseEntity<ApiResponse<TrafficOverviewResponse>> getOverview(
             @PathVariable UUID boutiqueId) {
-        return ResponseEntity.ok(ApiResponse.ok(trafficService.getOverview(boutiqueId)));
+        TrafficOverviewResponse overview = trafficService.getOverview(boutiqueId);
+        log.info("Overview for storeId={}: topCountries={}, topCities={}",
+                boutiqueId,
+                overview.getTopCountries() != null ? overview.getTopCountries().size() : 0,
+                overview.getTopCities() != null ? overview.getTopCities().size() : 0);
+        return ResponseEntity.ok(ApiResponse.ok(overview));
     }
 
     @GetMapping("/{boutiqueId}/visitors")
@@ -83,10 +90,14 @@ public class TrafficController {
 
     @PostMapping("/track")
     public ResponseEntity<ApiResponse<Map<String, Object>>> trackVisit(
-            @Valid @RequestBody TrackVisitRequest request) {
+            @Valid @RequestBody TrackVisitRequest request,
+            HttpServletRequest httpRequest) {
+        // Resolve real client IP from headers and set on request DTO
+        String clientIp = NetworkUtils.resolveClientIp(httpRequest);
+        request.setIpAddress(clientIp);
         log.info("Track visit: boutiqueId={}, slug={}, page={}, ip={}, sessionId={}",
                 request.getBoutiqueId(), request.getBoutiqueSlug(),
-                request.getPage(), request.getIpAddress(), request.getSessionId());
+                request.getPage(), clientIp, request.getSessionId());
         return ResponseEntity.ok(ApiResponse.ok(
                 "Visite enregistrée", trafficService.trackVisit(request)));
     }

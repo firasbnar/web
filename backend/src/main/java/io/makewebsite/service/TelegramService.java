@@ -1,5 +1,7 @@
 package io.makewebsite.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -7,6 +9,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -16,10 +20,19 @@ public class TelegramService {
     @Value("${telegram.bot-token:}")
     private String botToken;
 
+    @Value("${telegram.bot-username:}")
+    private String botUsername;
+
     @Value("${telegram.enabled:false}")
     private boolean enabled;
 
     private static final String TELEGRAM_API = "https://api.telegram.org/bot";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public String getBotUsername() {
+        return botUsername;
+    }
 
     public boolean isEnabled() {
         return enabled && botToken != null && !botToken.trim().isEmpty();
@@ -96,7 +109,58 @@ public class TelegramService {
         if (!verified) {
             log.warn("Bot token verification failed — test message may not be sent");
         }
-        sendMessage(chatId, "\u2705 Test notification de MakeWebsite\n\nVotre bot Telegram est correctement configur\u00e9 !");
+        sendMessage(chatId, "\u2705 Telegram connect\u00E9 avec succ\u00E8s\n\nVous recevrez d\u00E9sormais les notifications de votre boutique MakeWebsite.io.");
         return true;
+    }
+
+    public List<TelegramUpdate> getUpdates() {
+        List<TelegramUpdate> result = new ArrayList<>();
+        if (!isEnabled()) {
+            log.warn("Telegram is disabled — cannot get updates");
+            return result;
+        }
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            String url = TELEGRAM_API + botToken + "/getUpdates?timeout=5&limit=100";
+            String json = restTemplate.getForObject(url, String.class);
+            if (json == null || !json.contains("\"ok\":true")) {
+                log.warn("Telegram getUpdates returned unexpected response");
+                return result;
+            }
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode updates = root.get("result");
+            if (updates == null || !updates.isArray()) {
+                return result;
+            }
+            for (JsonNode update : updates) {
+                JsonNode message = update.get("message");
+                if (message == null) continue;
+                JsonNode chat = message.get("chat");
+                if (chat == null) continue;
+                JsonNode chatIdNode = chat.get("id");
+                JsonNode textNode = message.get("text");
+                if (chatIdNode == null) continue;
+                String chatId = chatIdNode.asText();
+                String text = textNode != null ? textNode.asText("") : "";
+                result.add(new TelegramUpdate(chatId, text));
+            }
+            log.info("Telegram getUpdates returned {} messages", result.size());
+        } catch (Exception e) {
+            log.error("Failed to get Telegram updates: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    public static class TelegramUpdate {
+        private final String chatId;
+        private final String text;
+
+        public TelegramUpdate(String chatId, String text) {
+            this.chatId = chatId;
+            this.text = text;
+        }
+
+        public String getChatId() { return chatId; }
+        public String getText() { return text; }
     }
 }

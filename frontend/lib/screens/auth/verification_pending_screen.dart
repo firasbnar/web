@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -40,7 +41,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
       setState(() => _resent = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email de vérification renvoyé'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('auth.verify_email_sent'.tr()), backgroundColor: AppColors.success));
       }
     } catch (e) {
       if (mounted) {
@@ -70,10 +71,10 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                 child: const Icon(Icons.email_outlined, size: 48, color: Colors.white),
               ),
               const SizedBox(height: 32),
-              Text('Vérifiez votre email', style: AppTypography.heading2.copyWith(fontWeight: FontWeight.w700)),
+              Text('auth.verify_email_title'.tr(), style: AppTypography.heading2.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
               Text(
-                'Nous avons envoyé un lien de vérification à',
+                'register.verification_sent'.tr(),
                 style: AppTypography.body1.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
@@ -83,7 +84,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                 keyboardType: TextInputType.emailAddress,
                 textAlign: TextAlign.center,
                 decoration: InputDecoration(
-                  hintText: 'Entrez votre email',
+                  hintText: 'auth.email'.tr(),
                   prefixIcon: const Icon(Icons.email_outlined, size: 20),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -106,9 +107,9 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Le lien expire dans 24 heures', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                          Text('auth.verify_email_sent'.tr(), style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
                           const SizedBox(height: 4),
-                          Text('Vérifiez également vos spams.', style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+                          Text('auth.verification_pending'.tr(), style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -124,7 +125,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                     children: [
                       const Icon(Icons.check_circle, size: 18, color: AppColors.success),
                       const SizedBox(width: 8),
-                      Text('Email renvoyé !', style: AppTypography.body2.copyWith(color: AppColors.success)),
+                      Text('auth.verify_email_sent'.tr(), style: AppTypography.body2.copyWith(color: AppColors.success)),
                     ],
                   ),
                 ),
@@ -134,7 +135,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
                   icon: _resending
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.refresh),
-                  label: Text(_resending ? 'Envoi...' : 'Renvoyer l\'email'),
+                  label: Text(_resending ? 'common.loading'.tr() : 'auth.resend_email'.tr()),
                   onPressed: _resending ? null : _resend,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
@@ -146,7 +147,7 @@ class _VerificationPendingScreenState extends State<VerificationPendingScreen> {
               ),
               const SizedBox(height: 12),
               AppButton(
-                label: 'Retour à la connexion',
+                label: 'common.back'.tr(),
                 onPressed: () {
                   context.read<AuthProvider>().logout();
                   context.go('/login');

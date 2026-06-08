@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -31,7 +32,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Panier ($count)', style: AppTypography.heading3),
+        title: Text('${'public_store.cart'.tr()} ($count)', style: AppTypography.heading3),
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
       ),
       body: items.isEmpty
@@ -41,14 +42,14 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                 children: [
                   Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
-                  Text('Votre panier est vide', style: AppTypography.heading3),
+                  Text('public_store.cart_empty'.tr(), style: AppTypography.heading3),
                   const SizedBox(height: 8),
-                  Text('Parcourez la boutique pour ajouter des articles.', style: AppTypography.caption),
+                  Text('public_store.cart_empty_hint'.tr(), style: AppTypography.caption),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => context.go('/store/${widget.slug}'),
                     style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100))),
-                    child: const Text('Voir la boutique'),
+                    child: Text('public_store.back_to_products'.tr()),
                   ),
                 ],
               ),
@@ -88,7 +89,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                                   if (item.selectedColor != null || item.selectedSize != null) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${item.selectedColor != null ? 'Couleur: ${item.selectedColor}' : ''}${item.selectedColor != null && item.selectedSize != null ? ' | ' : ''}${item.selectedSize != null ? 'Taille: ${item.selectedSize}' : ''}',
+                                      '${item.selectedColor != null ? '${'public_store.color'.tr()}: ${item.selectedColor}' : ''}${item.selectedColor != null && item.selectedSize != null ? ' | ' : ''}${item.selectedSize != null ? '${'public_store.size'.tr()}: ${item.selectedSize}' : ''}',
                                       style: AppTypography.caption.copyWith(color: AppColors.textHint),
                                     ),
                                   ],
@@ -141,7 +142,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Sous-total', style: AppTypography.body1),
+                            Text('public_store.subtotal'.tr(), style: AppTypography.body1),
                             Text('DT ${total.toStringAsFixed(2)}', style: AppTypography.heading3),
                           ],
                         ),
@@ -156,7 +157,7 @@ class _PublicCartScreenState extends State<PublicCartScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                             ),
                             onPressed: () => context.push('/store/${widget.slug}/checkout'),
-                            child: Text('Commander', style: AppTypography.button),
+                            child: Text('public_store.checkout'.tr(), style: AppTypography.button),
                           ),
                         ),
                       ],

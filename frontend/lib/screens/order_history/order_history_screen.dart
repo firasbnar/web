@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../models/order.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/status_chip.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -58,11 +60,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes commandes')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('orders.my_orders'.tr())),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _orders.isEmpty
-              ? const Center(child: Text('Aucune commande'))
+              ? Center(child: Text('orders.no_orders'.tr()))
               : RefreshIndicator(
                   onRefresh: _loadOrders,
                   child: ListView.separated(
@@ -94,7 +96,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               const SizedBox(height: 8),
                               Text('${o.total.toStringAsFixed(3)} TND', style: AppTypography.heading4.copyWith(color: AppColors.primary)),
                               const SizedBox(height: 4),
-                              Text('${o.items.length} article(s)', style: AppTypography.caption),
+                              Text('${o.items.length} ${'orders.order_items'.tr()}', style: AppTypography.caption),
                               if (o.createdAt != null) ...[
                                 const SizedBox(height: 4),
                                 Text(o.createdAt!.substring(0, 10), style: AppTypography.caption),

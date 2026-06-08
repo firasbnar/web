@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../providers/analytics_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -72,6 +74,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackArrow(),
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -84,8 +87,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Analytics', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                    Text('Performance overview of your store', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+                    Text('analytics.title'.tr(), style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    Text('analytics.overview'.tr(), style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -95,7 +98,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 icon: const Icon(Icons.refresh, size: 20),
                 onPressed: _loadData,
                 color: AppColors.textSecondary,
-                tooltip: 'Refresh',
+                tooltip: 'common.refresh'.tr(),
               ),
             ],
           ),
@@ -190,10 +193,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final trafficTotal = (ap.trafficSources?.values.fold<num>(0, (s, v) => s + (v as num)) ?? 0).toInt();
 
     final kpis = [
-      _KpiData(label: 'Total Revenue', value: '${totalRevenue.toStringAsFixed(2)} TND', icon: Icons.trending_up, color: AppColors.success, trend: '+12.5%'),
-      _KpiData(label: 'Total Orders', value: '$totalOrders', icon: Icons.shopping_cart_outlined, color: AppColors.primary, trend: null),
-      _KpiData(label: 'Avg Order Value', value: '${avgOrder.toStringAsFixed(2)} TND', icon: Icons.receipt, color: AppColors.warning, trend: null),
-      _KpiData(label: 'Traffic Sources', value: '$trafficTotal', icon: Icons.travel_explore, color: Colors.blue, trend: null),
+      _KpiData(label: 'analytics.revenue'.tr(), value: '${totalRevenue.toStringAsFixed(2)} TND', icon: Icons.trending_up, color: AppColors.success, trend: '+12.5%'),
+      _KpiData(label: 'analytics.orders'.tr(), value: '$totalOrders', icon: Icons.shopping_cart_outlined, color: AppColors.primary, trend: null),
+      _KpiData(label: 'analytics.average_order'.tr(), value: '${avgOrder.toStringAsFixed(2)} TND', icon: Icons.receipt, color: AppColors.warning, trend: null),
+      _KpiData(label: 'traffic.traffic_sources'.tr(), value: '$trafficTotal', icon: Icons.travel_explore, color: Colors.blue, trend: null),
     ];
 
     return Column(
@@ -203,7 +206,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           children: [
             const Icon(Icons.analytics_outlined, size: 16, color: AppColors.textSecondary),
             const SizedBox(width: 8),
-            Text('Key Performance Indicators', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('analytics.title'.tr(), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           ],
         ),
         const SizedBox(height: 14),
@@ -275,7 +278,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               const Icon(Icons.show_chart, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Revenue over time', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text('analytics.sales_trend'.tr(), style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -293,7 +296,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             height: 240,
             child: ap.revenueChart != null
                 ? _buildRevenueChart(ap.revenueChart!)
-                : const Center(child: Text('No data', style: TextStyle(color: AppColors.textHint))),
+                : Center(child: Text('common.no_data'.tr(), style: TextStyle(color: AppColors.textHint))),
           ),
         ],
       ),
@@ -303,7 +306,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildRevenueChart(Map<String, dynamic> chart) {
     final labels = (chart['labels'] as List?)?.cast<String>() ?? [];
     final values = (chart['values'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? [];
-    if (values.isEmpty) return const Center(child: Text('No data', style: TextStyle(color: AppColors.textHint)));
+    if (values.isEmpty) return Center(child: Text('common.no_data'.tr(), style: TextStyle(color: AppColors.textHint)));
     final maxY = values.reduce((a, b) => a > b ? a : b);
 
     return LineChart(
@@ -374,15 +377,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               const Icon(Icons.lightbulb_outline, size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
-              Text('Insights', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text('analytics.overview'.tr(), style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 20),
-          _insightRow('Total Revenue', '${totalRevenue.toStringAsFixed(2)} TND', Icons.trending_up, AppColors.success),
+          _insightRow('analytics.revenue'.tr(), '${totalRevenue.toStringAsFixed(2)} TND', Icons.trending_up, AppColors.success),
           const Divider(height: 24),
-          _insightRow('Total Orders', '$totalOrders', Icons.shopping_cart_outlined, AppColors.primary),
+          _insightRow('analytics.orders'.tr(), '$totalOrders', Icons.shopping_cart_outlined, AppColors.primary),
           const Divider(height: 24),
-          _insightRow('Avg Order Value', '${avgOrder.toStringAsFixed(2)} TND', Icons.receipt, AppColors.warning),
+          _insightRow('analytics.average_order'.tr(), '${avgOrder.toStringAsFixed(2)} TND', Icons.receipt, AppColors.warning),
           const Divider(height: 24),
           _insightBullet('Revenue growth +12.5% vs last period', AppColors.success),
           const SizedBox(height: 8),
@@ -423,10 +426,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildOrderStatusCard(AnalyticsProvider ap) {
     final data = ap.ordersByStatus;
     if (data == null || data.isEmpty) {
-      return _emptyCard('Order Status Overview', Icons.pie_chart_outline);
+      return _emptyCard('analytics.orders'.tr(), Icons.pie_chart_outline);
     }
     final colors = [AppColors.warning, AppColors.primary, Colors.blue, AppColors.success, AppColors.danger];
-    final statusLabels = {'PENDING': 'Pending', 'CONFIRMED': 'Confirmed', 'SHIPPED': 'Shipped', 'DELIVERED': 'Delivered', 'CANCELLED': 'Cancelled'};
+    final statusLabels = {'PENDING': 'orders.status_pending'.tr(), 'CONFIRMED': 'Confirmed', 'SHIPPED': 'orders.status_shipped'.tr(), 'DELIVERED': 'orders.status_delivered'.tr(), 'CANCELLED': 'orders.status_cancelled'.tr()};
     final entries = data.entries.where((e) => (e.value as num) > 0).toList();
     final total = entries.fold<num>(0, (s, e) => s + (e.value as num));
 
@@ -444,7 +447,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               const Icon(Icons.pie_chart_outline, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Order Status Overview', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text('analytics.orders'.tr(), style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 20),
@@ -485,7 +488,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                             const SizedBox(width: 8),
                             Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textPrimary))),
-                            Flexible(child: Text('$count orders', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis)),
+                            Flexible(child: Text('$count ${'analytics.orders'.tr()}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis)),
                             const SizedBox(width: 6),
                             Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textHint), textAlign: TextAlign.right),
                           ],
@@ -506,7 +509,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildTrafficSourcesCard(AnalyticsProvider ap) {
     final data = ap.trafficSources;
     if (data == null || data.isEmpty) {
-      return _emptyCard('Traffic Sources', Icons.travel_explore);
+      return _emptyCard('traffic.traffic_sources'.tr(), Icons.travel_explore);
     }
     final colors = [AppColors.primary, const Color(0xFF1877F2), const Color(0xFFE4405F), AppColors.warning, AppColors.success];
     final entries = data.entries.where((e) => (e.value as num) > 0).toList();
@@ -526,7 +529,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               const Icon(Icons.travel_explore, size: 18, color: Colors.blue),
               const SizedBox(width: 8),
-              Text('Traffic Sources', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text('traffic.traffic_sources'.tr(), style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 20),
@@ -592,8 +595,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ordersByStatus!.entries.reduce((a, b) => (a.value as num) > (b.value as num) ? a : b);
     final topTraffic = trafficSources?.entries.isEmpty ?? true ? null :
         trafficSources!.entries.reduce((a, b) => (a.value as num) > (b.value as num) ? a : b);
-    final statusLabels = {'PENDING': 'Pending', 'CONFIRMED': 'Confirmed', 'SHIPPED': 'Shipped', 'DELIVERED': 'Delivered', 'CANCELLED': 'Cancelled'};
-    final topStatusLabel = topStatus != null ? (statusLabels[topStatus.key] ?? topStatus.key) : 'N/A';
+    final statusLabels = {'PENDING': 'orders.status_pending'.tr(), 'CONFIRMED': 'Confirmed', 'SHIPPED': 'orders.status_shipped'.tr(), 'DELIVERED': 'orders.status_delivered'.tr(), 'CANCELLED': 'orders.status_cancelled'.tr()};
+    final topStatusLabel = topStatus != null ? (statusLabels[topStatus.key] ?? topStatus.key) : 'common.no_data'.tr();
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -608,23 +611,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               Icon(Icons.auto_awesome, size: 20, color: Colors.white.withValues(alpha: 0.9)),
               const SizedBox(width: 10),
-              Text('Smart Insights', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+              Text('analytics.title'.tr(), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
             ],
           ),
           const SizedBox(height: 16),
-          Text('Orders increased by +12% this week', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
+          Text('Orders increased by +12% this week'.tr(), style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
           const SizedBox(height: 6),
-          Text('Most common status: $topStatusLabel ($totalOrders total orders)', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
+          Text('Most common status: $topStatusLabel ($totalOrders total orders)'.tr(), style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
           const SizedBox(height: 6),
-          Text(topTraffic != null ? 'Top source: ${topTraffic.key}' : 'No traffic data yet', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
+          Text(topTraffic != null ? 'Top source: ${topTraffic.key}'.tr() : 'No traffic data yet'.tr(), style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
           const SizedBox(height: 6),
-          Text('Peak activity: 6PM - 9PM', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
+          Text('Peak activity: 6PM - 9PM'.tr(), style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85))),
           const SizedBox(height: 20),
           Row(
             children: [
-              _insightStat('$totalOrders', 'Total Orders'),
+              _insightStat('$totalOrders', 'analytics.orders'.tr()),
               const SizedBox(width: 32),
-              _insightStat(topStatusLabel, 'Top Status'),
+              _insightStat(topStatusLabel, 'analytics.overview'.tr()),
             ],
           ),
         ],
@@ -656,7 +659,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           const SizedBox(height: 8),
           Text(title, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textHint)),
           const SizedBox(height: 4),
-          Text('No data available', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textHint)),
+          Text('common.no_data'.tr(), style: GoogleFonts.inter(fontSize: 12, color: AppColors.textHint)),
         ],
       ),
     );

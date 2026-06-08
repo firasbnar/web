@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../providers/ai_provider.dart';
 
 class AiAssistantScreen extends StatefulWidget {
@@ -48,7 +50,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Assistant IA ✨'),
+        leading: const AppBackArrow(),
+        title: Text('ai_assistant.title'.tr()),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -70,17 +73,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                         children: [
                           const Icon(Icons.smart_toy, size: 80, color: AppColors.primary),
                           const SizedBox(height: 20),
-                          Text('Comment puis-je vous aider?', style: AppTypography.heading3),
+                          Text('ai_assistant.subtitle'.tr(), style: AppTypography.heading3),
                           const SizedBox(height: 20),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _quickChip('Best sellers'),
-                              _quickChip('Revenue today'),
-                              _quickChip('Low stock'),
-                              _quickChip('Traffic today'),
-                              _quickChip('Orders today'),
+                              _quickChip('ai_assistant.suggest_products'.tr()),
+                              _quickChip('ai_assistant.suggest_analytics'.tr()),
+                              _quickChip('ai_assistant.suggest_settings'.tr()),
+                              _quickChip('ai_assistant.suggest_analytics'.tr()),
+                              _quickChip('ai_assistant.suggest_orders'.tr()),
                             ],
                           ),
                         ],
@@ -136,8 +139,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                   Expanded(
                     child: TextField(
                       controller: _msgCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Écrivez votre message...',
+                      decoration: InputDecoration(
+                        hintText: 'ai_assistant.placeholder'.tr(),
                         border: InputBorder.none,
                         filled: false,
                       ),

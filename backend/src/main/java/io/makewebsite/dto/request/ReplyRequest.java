@@ -20,4 +20,5 @@ public class ReplyRequest {
 
     @NotBlank
     private String content;
+
 }

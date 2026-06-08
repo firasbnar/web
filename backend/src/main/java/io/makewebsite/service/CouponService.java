@@ -80,6 +80,50 @@ public class CouponService {
         couponRepository.deleteById(id);
     }
 
+    public CouponValidationResponse validateCouponOnly(ValidateCouponRequest request) {
+        Coupon coupon = couponRepository.findByBoutiqueIdAndCode(request.getBoutiqueId(), request.getCode())
+                .orElse(null);
+        if (coupon == null || !coupon.getIsActive()) {
+            return CouponValidationResponse.builder()
+                    .valid(false).discountAmount(BigDecimal.ZERO)
+                    .finalAmount(request.getOrderAmount())
+                    .message("Code promo invalide ou expir\u00E9").build();
+        }
+        if (coupon.getExpiresAt() != null && coupon.getExpiresAt().isBefore(LocalDateTime.now())) {
+            return CouponValidationResponse.builder()
+                    .valid(false).discountAmount(BigDecimal.ZERO)
+                    .finalAmount(request.getOrderAmount())
+                    .message("Code promo expir\u00E9").build();
+        }
+        if (coupon.getMaxUses() != null && coupon.getUsedCount() >= coupon.getMaxUses()) {
+            return CouponValidationResponse.builder()
+                    .valid(false).discountAmount(BigDecimal.ZERO)
+                    .finalAmount(request.getOrderAmount())
+                    .message("Code promo \u00E9puis\u00E9").build();
+        }
+        if (coupon.getMinOrderAmount() != null && request.getOrderAmount().compareTo(coupon.getMinOrderAmount()) < 0) {
+            return CouponValidationResponse.builder()
+                    .valid(false).discountAmount(BigDecimal.ZERO)
+                    .finalAmount(request.getOrderAmount())
+                    .message("Montant minimum non atteint (" + coupon.getMinOrderAmount() + " TND)").build();
+        }
+
+        BigDecimal discount;
+        if ("PERCENT".equals(coupon.getDiscountType())) {
+            discount = request.getOrderAmount().multiply(coupon.getDiscountValue()).divide(BigDecimal.valueOf(100));
+        } else {
+            discount = coupon.getDiscountValue();
+        }
+
+        BigDecimal finalAmount = request.getOrderAmount().subtract(discount);
+        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) finalAmount = BigDecimal.ZERO;
+
+        return CouponValidationResponse.builder()
+                .valid(true).discountAmount(discount)
+                .finalAmount(finalAmount)
+                .message("Code promo appliqu\u00E9!").build();
+    }
+
     public CouponValidationResponse validateCoupon(ValidateCouponRequest request) {
         Coupon coupon = couponRepository.findByBoutiqueIdAndCode(request.getBoutiqueId(), request.getCode())
                 .orElse(null);

@@ -1,5 +1,6 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 import './storage.dart';
 import 'env_config.dart';
 
@@ -52,16 +53,16 @@ class ApiClient {
           error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
           error.response == null) {
-        return 'Serveur inaccessible';
+        return tr('errors.server_unreachable');
       }
-      if (error.response?.statusCode == 400) return 'Requête invalide';
-      if (error.response?.statusCode == 401) return 'Session expirée';
-      if (error.response?.statusCode == 403) return 'Accès refusé';
-      if (error.response?.statusCode == 404) return 'Introuvable';
-      if (error.response?.statusCode == 413) return 'Fichier trop volumineux';
-      if (error.response?.statusCode == 422) return 'Données invalides';
-      if (error.response?.statusCode == 500) return 'Erreur serveur';
-      return 'Erreur de communication';
+      if (error.response?.statusCode == 400) return tr('errors.bad_request');
+      if (error.response?.statusCode == 401) return tr('errors.session_expired');
+      if (error.response?.statusCode == 403) return tr('errors.access_denied');
+      if (error.response?.statusCode == 404) return tr('errors.not_found');
+      if (error.response?.statusCode == 413) return tr('errors.file_too_large');
+      if (error.response?.statusCode == 422) return tr('errors.invalid_data');
+      if (error.response?.statusCode == 500) return tr('errors.server_error');
+      return tr('errors.communication_error');
     }
     return error.toString();
   }
@@ -79,6 +80,10 @@ class ApiClient {
           final token = await _storage.getAccessToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
+          }
+          final locale = await _storage.getLocaleCode();
+          if (locale != null && locale.isNotEmpty) {
+            options.headers['Accept-Language'] = locale;
           }
           if (options.data != null &&
               options.data is! FormData &&

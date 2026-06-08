@@ -8,6 +8,8 @@ import '../../providers/wishlist_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/app_back_button.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -94,9 +96,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Text('Donner votre avis', style: AppTypography.heading4)),
+              Center(child: Text('products.product_details'.tr(), style: AppTypography.heading4)),
               const SizedBox(height: 20),
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Votre nom *', border: OutlineInputBorder())),
+              TextField(controller: nameCtrl, decoration: InputDecoration(labelText: 'products.product_name'.tr(), border: const OutlineInputBorder())),
               const SizedBox(height: 16),
               Center(
                 child: Row(
@@ -108,11 +110,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TextField(controller: commentCtrl, decoration: const InputDecoration(labelText: 'Votre commentaire', border: OutlineInputBorder()), maxLines: 3),
+              TextField(controller: commentCtrl, decoration: InputDecoration(labelText: 'products.product_description'.tr(), border: const OutlineInputBorder()), maxLines: 3),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: AppButton(label: 'Envoyer', onPressed: () async {
+                child: AppButton(label: 'common.save'.tr(), onPressed: () async {
                   if (nameCtrl.text.trim().isEmpty) return;
                   try {
                     final res = await _api.post('/products/${widget.productId}/reviews', data: {
@@ -125,7 +127,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       setState(() => _reviewSubmitted = true);
                       _loadReviews();
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(res['message'] ?? 'Merci pour votre avis !'),
+                        content: Text(res['message'] ?? 'common.operation_success'.tr()),
                         backgroundColor: AppColors.success,
                         duration: const Duration(seconds: 4),
                       ));
@@ -133,7 +135,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   } catch (e) {
                     Navigator.pop(ctx, false);
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('common.error'.tr()), backgroundColor: AppColors.danger));
                     }
                   }
                 }),
@@ -143,7 +145,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Annuler'),
+                  child: Text('common.cancel'.tr()),
                 ),
               ),
             ],
@@ -162,7 +164,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final ok = await cart.addItem(widget.boutiqueId!, widget.productId, _quantity);
     if (ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$_quantity x ${_product!.name} ajouté au panier'), backgroundColor: AppColors.success),
+        SnackBar(content: Text('$_quantity x ${_product!.name} ${'common.operation_success'.tr()}'), backgroundColor: AppColors.success),
       );
     }
   }
@@ -171,7 +173,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     if (_loading) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
     if (_error != null) return Scaffold(appBar: AppBar(), body: Center(child: Text(_error!)));
-    if (_product == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('Produit non trouvé')));
+    if (_product == null) return Scaffold(appBar: AppBar(), body: Center(child: Text('products.no_products'.tr())));
     final p = _product!;
     final boutiqueId = widget.boutiqueId ?? p.boutiqueId ?? '';
 
@@ -181,10 +183,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () { if (context.canPop()) context.pop(); },
-            ),
+            leading: const AppBackButton(),
             actions: [
               IconButton(
                 icon: Icon(_inWishlist ? Icons.favorite : Icons.favorite_border, color: _inWishlist ? AppColors.danger : null),
@@ -247,13 +246,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   _stockBadge(p.stock),
                   const SizedBox(height: 16),
                   if (p.description != null && p.description!.isNotEmpty) ...[
-                    Text('Description', style: AppTypography.heading4),
+                    Text('products.product_description'.tr(), style: AppTypography.heading4),
                     const SizedBox(height: 8),
                     Text(p.description!, style: AppTypography.body2, overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 24),
                   if (p.stock > 0) ...[
-                    Text('Quantité', style: AppTypography.body2),
+                    Text('products.stock'.tr(), style: AppTypography.body2),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
@@ -281,7 +280,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ],
                   const SizedBox(height: 32),
                   AppButton(
-                    label: p.stock > 0 ? 'Ajouter au panier' : 'Rupture de stock',
+                    label: p.stock > 0 ? 'products.add_product'.tr() : 'inventory.out_of_stock'.tr(),
                     onPressed: p.stock > 0 ? _addToCart : null,
                   ),
                   const SizedBox(height: 16),
@@ -290,7 +289,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/checkout/$boutiqueId'),
                       icon: const Icon(Icons.flash_on),
-                      label: const Text('Acheter maintenant'),
+                      label: Text('products.add_product'.tr()),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
@@ -320,7 +319,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Row(
               children: [
-                Text('Avis', style: AppTypography.heading4),
+                Text('products.product_details'.tr(), style: AppTypography.heading4),
                 if (_totalReviews > 0) ...[
                   const SizedBox(width: 8),
                   Row(
@@ -337,7 +336,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             TextButton.icon(
               icon: const Icon(Icons.edit, size: 16),
-              label: const Text('Écrire'),
+              label: Text('common.edit'.tr()),
               onPressed: _showReviewDialog,
             ),
           ],
@@ -359,7 +358,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Votre avis a été soumis et sera visible après validation par le marchand.',
+                    'common.operation_success'.tr(),
                     style: AppTypography.body2.copyWith(color: AppColors.success),
                   ),
                 ),
@@ -381,7 +380,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 const Icon(Icons.rate_review_outlined, size: 48, color: AppColors.textHint),
                 const SizedBox(height: 12),
-                Text('Soyez le premier à donner votre avis', style: AppTypography.body2),
+                Text('products.no_products'.tr(), style: AppTypography.body2),
               ],
             ),
           )
@@ -428,9 +427,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _stockBadge(int stock) {
     Color color;
     String text;
-    if (stock <= 0) { color = AppColors.danger; text = 'Rupture de stock'; }
-    else if (stock <= 10) { color = AppColors.warning; text = 'Plus que $stock en stock'; }
-    else { color = AppColors.success; text = '$stock en stock'; }
+    if (stock <= 0) { color = AppColors.danger; text = 'inventory.out_of_stock'.tr(); }
+    else if (stock <= 10) { color = AppColors.warning; text = 'inventory.low_stock'.tr(args: [stock.toString()]); }
+    else { color = AppColors.success; text = 'inventory.in_stock'.tr(args: [stock.toString()]); }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(100)),

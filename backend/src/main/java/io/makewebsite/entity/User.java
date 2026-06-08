@@ -66,6 +66,16 @@ public class User {
     @Column(name = "telegram_enabled", nullable = false)
     private Boolean telegramEnabled = false;
 
+    @Builder.Default
+    @Column(name = "telegram_connected", nullable = false)
+    private Boolean telegramConnected = false;
+
+    @Column(name = "telegram_connection_code", length = 20)
+    private String telegramConnectionCode;
+
+    @Column(name = "telegram_connection_code_expires_at")
+    private LocalDateTime telegramConnectionCodeExpiresAt;
+
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 

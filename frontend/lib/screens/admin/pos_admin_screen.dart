@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -6,6 +7,7 @@ import '../../providers/boutique_provider.dart';
 import '../../providers/pos_admin_provider.dart';
 import '../../models/cashier.dart';
 import 'package:provider/provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class PosAdminScreen extends StatefulWidget {
   const PosAdminScreen({super.key});
@@ -59,17 +61,18 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       child: Consumer<PosAdminProvider>(
         builder: (_, p, __) => Scaffold(
           appBar: AppBar(
-            title: const Text('Administration Caisse'),
+            leading: const AppBackArrow(),
+            title: Text('menu.pos_admin'.tr()),
             bottom: TabBar(
               controller: _tabCtrl,
               indicatorColor: AppColors.primary,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textSecondary,
-              tabs: const [
-                Tab(icon: Icon(Icons.dashboard), text: 'Tableau de bord'),
-                Tab(icon: Icon(Icons.people), text: 'Caissiers'),
-                Tab(icon: Icon(Icons.receipt_long), text: 'Commandes'),
-                Tab(icon: Icon(Icons.history), text: 'Activité'),
+              tabs: [
+                Tab(icon: Icon(Icons.dashboard), text: 'dashboard.title'.tr()),
+                Tab(icon: Icon(Icons.people), text: 'team.staff'.tr()),
+                Tab(icon: Icon(Icons.receipt_long), text: 'orders.title'.tr()),
+                Tab(icon: Icon(Icons.history), text: 'super_admin.activity'.tr()),
               ],
             ),
           ),
@@ -104,7 +107,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             const SizedBox(height: 8),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: p.loadDashboard,
             ),
           ],
@@ -119,12 +122,12 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: [
-        _metricCard('Total ventes', '${d?['totalVentes'] ?? 0} TND', Icons.trending_up, AppColors.primary),
-        _metricCard('Ventes aujourd\'hui', '${d?['ventesAujourdhui'] ?? 0} TND', Icons.today, Colors.green),
-        _metricCard('Commandes aujourd\'hui', '${d?['commandesAujourdhui'] ?? 0}', Icons.receipt, Colors.amber),
-        _metricCard('Total commandes', '${d?['totalCommandes'] ?? 0}', Icons.receipt_long, Colors.cyan),
-        _metricCard('Caisses actives', '${d?['caissesActives'] ?? 0}', Icons.point_of_sale, Colors.purple),
-        _metricCard('Utilisateurs connectés', '${d?['utilisateursConnectes'] ?? 0}', Icons.person, Colors.pink),
+        _metricCard('dashboard.total_sales'.tr(), '${d?['totalVentes'] ?? 0} TND', Icons.trending_up, AppColors.primary),
+        _metricCard('dashboard.today'.tr(), '${d?['ventesAujourdhui'] ?? 0} TND', Icons.today, Colors.green),
+        _metricCard('dashboard.today'.tr(), '${d?['commandesAujourdhui'] ?? 0}', Icons.receipt, Colors.amber),
+        _metricCard('dashboard.total_orders'.tr(), '${d?['totalCommandes'] ?? 0}', Icons.receipt_long, Colors.cyan),
+        _metricCard('dashboard.total_sales'.tr(), '${d?['caissesActives'] ?? 0}', Icons.point_of_sale, Colors.purple),
+        _metricCard('super_admin.active_users'.tr(), '${d?['utilisateursConnectes'] ?? 0}', Icons.person, Colors.pink),
       ],
     );
   }
@@ -164,7 +167,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
                 child: TextField(
                   controller: _searchCtrl,
                   decoration: InputDecoration(
-                    hintText: 'Rechercher un caissier...',
+                    hintText: 'admin.search'.tr(),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -176,7 +179,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
               const SizedBox(width: 8),
               TextButton.icon(
                 icon: const Icon(Icons.person_add),
-                label: const Text('Nouvel Utilisateur'),
+                label: Text('team.add_member'.tr()),
                 onPressed: () => _showCreateCashierDialog(p),
               ),
             ],
@@ -193,9 +196,9 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          _smallStat('Caissiers', '${cs?['totalCashiers'] ?? '...'}', Icons.people, AppColors.primary),
-          _smallStat('En ligne', '${cs?['onlineCashiers'] ?? '...'}', Icons.wifi, Colors.green),
-          _smallStat('Ventes', '${cs?['totalSales'] ?? '...'} TND', Icons.trending_up, Colors.amber),
+          _smallStat('team.staff'.tr(), '${cs?['totalCashiers'] ?? '...'}', Icons.people, AppColors.primary),
+          _smallStat('common.active'.tr(), '${cs?['onlineCashiers'] ?? '...'}', Icons.wifi, Colors.green),
+          _smallStat('dashboard.total_sales'.tr(), '${cs?['totalSales'] ?? '...'} TND', Icons.trending_up, Colors.amber),
         ],
       ),
     );
@@ -236,11 +239,11 @@ class _PosAdminScreenState extends State<PosAdminScreen>
           children: [
             const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
             const SizedBox(height: 12),
-            const Text('Impossible de charger les caissiers'),
+            Text('common.no_data'.tr()),
             const SizedBox(height: 8),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: () => p.loadCashiers(refresh: true),
             ),
           ],
@@ -251,7 +254,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       return const Center(child: CircularProgressIndicator());
     }
     if (p.cashiers.isEmpty) {
-      return const Center(child: Text('Aucun caissier trouvé'));
+      return Center(child: Text('common.no_results'.tr()));
     }
     return RefreshIndicator(
       onRefresh: () => p.loadCashiers(refresh: true),
@@ -315,7 +318,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
                 color: AppColors.danger.withAlpha(30),
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: const Text('SUSPENDU', style: TextStyle(fontSize: 10, color: AppColors.danger)),
+              child: Text('admin.suspend'.tr(), style: TextStyle(fontSize: 10, color: AppColors.danger)),
             ),
           if (!c.isSuspended && c.online)
             Container(
@@ -324,7 +327,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
                 color: AppColors.success.withAlpha(30),
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: const Text('EN LIGNE', style: TextStyle(fontSize: 10, color: AppColors.success)),
+              child: Text('common.active'.tr(), style: TextStyle(fontSize: 10, color: AppColors.success)),
             ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 20),
@@ -335,11 +338,11 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'toggle',
-                child: Text(c.isSuspended ? 'Activer' : 'Suspendre'),
+                child: Text(c.isSuspended ? 'admin.activate'.tr() : 'admin.suspend'.tr()),
               ),
               PopupMenuItem(
                 value: 'delete',
-                child: const Text('Supprimer', style: TextStyle(color: AppColors.danger)),
+                child: Text('admin.delete'.tr(), style: TextStyle(color: AppColors.danger)),
               ),
             ],
           ),
@@ -356,23 +359,23 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Nouvel Utilisateur'),
+          title: Text('team.add_member'.tr()),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nom complet', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: 'auth.full_name'.tr(), border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _emailCtrl,
-                decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: 'auth.email'.tr(), border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _selectedRole,
-                decoration: const InputDecoration(labelText: 'Rôle', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: 'team.role'.tr(), border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'STAFF', child: Text('STAFF')),
                   DropdownMenuItem(value: 'MANAGER', child: Text('MANAGER')),
@@ -382,7 +385,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
             ElevatedButton(
               onPressed: () async {
                 final ok = await p.createCashier(_emailCtrl.text.trim(), _nameCtrl.text.trim(), _selectedRole);
@@ -390,13 +393,13 @@ class _PosAdminScreenState extends State<PosAdminScreen>
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(ok ? 'Caissier ajouté' : p.cashierActionError ?? 'Erreur'),
+                      content: Text(ok ? 'common.operation_success'.tr() : p.cashierActionError ?? 'errors.unknown'.tr()),
                       backgroundColor: ok ? AppColors.success : AppColors.danger,
                     ),
                   );
                 }
               },
-              child: const Text('Ajouter'),
+              child: Text('team.add_member'.tr()),
             ),
           ],
         ),
@@ -408,10 +411,10 @@ class _PosAdminScreenState extends State<PosAdminScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer'),
-        content: Text('Supprimer "${c.fullName}" de la boutique ?'),
+        title: Text('common.confirm'.tr()),
+        content: Text('${'common.confirm_delete'.tr()} "${c.fullName}" ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () async {
@@ -420,13 +423,13 @@ class _PosAdminScreenState extends State<PosAdminScreen>
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(ok ? 'Caissier supprimé' : p.cashierActionError ?? 'Erreur'),
+                    content: Text(ok ? 'common.operation_success'.tr() : p.cashierActionError ?? 'errors.unknown'.tr()),
                     backgroundColor: ok ? AppColors.success : AppColors.danger,
                   ),
                 );
               }
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text('common.delete'.tr(), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -439,8 +442,8 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ok
-              ? suspend ? 'Caissier suspendu' : 'Caissier activé'
-              : p.cashierActionError ?? 'Erreur'),
+              ? 'common.operation_success'.tr()
+              : p.cashierActionError ?? 'errors.unknown'.tr()),
           backgroundColor: ok ? AppColors.success : AppColors.danger,
         ),
       );
@@ -467,7 +470,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _userTab('Tous', p.orderUserIdFilter == null, () => p.selectCashier(null)),
+          _userTab('common.all'.tr(), p.orderUserIdFilter == null, () => p.selectCashier(null)),
           ...p.cashiers.map((c) => _userTab(
             c.fullName.split(' ').first,
             p.orderUserIdFilter == c.id,
@@ -531,7 +534,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('${c.totalVentes.toStringAsFixed(2)} TND', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-              Text('${c.commandesCount} commandes', style: AppTypography.caption),
+              Text('${c.commandesCount} ${'orders.title'.tr()}', style: AppTypography.caption),
             ],
           ),
         ],
@@ -546,13 +549,13 @@ class _PosAdminScreenState extends State<PosAdminScreen>
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _filterChip('Tous', p.orderStatusFilter == '', () => p.setOrderStatusFilter('')),
-            _filterChip('En attente', p.orderStatusFilter == 'PENDING', () => p.setOrderStatusFilter('PENDING')),
-            _filterChip('Confirmée', p.orderStatusFilter == 'CONFIRMED', () => p.setOrderStatusFilter('CONFIRMED')),
-            _filterChip('Préparation', p.orderStatusFilter == 'PREPARING', () => p.setOrderStatusFilter('PREPARING')),
-            _filterChip('Prête', p.orderStatusFilter == 'READY', () => p.setOrderStatusFilter('READY')),
-            _filterChip('Livrée', p.orderStatusFilter == 'DELIVERED', () => p.setOrderStatusFilter('DELIVERED')),
-            _filterChip('Annulée', p.orderStatusFilter == 'CANCELLED', () => p.setOrderStatusFilter('CANCELLED')),
+            _filterChip('common.all'.tr(), p.orderStatusFilter == '', () => p.setOrderStatusFilter('')),
+            _filterChip('orders.status_pending'.tr(), p.orderStatusFilter == 'PENDING', () => p.setOrderStatusFilter('PENDING')),
+            _filterChip('orders.status_processing'.tr(), p.orderStatusFilter == 'CONFIRMED', () => p.setOrderStatusFilter('CONFIRMED')),
+            _filterChip('orders.status_processing'.tr(), p.orderStatusFilter == 'PREPARING', () => p.setOrderStatusFilter('PREPARING')),
+            _filterChip('orders.status_processing'.tr(), p.orderStatusFilter == 'READY', () => p.setOrderStatusFilter('READY')),
+            _filterChip('orders.status_delivered'.tr(), p.orderStatusFilter == 'DELIVERED', () => p.setOrderStatusFilter('DELIVERED')),
+            _filterChip('orders.status_cancelled'.tr(), p.orderStatusFilter == 'CANCELLED', () => p.setOrderStatusFilter('CANCELLED')),
           ],
         ),
       ),
@@ -567,11 +570,11 @@ class _PosAdminScreenState extends State<PosAdminScreen>
           children: [
             const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
             const SizedBox(height: 12),
-            const Text('Impossible de charger les commandes'),
+            Text('common.no_data'.tr()),
             const SizedBox(height: 8),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: () => p.loadOrders(refresh: true),
             ),
           ],
@@ -582,7 +585,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
       return const Center(child: CircularProgressIndicator());
     }
     if (p.orders.isEmpty) {
-      return const Center(child: Text('Aucune commande'));
+      return Center(child: Text('orders.no_orders'.tr()));
     }
     return RefreshIndicator(
       onRefresh: () => p.loadOrders(refresh: true),
@@ -665,15 +668,15 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             const SizedBox(height: 16),
             Text(order['orderNumber'] ?? '', style: AppTypography.heading3),
             const SizedBox(height: 8),
-            _detailRow('Client', order['customerName'] ?? 'Client inconnu'),
-            _detailRow('Statut', _orderStatusLabel(order['status'] ?? '')),
-            _detailRow('Total', '${order['total'] ?? 0} TND'),
-            _detailRow('Paiement', order['paymentStatus'] ?? 'N/A'),
-            _detailRow('Méthode', order['paymentMethod'] ?? 'N/A'),
+            _detailRow('orders.customer'.tr(), order['customerName'] ?? 'orders.unknown_customer'.tr()),
+            _detailRow('orders.order_status'.tr(), _orderStatusLabel(order['status'] ?? '')),
+            _detailRow('orders.total'.tr(), '${order['total'] ?? 0} TND'),
+            _detailRow('orders.payment_status'.tr(), order['paymentStatus'] ?? 'N/A'),
+            _detailRow('orders.payment_method'.tr(), order['paymentMethod'] ?? 'N/A'),
             if (order['createdAt'] != null)
-              _detailRow('Date', order['createdAt'].toString().substring(0, 16)),
+              _detailRow('common.date'.tr(), order['createdAt'].toString().substring(0, 16)),
             if (order['notes'] != null && (order['notes'] as String).isNotEmpty)
-              _detailRow('Notes', order['notes']),
+              _detailRow('orders.notes'.tr(), order['notes']),
           ],
         ),
       ),
@@ -721,12 +724,12 @@ class _PosAdminScreenState extends State<PosAdminScreen>
 
   String _orderStatusLabel(String status) {
     switch (status) {
-      case 'PENDING': return 'En attente';
-      case 'CONFIRMED': return 'Confirmée';
-      case 'PREPARING': return 'Préparation';
-      case 'READY': return 'Prête';
-      case 'DELIVERED': return 'Livrée';
-      case 'CANCELLED': return 'Annulée';
+      case 'PENDING': return 'orders.status_pending'.tr();
+      case 'CONFIRMED': return 'orders.status_processing'.tr();
+      case 'PREPARING': return 'orders.status_processing'.tr();
+      case 'READY': return 'orders.status_processing'.tr();
+      case 'DELIVERED': return 'orders.status_delivered'.tr();
+      case 'CANCELLED': return 'orders.status_cancelled'.tr();
       default: return status;
     }
   }
@@ -742,11 +745,11 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _filterChip('Toutes', p.activityActionFilter == '', () => p.setActivityActionFilter('')),
-                _filterChip('Connexion', p.activityActionFilter == 'CONNEXION_CAISSE_REUSSIE', () => p.setActivityActionFilter('CONNEXION_CAISSE_REUSSIE')),
-                _filterChip('Déconnexion', p.activityActionFilter == 'DECONNEXION_CAISSE', () => p.setActivityActionFilter('DECONNEXION_CAISSE')),
-                _filterChip('Commande', p.activityActionFilter == 'CREATION_COMMANDE', () => p.setActivityActionFilter('CREATION_COMMANDE')),
-                _filterChip('Caisse', p.activityActionFilter == 'OUVERTURE_CAISSE', () => p.setActivityActionFilter('OUVERTURE_CAISSE')),
+                _filterChip('common.all'.tr(), p.activityActionFilter == '', () => p.setActivityActionFilter('')),
+                _filterChip('auth.login'.tr(), p.activityActionFilter == 'CONNEXION_CAISSE_REUSSIE', () => p.setActivityActionFilter('CONNEXION_CAISSE_REUSSIE')),
+                _filterChip('auth.logout'.tr(), p.activityActionFilter == 'DECONNEXION_CAISSE', () => p.setActivityActionFilter('DECONNEXION_CAISSE')),
+                _filterChip('orders.title'.tr(), p.activityActionFilter == 'CREATION_COMMANDE', () => p.setActivityActionFilter('CREATION_COMMANDE')),
+                _filterChip('pos.title'.tr(), p.activityActionFilter == 'OUVERTURE_CAISSE', () => p.setActivityActionFilter('OUVERTURE_CAISSE')),
               ],
             ),
           ),
@@ -757,11 +760,11 @@ class _PosAdminScreenState extends State<PosAdminScreen>
             children: [
               TextButton.icon(
                 icon: const Icon(Icons.open_in_new, size: 16),
-                label: const Text('Voir le journal complet', style: TextStyle(fontSize: 12)),
+                label: Text('admin.logs'.tr(), style: TextStyle(fontSize: 12)),
                 onPressed: () => context.go('/admin/activities'),
               ),
               const Spacer(),
-              Text('${p.activities.length} activités', style: AppTypography.caption.copyWith(fontSize: 11)),
+              Text('${p.activities.length} ${'super_admin.activity'.tr()}', style: AppTypography.caption.copyWith(fontSize: 11)),
             ],
           ),
         ),
@@ -773,11 +776,11 @@ class _PosAdminScreenState extends State<PosAdminScreen>
                     children: [
                       const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
                       const SizedBox(height: 12),
-                      const Text('Impossible de charger les activités'),
+                      Text('common.no_data'.tr()),
                       const SizedBox(height: 8),
                       TextButton.icon(
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Réessayer'),
+                        label: Text('common.retry'.tr()),
                         onPressed: () => p.loadActivities(refresh: true),
                       ),
                     ],
@@ -786,7 +789,7 @@ class _PosAdminScreenState extends State<PosAdminScreen>
               : p.loadingActivities && p.activities.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : p.activities.isEmpty
-                      ? const Center(child: Text('Aucune activité'))
+                      ? Center(child: Text('common.no_results'.tr()))
                       : RefreshIndicator(
                           onRefresh: () => p.loadActivities(refresh: true),
                           child: ListView.builder(
@@ -858,19 +861,19 @@ class _PosAdminScreenState extends State<PosAdminScreen>
   String _activityLabel(String action) {
     switch (action) {
       case 'LOGIN':
-      case 'CONNEXION_CAISSE_REUSSIE': return 'Connexion';
+      case 'CONNEXION_CAISSE_REUSSIE': return 'auth.login'.tr();
       case 'LOGOUT':
-      case 'DECONNEXION_CAISSE': return 'Déconnexion';
+      case 'DECONNEXION_CAISSE': return 'auth.logout'.tr();
       case 'LOGIN_FAILED':
-      case 'CONNEXION_CAISSE_ECHOUEE': return 'Échec de connexion';
+      case 'CONNEXION_CAISSE_ECHOUEE': return 'auth.invalid_credentials'.tr();
       case 'ORDER_CREATED':
-      case 'CREATION_COMMANDE': return 'Nouvelle commande';
-      case 'ANNULATION_COMMANDE': return 'Commande annulée';
-      case 'ORDER_STATUS_CHANGED': return 'Statut commande modifié';
+      case 'CREATION_COMMANDE': return 'orders.title'.tr();
+      case 'ANNULATION_COMMANDE': return 'orders.status_cancelled'.tr();
+      case 'ORDER_STATUS_CHANGED': return 'orders.order_status'.tr();
       case 'CAISSE_OPENED':
-      case 'OUVERTURE_CAISSE': return 'Caisse ouverte';
+      case 'OUVERTURE_CAISSE': return 'pos.title'.tr();
       case 'CAISSE_CLOSED':
-      case 'FERMETURE_CAISSE': return 'Caisse fermée';
+      case 'FERMETURE_CAISSE': return 'pos.title'.tr();
       default: return action;
     }
   }

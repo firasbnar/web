@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../providers/boutique_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class CreateStoreScreen extends StatefulWidget {
   const CreateStoreScreen({super.key});
@@ -58,40 +60,40 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
       if (!mounted) return;
       await context.read<BoutiqueProvider>().loadBoutiques();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Boutique créée'), backgroundColor: AppColors.success));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('common.success'.tr()), backgroundColor: AppColors.success));
       if (!mounted) return;
       context.go('/home');
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('common.error'.tr(args: [e.toString()])), backgroundColor: AppColors.danger));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle boutique')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('store_catalog.title'.tr())),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Créer votre boutique', style: AppTypography.heading2),
+            Text('store_catalog.title'.tr(), style: AppTypography.heading2),
             const SizedBox(height: 24),
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nom de la boutique', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: 'boutique.name'.tr(), border: const OutlineInputBorder()),
               onChanged: (_) => _generateSlug(),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _slugCtrl,
               decoration: InputDecoration(
-                labelText: 'URL (slug)',
+                labelText: 'boutique.slug'.tr(),
                 border: const OutlineInputBorder(),
-                hintText: 'ma-boutique',
+                hintText: 'boutique.slug_help'.tr(),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.auto_fix_high, size: 18),
                   onPressed: _generateSlug,
@@ -101,28 +103,28 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _descCtrl,
-              decoration: const InputDecoration(labelText: 'Description (optionnel)', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: 'boutique.description'.tr(), border: const OutlineInputBorder()),
               maxLines: 3,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(value: '', child: Text('Sélectionnez une catégorie')),
-                DropdownMenuItem(value: 'Mode', child: Text('Mode')),
-                DropdownMenuItem(value: 'Alimentation', child: Text('Alimentation')),
-                DropdownMenuItem(value: 'Électronique', child: Text('Électronique')),
-                DropdownMenuItem(value: 'Maison', child: Text('Maison')),
-                DropdownMenuItem(value: 'Beauté', child: Text('Beauté')),
-                DropdownMenuItem(value: 'Sports', child: Text('Sports')),
-                DropdownMenuItem(value: 'Autre', child: Text('Autre')),
+              decoration: InputDecoration(labelText: 'boutique.categories'.tr(), border: const OutlineInputBorder()),
+              items: [
+                DropdownMenuItem(value: '', child: Text('common.select'.tr())),
+                const DropdownMenuItem(value: 'Mode', child: Text('Mode')),
+                const DropdownMenuItem(value: 'Alimentation', child: Text('Alimentation')),
+                const DropdownMenuItem(value: 'Électronique', child: Text('Électronique')),
+                const DropdownMenuItem(value: 'Maison', child: Text('Maison')),
+                const DropdownMenuItem(value: 'Beauté', child: Text('Beauté')),
+                const DropdownMenuItem(value: 'Sports', child: Text('Sports')),
+                const DropdownMenuItem(value: 'Autre', child: Text('Autre')),
               ],
               onChanged: (v) => setState(() => _category = v ?? ''),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _currency,
-              decoration: const InputDecoration(labelText: 'Devise', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: 'boutique.currency'.tr(), border: const OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'TND', child: Text('TND - Dinar tunisien')),
                 DropdownMenuItem(value: 'EUR', child: Text('EUR - Euro')),
@@ -133,26 +135,26 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _language,
-              decoration: const InputDecoration(labelText: 'Langue', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(value: 'fr', child: Text('Français')),
-                DropdownMenuItem(value: 'en', child: Text('English')),
-                DropdownMenuItem(value: 'ar', child: Text('العربية')),
+              decoration: InputDecoration(labelText: 'boutique.language'.tr(), border: const OutlineInputBorder()),
+              items: [
+                DropdownMenuItem(value: 'fr', child: Text('profile.french'.tr())),
+                DropdownMenuItem(value: 'en', child: Text('profile.english'.tr())),
+                DropdownMenuItem(value: 'ar', child: Text('profile.arabic'.tr())),
               ],
               onChanged: (v) => setState(() => _language = v ?? 'fr'),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _countryCtrl,
-              decoration: const InputDecoration(labelText: 'Pays (optionnel)', border: OutlineInputBorder(), hintText: 'Tunisie'),
+              decoration: InputDecoration(labelText: 'boutique.countries'.tr(), border: const OutlineInputBorder(), hintText: 'boutique.country_hint'.tr()),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _cityCtrl,
-              decoration: const InputDecoration(labelText: 'Ville (optionnel)', border: OutlineInputBorder(), hintText: 'Tunis'),
+              decoration: InputDecoration(labelText: 'boutique.city'.tr(), border: const OutlineInputBorder(), hintText: 'boutique.city_hint'.tr()),
             ),
             const SizedBox(height: 32),
-            AppButton(label: 'Créer la boutique', onPressed: _saving ? null : _create, loading: _saving),
+            AppButton(label: 'common.save'.tr(), onPressed: _saving ? null : _create, loading: _saving),
           ],
         ),
       ),

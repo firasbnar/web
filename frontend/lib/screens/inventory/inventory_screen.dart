@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../models/product.dart';
 import '../../providers/boutique_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 
@@ -54,14 +56,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Stock', border: OutlineInputBorder()),
+          decoration: InputDecoration(labelText: 'inventory.stock'.tr(), border: const OutlineInputBorder()),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
           TextButton(
             onPressed: () => Navigator.pop(ctx, int.tryParse(ctrl.text.trim())),
-            child: const Text('Enregistrer'),
+            child: Text('common.save'.tr()),
           ),
         ],
       ),
@@ -72,7 +74,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         await _loadProducts();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${'common.error'.tr()}: $e'), backgroundColor: AppColors.danger));
         }
       }
     }
@@ -81,13 +83,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Gestion des stocks')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('inventory.title'.tr())),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? ErrorState(message: _error!, onRetry: _loadProducts)
               : _products.isEmpty
-                  ? const EmptyState(title: 'Aucun produit', subtitle: 'Ajoutez des produits pour gérer les stocks')
+                  ? EmptyState(title: 'inventory.title'.tr(), subtitle: 'inventory.update_stock'.tr())
                   : RefreshIndicator(
                       onRefresh: _loadProducts,
                       child: ListView.builder(
@@ -120,7 +122,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ),
         title: Text(product.name, style: AppTypography.body2, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(product.sku ?? 'Pas de SKU', style: AppTypography.caption),
+        subtitle: Text(product.sku ?? 'inventory.sku'.tr(), style: AppTypography.caption),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

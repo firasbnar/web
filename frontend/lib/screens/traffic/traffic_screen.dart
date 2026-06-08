@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../models/traffic_stats.dart';
 import '../../providers/boutique_provider.dart';
@@ -9,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/animated_counter.dart';
 import '../../widgets/traffic_map_widget.dart';
 import '../../widgets/visit_table.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class TrafficScreen extends StatefulWidget {
   const TrafficScreen({super.key});
@@ -59,8 +61,8 @@ class _TrafficScreenState extends State<TrafficScreen> {
         _api.get('/traffic/$bid/recent', queryParameters: {'page': _recentPageIdx, 'size': _perPage}),
       ]);
       _stats = results[0]['data'];
-      _topCountries = results[1]['data'] as List? ?? [];
-      _topCities = results[2]['data'] as List? ?? [];
+      _topCountries = (results[1]['data'] as List?) ?? [];
+      _topCities = (results[2]['data'] as List?) ?? [];
       final mapData = results[3]['data'] as List? ?? [];
       _mapPoints = mapData.map((e) => MapPoint.fromJson(e as Map<String, dynamic>)).toList();
       _recentPage = results[4]['data'];
@@ -84,14 +86,14 @@ class _TrafficScreenState extends State<TrafficScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Test traffic injecté'), behavior: SnackBarBehavior.floating),
+          SnackBar(content: Text('Test traffic injecté'.tr()), behavior: SnackBarBehavior.floating),
         );
         _load();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'), behavior: SnackBarBehavior.floating),
+          SnackBar(content: Text('${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'), behavior: SnackBarBehavior.floating),
         );
       }
     }
@@ -121,6 +123,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackArrow(),
         title: Row(
           children: [
             Container(
@@ -135,7 +138,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Traffic', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                Text('traffic.title'.tr(), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                 Text(boutiqueName, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
               ],
             ),
@@ -149,7 +152,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
               margin: const EdgeInsets.only(right: 4),
               child: TextButton.icon(
                 icon: const Icon(Icons.science, size: 16),
-                label: const Text('Inject'),
+                label: Text('Inject'.tr()),
                 onPressed: _injectDevTraffic,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.orange.shade700,
@@ -163,7 +166,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
             margin: const EdgeInsets.only(right: 12),
             child: TextButton.icon(
               icon: const Icon(Icons.open_in_new, size: 16),
-              label: const Text('Analytics'),
+              label: Text('menu.analytics'.tr()),
               onPressed: _openAnalytics,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
@@ -201,7 +204,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
             const SizedBox(height: 16),
             FilledButton.icon(
               icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: _refresh,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -252,16 +255,16 @@ class _TrafficScreenState extends State<TrafficScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Aperçu du trafic', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              Text('traffic.title'.tr(), style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
               const SizedBox(height: 4),
-              Text('Analyse des visites de votre boutique en ligne',
+              Text('traffic.overview'.tr(),
                   style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
             ],
           ),
         ),
         FilledButton.icon(
           icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('Actualiser'),
+          label: Text('common.refresh'.tr()),
           onPressed: _refresh,
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary,
@@ -286,10 +289,10 @@ class _TrafficScreenState extends State<TrafficScreen> {
           mainAxisSpacing: 16,
           childAspectRatio: 1.5,
           children: [
-            _kpiCard('Total Visites', _stats?['totalVisits'] ?? 0, Icons.bar_chart, const Color(0xFF2710BF), const Color(0xFF6C4FFF)),
-            _kpiCard("Aujourd'hui", _stats?['todayVisits'] ?? 0, Icons.today, const Color(0xFF0EA5E9), const Color(0xFF38BDF8)),
-            _kpiCard('Cette Semaine', _stats?['weekVisits'] ?? 0, Icons.date_range, const Color(0xFF10B981), const Color(0xFF34D399)),
-            _kpiCard('Ce Mois', _stats?['monthVisits'] ?? 0, Icons.calendar_month, const Color(0xFFF59E0B), const Color(0xFFFBBF24)),
+            _kpiCard('traffic.visitors'.tr(), _stats?['totalVisits'] ?? 0, Icons.bar_chart, const Color(0xFF2710BF), const Color(0xFF6C4FFF)),
+            _kpiCard('traffic.today'.tr(), _stats?['todayVisits'] ?? 0, Icons.today, const Color(0xFF0EA5E9), const Color(0xFF38BDF8)),
+            _kpiCard('traffic.this_week'.tr(), _stats?['weekVisits'] ?? 0, Icons.date_range, const Color(0xFF10B981), const Color(0xFF34D399)),
+            _kpiCard('traffic.this_month'.tr(), _stats?['monthVisits'] ?? 0, Icons.calendar_month, const Color(0xFFF59E0B), const Color(0xFFFBBF24)),
           ],
         );
       },
@@ -360,17 +363,17 @@ class _TrafficScreenState extends State<TrafficScreen> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _geoCard('Top Pays', Icons.flag_outlined, _topCountries, isCountry: true)),
+              Expanded(child: _geoCard('traffic.countries'.tr(), Icons.flag_outlined, _topCountries, isCountry: true)),
               const SizedBox(width: 16),
-              Expanded(child: _geoCard('Top Villes', Icons.location_city_outlined, _topCities, isCountry: false)),
+              Expanded(child: _geoCard('Top Cities'.tr(), Icons.location_city_outlined, _topCities, isCountry: false)),
             ],
           );
         }
         return Column(
           children: [
-            _geoCard('Top Pays', Icons.flag_outlined, _topCountries, isCountry: true),
+            _geoCard('traffic.countries'.tr(), Icons.flag_outlined, _topCountries, isCountry: true),
             const SizedBox(height: 16),
-            _geoCard('Top Villes', Icons.location_city_outlined, _topCities, isCountry: false),
+            _geoCard('Top Cities'.tr(), Icons.location_city_outlined, _topCities, isCountry: false),
           ],
         );
       },
@@ -404,7 +407,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
               const SizedBox(width: 10),
               Text(title, style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const Spacer(),
-              Text('${data.length} ${isCountry ? 'Pays' : 'Villes'}',
+              Text('${data.length} ${isCountry ? 'traffic.countries'.tr() : 'Cities'.tr()}',
                   style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),
@@ -417,7 +420,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
                   children: [
                     Icon(isCountry ? Icons.flag_outlined : Icons.location_city_outlined, size: 32, color: AppColors.border),
                     const SizedBox(height: 8),
-                    Text('Aucune donnée', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textHint)),
+                    Text('common.no_data'.tr(), style: GoogleFonts.inter(fontSize: 12, color: AppColors.textHint)),
                   ],
                 ),
               ),
@@ -430,7 +433,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
   }
 
   Widget _geoRow(dynamic e, int maxVal, bool isCountry) {
-    final name = isCountry ? (e['country']?.toString() ?? 'Inconnu') : (e['city']?.toString() ?? 'Inconnu');
+    final name = isCountry ? (e['country']?.toString() ?? 'common.no_data'.tr()) : (e['city']?.toString() ?? 'common.no_data'.tr());
     final count = ((e['count'] as num?)?.toInt() ?? 0);
     final pct = maxVal > 0 ? count / maxVal : 0.0;
     return Padding(

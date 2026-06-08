@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../models/product.dart';
 import '../../services/traffic_tracker.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/product_card.dart';
@@ -158,6 +159,7 @@ class _StoreCatalogScreenState extends State<StoreCatalogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackArrow(),
         title: Text(widget.boutiqueName ?? 'Boutique'),
         actions: [
           IconButton(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class _StoreInfo {
   final String id;
@@ -70,7 +72,7 @@ class _StoresBrowserScreenState extends State<StoresBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Boutiques')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('store_catalog.title'.tr())),
       body: Column(
         children: [
           Padding(
@@ -78,7 +80,7 @@ class _StoresBrowserScreenState extends State<StoresBrowserScreen> {
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
-                hintText: 'Rechercher une boutique...',
+                hintText: 'store_catalog.search'.tr(),
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(100)),
               ),
@@ -89,7 +91,7 @@ class _StoresBrowserScreenState extends State<StoresBrowserScreen> {
             child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _filtered.isEmpty
-                ? const Center(child: Text('Aucune boutique trouvée'))
+                ? Center(child: Text('store_catalog.no_stores'.tr()))
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: _filtered.length,

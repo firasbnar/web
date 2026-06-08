@@ -5,6 +5,7 @@ class AppStorage {
   static const _refreshTokenKey = 'refresh_token';
   static const _userIdKey = 'user_id';
   static const _userKey = 'user_data';
+  static const _localeCodeKey = 'locale_code';
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
@@ -53,6 +54,16 @@ class AppStorage {
   Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
+  }
+
+  Future<void> saveLocaleCode(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_localeCodeKey, code);
+  }
+
+  Future<String?> getLocaleCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_localeCodeKey);
   }
 
   static const _activeBoutiqueKey = 'active_boutique_id';
@@ -105,6 +116,7 @@ class AppStorage {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userKey);
+    await prefs.remove(_localeCodeKey);
     await prefs.remove(_activeBoutiqueKey);
     await prefs.remove(_userRoleKey);
     await prefs.remove(_subscriptionActiveKey);

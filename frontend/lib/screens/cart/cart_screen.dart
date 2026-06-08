@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../providers/cart_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
@@ -30,7 +32,8 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panier'),
+        leading: const AppBackArrow(),
+        title: Text('cart.title'.tr()),
         actions: [
           Consumer<CartProvider>(
             builder: (_, cart, __) => cart.items.isNotEmpty
@@ -46,7 +49,7 @@ class _CartScreenState extends State<CartScreen> {
         builder: (_, cart, __) {
           if (cart.loading && cart.items.isEmpty) return const LoadingSkeleton();
           if (cart.error != null && cart.items.isEmpty) return ErrorState(message: cart.error!, onRetry: () => cart.loadCart(widget.boutiqueId));
-          if (cart.items.isEmpty) return const EmptyState(title: 'Votre panier est vide', icon: Icons.shopping_cart_outlined);
+          if (cart.items.isEmpty) return EmptyState(title: 'cart.empty'.tr(), icon: Icons.shopping_cart_outlined);
           return Column(
             children: [
               Expanded(
@@ -80,13 +83,13 @@ class _CartScreenState extends State<CartScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Sous-total', style: AppTypography.caption),
+                            Text('cart.subtotal'.tr(), style: AppTypography.caption),
                             Text('${cart.subtotal.toStringAsFixed(3)} TND', style: AppTypography.heading3),
                           ],
                         ),
                       ),
                       AppButton(
-                        label: 'Commander',
+                        label: 'cart.checkout'.tr(),
                         onPressed: () => context.go('/checkout/${widget.boutiqueId}'),
                         fullWidth: false,
                       ),
@@ -105,13 +108,13 @@ class _CartScreenState extends State<CartScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Vider le panier'),
-        content: const Text('Êtes-vous sûr de vouloir vider le panier ?'),
+        title: Text('cart.clear_cart'.tr()),
+        content: Text('cart.clear_confirm'.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
           TextButton(
             onPressed: () { Navigator.pop(ctx); cart.clearCart(widget.boutiqueId); },
-            child: const Text('Vider', style: TextStyle(color: AppColors.danger)),
+            child: Text('cart.clear_cart'.tr(), style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),

@@ -1,10 +1,16 @@
+import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../models/conversation.dart';
+import '../../models/message.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/messages_provider.dart';
+import '../../providers/websocket_provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class ConversationScreen extends StatefulWidget {
   final Conversation conversation;
@@ -16,18 +22,43 @@ class ConversationScreen extends StatefulWidget {
 class _ConversationScreenState extends State<ConversationScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+  Timer? _pollingTimer;
+  int _lastMessageCount = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MessagesProvider>().loadMessages(widget.conversation.id);
-      context.read<MessagesProvider>().markAsRead(widget.conversation.id);
+      _load();
+      _startPolling();
+    });
+  }
+
+  void _load() {
+    final mp = context.read<MessagesProvider>();
+    mp.loadMessages(widget.conversation.id).then((_) {
+      _lastMessageCount = mp.messages.length;
+      _scrollToBottom();
+    });
+    mp.markAsRead(widget.conversation.id);
+    context.read<WebSocketProvider>().subscribeToConversation(widget.conversation.id);
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      final wsp = context.read<WebSocketProvider>();
+      if (!wsp.isConnected) {
+        dev.log('[ConversationScreen] WS not connected, polling messages');
+        context.read<MessagesProvider>().loadMessages(widget.conversation.id);
+      }
     });
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
+    context.read<WebSocketProvider>().unsubscribeConversation();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -43,6 +74,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
         );
       }
     });
+  }
+
+  static bool isMerchantMessage(Message msg) {
+    return msg.senderType == 'MERCHANT' || msg.senderType == 'BOUTIQUE';
   }
 
   Future<void> _sendReply() async {
@@ -67,11 +102,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackArrow(),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.conversation.customerName, style: const TextStyle(fontSize: 16)),
-            Text(widget.conversation.customerEmail, style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
+            if (widget.conversation.customerEmail.isNotEmpty)
+              Text(widget.conversation.customerEmail, style: const TextStyle(fontSize: 12, color: AppColors.textHint))
+            else if (widget.conversation.customerPhone != null && widget.conversation.customerPhone!.isNotEmpty)
+              Text(widget.conversation.customerPhone!, style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
           ],
         ),
       ),
@@ -80,22 +119,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Expanded(
             child: Consumer<MessagesProvider>(
               builder: (_, mp, __) {
+                if (mp.messages.length > _lastMessageCount) {
+                  _lastMessageCount = mp.messages.length;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOut,
+                      );
+                    }
+                  });
+                }
                 if (mp.loadingMessages) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (mp.messages.isEmpty) {
                   return Center(
-                    child: Text('Aucun message', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
+                    child: Text('messages.no_messages'.tr(), style: AppTypography.body2.copyWith(color: AppColors.textHint)),
                   );
                 }
-                _scrollToBottom();
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: mp.messages.length,
                   itemBuilder: (_, i) {
                     final msg = mp.messages[i];
-                    final isMine = msg.senderType == 'BOUTIQUE';
+                    final isMine = isMerchantMessage(msg);
                     return Align(
                       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
@@ -140,10 +190,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Écrivez votre réponse...',
+                      decoration: InputDecoration(
+                        hintText: 'messages.type_message'.tr(),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _sendReply(),

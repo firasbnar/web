@@ -16,7 +16,10 @@
 <meta name="twitter:image" th:content="${store.ogImage}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;display=swap" rel="stylesheet">
 <link rel="icon" th:href="${store.faviconUrl != null and !store.faviconUrl.isEmpty()} ? ${store.faviconUrl} : '/favicon.ico'">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <style>
 :root{--bg:[[${store.bodyBg}]];--white:#ffffff;--text:[[${store.textColor}]];--text-soft:#444444;--muted:#737373;--accent:[[${store.accent}]];--header-bg:[[${store.headerBg}]];--footer-bg:[[${store.footerBg}]];--card-bg:[[${store.cardBg}]];--top-bar-bg:[[${store.topBarBg}]];--border:#e5e5e5;--radius:12px;--radius-sm:8px;--radius-full:9999px;--shadow:0 4px 6px -1px rgba(0,0,0,0.06);--shadow-lg:0 10px 40px -10px rgba(0,0,0,0.1);--font:'DM Sans',-apple-system,sans-serif;--transition:0.25s cubic-bezier(0.4,0,0.2,1)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -32,6 +35,10 @@ img{max-width:100%;display:block}
 .nav a{font-size:0.9375rem;font-weight:500;padding:4px 0;border-bottom:2px solid transparent;transition:var(--transition)}
 .nav a:hover,.nav a.active{border-bottom-color:var(--accent);color:var(--accent)}
 .header-actions{display:flex;gap:12px;align-items:center}
+.lang-switch{display:flex;gap:6px;align-items:center}
+.lang-switch button{border:1px solid var(--border);background:var(--white);color:var(--text);border-radius:9999px;padding:6px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;transition:var(--transition);font-family:var(--font)}
+.lang-switch button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.lang-switch button:hover{border-color:var(--accent)}
 .header-actions button{background:none;border:none;cursor:pointer;position:relative;padding:8px;font-size:1.2rem;color:var(--text);border-radius:var(--radius-sm);transition:var(--transition)}
 .header-actions button:hover{background:rgba(0,0,0,0.05)}
 .cart-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:0.625rem;min-width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 4px}
@@ -150,6 +157,51 @@ img{max-width:100%;display:block}
 .order-value{font-weight:600;color:#222}
 .modal-footer{margin-top:20px}
 .close-modal-btn{padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.875rem}
+.chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.2);font-size:1.4rem;display:flex;align-items:center;justify-content:center;z-index:500;transition:transform 0.2s}
+.chat-fab:hover{transform:scale(1.1)}
+.chat-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;display:none;font-family:var(--font);color:var(--text)}
+.chat-modal.open{display:flex;align-items:center;justify-content:center}
+.chat-modal-overlay{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4)}
+.chat-modal-content{background:#fff;border-radius:var(--radius);width:420px;max-width:92vw;max-height:80vh;position:relative;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden}
+.chat-modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chat-modal-header h3{font-size:1.1rem;font-weight:600}
+.chat-close{background:none;border:none;cursor:pointer;padding:4px;color:var(--text);border-radius:6px;font-size:1.2rem}
+.chat-close:hover{background:#f0f0f0}
+.chat-body{padding:20px;overflow-y:auto;flex:1}
+.chat-form label{display:block;font-size:0.875rem;font-weight:500;margin-bottom:4px;color:var(--text-soft)}
+.chat-form input,.chat-form textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:0.9375rem;outline:none;box-sizing:border-box;margin-bottom:12px}
+.chat-form input:focus,.chat-form textarea:focus{border-color:var(--accent)}
+.chat-form textarea{resize:vertical;min-height:80px}
+.chat-submit{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.9375rem;transition:filter 0.2s}
+.chat-submit:hover{filter:brightness(1.1)}
+.chat-submit:disabled{opacity:0.6;cursor:not-allowed}
+.chat-msg{padding:20px;text-align:center}
+.chat-msg.success{color:#16a34a}
+.chat-msg.error{color:#ef4444}
+.chat-bubble{margin-bottom:12px;display:flex;flex-direction:column}
+.chat-bubble.mine{align-items:flex-end}
+.chat-bubble.theirs{align-items:flex-start}
+.chat-bubble-text{padding:10px 16px;border-radius:16px;max-width:80%;word-wrap:break-word;font-size:0.9375rem;line-height:1.4}
+.chat-bubble.mine .chat-bubble-text{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.chat-bubble.theirs .chat-bubble-text{background:#f0f0f0;color:var(--text);border-bottom-left-radius:4px}
+.chat-time{font-size:0.75rem;color:var(--muted);margin-top:4px;padding:0 4px}
+.chat-bubble.mine .chat-time{text-align:right}
+.chat-reply-bar{display:flex;border-top:1px solid var(--border);padding:12px 16px;gap:8px}
+.chat-reply-bar input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-full);font-family:var(--font);font-size:0.9375rem;outline:none}
+.chat-reply-bar input:focus{border-color:var(--accent)}
+.chat-reply-bar button{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.chat-reply-bar button:hover{filter:brightness(1.1)}
+.chat-loading{text-align:center;padding:40px;color:var(--muted)}
+html[dir="rtl"] body{font-family:'Cairo',var(--font)}
+html[dir="rtl"] .header-inner{flex-direction:row-reverse}
+html[dir="rtl"] .nav{flex-direction:row-reverse}
+html[dir="rtl"] .cart-count{right:auto;left:0}
+html[dir="rtl"] .t2-cart-drawer{right:auto;left:-420px}
+html[dir="rtl"] .t2-cart-drawer.open{left:0}
+html[dir="rtl"] .chat-fab{right:auto;left:24px}
+html[dir="rtl"] .chat-modal-content{text-align:right}
+html[dir="rtl"] .t2-cart-drawer__row{direction:rtl}
+html[dir="rtl"] .order-summary{text-align:right}
 @media(max-width:768px){.nav{display:none}.footer-top{grid-template-columns:1fr}.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.slide img{height:240px}.trust-inner{gap:24px;flex-wrap:wrap;justify-content:center}.t2-cart-drawer{width:100vw;right:-100vw}}
 @media(max-width:640px){.products-grid{grid-template-columns:repeat(2,1fr);gap:10px}.main{padding:20px 10px}.info{padding:10px}.name{font-size:0.8125rem}.price{font-size:1rem}.add-cart{padding:8px 12px;font-size:0.75rem}}
 </style>
@@ -171,6 +223,12 @@ img{max-width:100%;display:block}
 <a th:each="cat : ${store.categories}" th:href="@{'?menu_item_id=' + ${cat.id}}" th:text="${cat.name}">Category</a>
 </nav>
 <div class="header-actions">
+<div class="lang-switch" id="langSwitch">
+<button type="button" data-lang="fr" class="active">Français</button>
+<button type="button" data-lang="en">English</button>
+<button type="button" data-lang="ar">العربية</button>
+</div>
+<button class="cart-btn" onclick="openContactModal()" id="headerChatBtn" title="Contacter la boutique"><i class="fas fa-comment"></i></button>
 <button class="cart-btn" onclick="toggleCartSidebar()"><i class="fas fa-shopping-bag"></i><span class="cart-count" id="cartCount">0</span></button>
 </div>
 </div>
@@ -197,9 +255,9 @@ img{max-width:100%;display:block}
 <!-- Trust strip -->
 <div class="trust-strip">
 <div class="trust-inner">
-<div class="trust-item"><i class="fas fa-truck-fast"></i> Livraison 24-48h</div>
-<div class="trust-item"><i class="fas fa-shield-halved"></i> Paiement s&eacute;curis&eacute;</div>
-<div class="trust-item"><i class="fas fa-headset"></i> Service client 7j/7</div>
+<div class="trust-item" id="trustDelivery"><i class="fas fa-truck-fast"></i> Livraison 24-48h</div>
+<div class="trust-item" id="trustSecurePayment"><i class="fas fa-shield-halved"></i> Paiement s&eacute;curis&eacute;</div>
+<div class="trust-item" id="trustSupport"><i class="fas fa-headset"></i> Service client 7j/7</div>
 </div>
 </div>
 
@@ -209,7 +267,7 @@ img{max-width:100%;display:block}
 <!-- ====== PRODUCT GRID ====== -->
 <th:block th:if="${detailProduct == null}">
 <div class="section-head">
-<h2 class="section-title">Nos produits</h2>
+<h2 class="section-title" id="productsTitle">Nos produits</h2>
 <p class="section-subtitle" th:text="${store.name} + ' &ndash; Qualité et livraison rapide.'">Store name</p>
 </div>
 
@@ -571,15 +629,17 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <!-- Cart drawer -->
 <div id="cartSidebar" class="t2-cart-drawer">
 <div class="t2-cart-drawer__header">
-<h2 class="t2-cart-drawer__title" th:text="${store.language != null and store.language.cartTitle != null} ? ${store.language.cartTitle} : 'Panier'">Panier</h2>
+<h2 class="t2-cart-drawer__title" id="cartTitleEl" th:text="${store.language != null and store.language.cartTitle != null} ? ${store.language.cartTitle} : 'Panier'">Panier</h2>
 <button id="closeCartSidebar" class="t2-cart-drawer__close" onclick="toggleCartSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
 </div>
 <div class="t2-cart-drawer__body">
 <div id="cartItems"></div>
 <div class="t2-cart-drawer__totals">
 <div class="t2-cart-drawer__row"><span th:text="${store.language != null and store.language.totalPriceLabel != null} ? ${store.language.totalPriceLabel} : 'Prix Total :'">Prix Total :</span><span id="total-price" th:text="${store.currencySymbol} + '0.00'">0.00</span></div>
-<div class="t2-cart-drawer__row"><span th:text="${store.language != null and store.language.shippingCostLabel != null} ? ${store.language.shippingCostLabel} : 'Frais de livraison'">Frais de livraison</span><span id="shipping-cost" th:text="${store.currencySymbol} + ${#numbers.formatDecimal(store.deliveryFees, 1, 2)}">0.00</span></div>
-<div class="t2-cart-drawer__row t2-cart-drawer__row--total"><span th:text="${store.language != null and store.language.grandTotalLabel != null} ? ${store.language.grandTotalLabel} : 'Total Général'">Total Général</span><span id="grand-total" th:text="${store.currencySymbol} + '0.00'">0.00</span></div>
+            <div class="t2-cart-drawer__row"><span th:text="${store.language != null and store.language.shippingCostLabel != null} ? ${store.language.shippingCostLabel} : 'Frais de livraison'">Frais de livraison</span><span id="shipping-cost" th:text="${store.currencySymbol} + ${#numbers.formatDecimal(store.deliveryFees, 1, 2)}">0.00</span></div>
+            <div class="t2-cart-drawer__row" id="couponInputRow"><div style="display:flex;gap:6px;width:100%"><input type="text" id="couponCode" placeholder="Code promo" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.8125rem;outline:none"><button type="button" id="applyCouponBtn" onclick="applyCoupon()" style="padding:8px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.8125rem">Appliquer</button></div></div>
+            <div class="t2-cart-drawer__row" id="discountRow" style="display:none"><span id="discountLabelEl" style="color:#16a34a">Remise</span><span id="discount-amount" style="color:#16a34a;font-weight:600"></span><button type="button" id="removeCouponBtn" onclick="removeCoupon()" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:0.875rem;margin-left:8px" title="Retirer le code promo">&times;</button></div>
+            <div class="t2-cart-drawer__row t2-cart-drawer__row--total"><span th:text="${store.language != null and store.language.grandTotalLabel != null} ? ${store.language.grandTotalLabel} : 'Total Général'">Total Général</span><span id="grand-total" th:text="${store.currencySymbol} + '0.00'">0.00</span></div>
 </div>
 <form id="checkout-form" class="t2-cart-drawer__form" onsubmit="return submitOrder(event)">
 <input type="text" name="full-name" th:placeholder="${store.language != null and store.language.fullNamePlaceholder != null} ? ${store.language.fullNamePlaceholder} : 'Entrez votre nom complet'" required class="t2-cart-drawer__input">
@@ -603,8 +663,9 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 </select>
 </th:block>
 <input type="tel" name="phone_number" th:placeholder="${store.language != null and store.language.phonePlaceholder != null} ? ${store.language.phonePlaceholder} : 'Entrez votre numéro de téléphone'" required class="t2-cart-drawer__input">
-<div><label th:text="${store.language != null and store.language.paymentMethodLabel != null} ? ${store.language.paymentMethodLabel} : 'Méthode de paiement :'">Payment method</label>
-<select name="payment-method" required class="t2-cart-drawer__input">
+            <input type="hidden" name="coupon-code" id="orderCouponCode" value="">
+            <div><label th:text="${store.language != null and store.language.paymentMethodLabel != null} ? ${store.language.paymentMethodLabel} : 'Méthode de paiement :'">Payment method</label>
+            <select name="payment-method" required class="t2-cart-drawer__input">
 <option value="cash-on-delivery" th:if="${store.cashOnDelivery}" th:text="${store.language != null and store.language.cashOnDelivery != null} ? ${store.language.cashOnDelivery} : 'Paiement à la livraison'">COD</option>
 <option value="konnect" th:if="${store.konnectActive}">Paiement par carte (Konnect)</option>
 <option value="d17" th:if="${store.d17Active}">D17</option>
@@ -619,15 +680,16 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <div id="customOrderConfirmationModal" class="custom-modal">
 <div class="custom-modal-content">
 <div class="modal-header"><div class="success-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-<h2 th:text="${store.language != null and store.language.orderConfirmationTitle != null} ? ${store.language.orderConfirmationTitle} : 'Confirmation de commande'">Confirmation</h2></div>
+<h2 id="orderConfirmationTitleEl" th:text="${store.language != null and store.language.orderConfirmationTitle != null} ? ${store.language.orderConfirmationTitle} : 'Confirmation de commande'">Confirmation</h2></div>
 <div class="order-summary">
 <div class="order-item"><div class="order-label">Nom complet :</div><div class="order-value" id="customUserFullName"></div></div>
 <div class="order-item"><div class="order-label">Adresse :</div><div class="order-value" id="customUserBillingAddress"></div></div>
-<div class="order-item"><div class="order-label">Ville</div><div class="order-value" id="customUserCity"></div></div>
-<div class="order-item"><div class="order-label">Téléphone</div><div class="order-value" id="customUserPhoneNumber"></div></div>
-<div class="order-item"><div class="order-label">Méthode de paiement :</div><div class="order-value" id="customUserPaymentMethod"></div></div>
+            <div class="order-item"><div class="order-label">Ville</div><div class="order-value" id="customUserCity"></div></div>
+            <div class="order-item"><div class="order-label">Téléphone</div><div class="order-value" id="customUserPhoneNumber"></div></div>
+            <div class="order-item" id="customDiscountRow" style="display:none"><div class="order-label">Remise</div><div class="order-value" id="customDiscountValue" style="color:#16a34a"></div></div>
+            <div class="order-item"><div class="order-label">Méthode de paiement :</div><div class="order-value" id="customUserPaymentMethod"></div></div>
 </div>
-<div class="modal-footer"><button class="close-modal-btn" onclick="document.getElementById('customOrderConfirmationModal').classList.remove('open')">Fermer</button></div>
+<div class="modal-footer"><button class="close-modal-btn" id="closeOrderModalBtn" onclick="document.getElementById('customOrderConfirmationModal').classList.remove('open')">Fermer</button></div>
 </div>
 </div>
 
@@ -635,6 +697,41 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <th:block th:if="${store.customJs != null and !store.customJs.isEmpty()}">
 <script th:inline="text">[[${store.customJs}]]</script>
 </th:block>
+
+<!-- Chat floating button -->
+<button id="chatFab" class="chat-fab" onclick="openContactModal()" title="Contacter la boutique"><i class="fas fa-comment-dots"></i></button>
+
+<!-- Contact / chat modal -->
+<div id="contactModal" class="chat-modal">
+  <div class="chat-modal-overlay" onclick="closeContactModal()"></div>
+  <div class="chat-modal-content">
+    <div class="chat-modal-header">
+      <h3 id="chatModalTitle">Contacter la boutique</h3>
+      <button class="chat-close" onclick="closeContactModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="contactFormContainer" class="chat-body">
+      <form id="contactForm" class="chat-form" onsubmit="return submitContactForm(event)">
+        <label for="chatName">Nom *</label>
+        <input type="text" id="chatName" required placeholder="Votre nom">
+        <label for="chatEmail">Email (optionnel)</label>
+        <input type="email" id="chatEmail" placeholder="votre@email.com">
+        <label for="chatPhone">Téléphone (optionnel)</label>
+        <input type="tel" id="chatPhone" placeholder="Votre téléphone">
+        <label for="chatMessage">Message *</label>
+        <textarea id="chatMessage" required placeholder="Votre message..."></textarea>
+        <button type="submit" class="chat-submit" id="chatSubmitBtn">Envoyer</button>
+      </form>
+    </div>
+    <div id="chatConversationContainer" class="chat-body" style="display:none;padding:0">
+      <div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px"></div>
+      <div class="chat-reply-bar">
+        <input type="text" id="chatReplyInput" placeholder="Écrivez votre message..." onkeydown="if(event.key==='Enter')sendChatReply()">
+        <button onclick="sendChatReply()"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+    <div id="chatStatusMsg" class="chat-msg" style="display:none"></div>
+  </div>
+</div>
 
 <!-- Main store JS -->
 <script th:inline="javascript">
@@ -646,6 +743,214 @@ const DELIVERY_FEES = /*[[${store.deliveryFees}]]*/ 0;
 const BOUTIQUE_ID = /*[[${store.boutiqueId}]]*/ '';
 const DEFAULT_PRODUCT_IMAGE='/images/default-product.png';
 /*]]*/
+
+const I18N = {
+  en: {
+    products: 'Products',
+    search_products: 'Search products...',
+    add_to_cart: 'Add to cart',
+    unavailable: 'Unavailable',
+    promo: 'Sale',
+    in_stock: '✓ In stock',
+    out_of_stock: '✗ Out of stock',
+    colors: 'Colors',
+    sizes: 'Sizes',
+    quantity: 'Quantity',
+    customer_reviews: 'Customer reviews',
+    send_review: 'Send review',
+    cart: 'Cart',
+    total_price: 'Total price:',
+    delivery_fees: 'Delivery fees',
+    grand_total: 'Grand total',
+    coupon_code: 'Coupon code',
+    apply_coupon: 'Apply',
+    remove_coupon: 'Remove coupon',
+    discount: 'Discount',
+    payment_method: 'Payment method:',
+    place_order: 'Place order',
+    order_confirmation: 'Order confirmation',
+    close: 'Close',
+    cart_empty: 'Your cart is empty',
+    cart_empty_alert: 'Cart is empty',
+    invalid_coupon: 'Invalid coupon code',
+    network_error: 'Network error. Check your connection.',
+    error_prefix: 'Error:',
+    order_not_accepted: 'Order not accepted',
+    contact_store: 'Contact store',
+    write_message: 'Write your message...',
+    sending: 'Sending...',
+    send: 'Send',
+    message_sent: 'Message sent!',
+    send_error: 'Error while sending',
+    conversation: 'Your conversation',
+    loading: 'Loading...',
+    load_error: 'Loading error',
+    no_message: 'No messages',
+    full_name_required: 'Please enter your full name',
+    address_required: 'Please enter your delivery address',
+    phone_required: 'Please enter your phone number',
+    city_required: 'Please select your city',
+    payment_required: 'Please select a payment method',
+    delivery_24_48: 'Delivery 24-48h',
+    secure_payment: 'Secure payment',
+    support_7_7: 'Customer support 7/7',
+    color: 'Color',
+    size: 'Size'
+  },
+  fr: {
+    products: 'Nos produits',
+    search_products: 'Rechercher des produits...',
+    add_to_cart: 'Ajouter au panier',
+    unavailable: 'Indisponible',
+    promo: 'Promo',
+    in_stock: '✓ En stock',
+    out_of_stock: '✗ Rupture de stock',
+    colors: 'Couleurs',
+    sizes: 'Tailles',
+    quantity: 'Quantité',
+    customer_reviews: 'Avis clients',
+    send_review: 'Envoyer mon avis',
+    cart: 'Panier',
+    total_price: 'Prix Total :',
+    delivery_fees: 'Frais de livraison',
+    grand_total: 'Total Général',
+    coupon_code: 'Code promo',
+    apply_coupon: 'Appliquer',
+    remove_coupon: 'Retirer le code promo',
+    discount: 'Remise',
+    payment_method: 'Méthode de paiement :',
+    place_order: 'Passer la commande',
+    order_confirmation: 'Confirmation de commande',
+    close: 'Fermer',
+    cart_empty: 'Votre panier est vide',
+    cart_empty_alert: 'Panier vide',
+    invalid_coupon: 'Code promo invalide',
+    network_error: 'Erreur réseau. Vérifiez votre connexion.',
+    error_prefix: 'Erreur:',
+    order_not_accepted: 'Commande non acceptée',
+    contact_store: 'Contacter la boutique',
+    write_message: 'Écrivez votre message...',
+    sending: 'Envoi...',
+    send: 'Envoyer',
+    message_sent: 'Message envoyé !',
+    send_error: 'Erreur lors de l\'envoi',
+    conversation: 'Votre conversation',
+    loading: 'Chargement...',
+    load_error: 'Erreur de chargement',
+    no_message: 'Aucun message',
+    full_name_required: 'Veuillez entrer votre nom complet',
+    address_required: 'Veuillez entrer votre adresse de livraison',
+    phone_required: 'Veuillez entrer votre numéro de téléphone',
+    city_required: 'Veuillez sélectionner votre ville',
+    payment_required: 'Veuillez sélectionner un moyen de paiement',
+    delivery_24_48: 'Livraison 24-48h',
+    secure_payment: 'Paiement sécurisé',
+    support_7_7: 'Service client 7j/7',
+    color: 'Couleur',
+    size: 'Taille'
+  },
+  ar: {
+    products: 'منتجاتنا',
+    search_products: 'ابحث عن المنتجات...',
+    add_to_cart: 'أضف إلى السلة',
+    unavailable: 'غير متوفر',
+    promo: 'عرض',
+    in_stock: '✓ متوفر',
+    out_of_stock: '✗ غير متوفر',
+    colors: 'الألوان',
+    sizes: 'المقاسات',
+    quantity: 'الكمية',
+    customer_reviews: 'آراء العملاء',
+    send_review: 'إرسال المراجعة',
+    cart: 'السلة',
+    total_price: 'المجموع:',
+    delivery_fees: 'رسوم التوصيل',
+    grand_total: 'الإجمالي',
+    coupon_code: 'كود الخصم',
+    apply_coupon: 'تطبيق',
+    remove_coupon: 'إزالة الكوبون',
+    discount: 'الخصم',
+    payment_method: 'طريقة الدفع:',
+    place_order: 'تأكيد الطلب',
+    order_confirmation: 'تأكيد الطلب',
+    close: 'إغلاق',
+    cart_empty: 'سلتك فارغة',
+    cart_empty_alert: 'السلة فارغة',
+    invalid_coupon: 'كود خصم غير صالح',
+    network_error: 'خطأ في الشبكة. تحقق من اتصالك.',
+    error_prefix: 'خطأ:',
+    order_not_accepted: 'لم يتم قبول الطلب',
+    contact_store: 'اتصل بالمتجر',
+    write_message: 'اكتب رسالتك...',
+    sending: 'جارٍ الإرسال...',
+    send: 'إرسال',
+    message_sent: 'تم إرسال الرسالة!',
+    send_error: 'خطأ أثناء الإرسال',
+    conversation: 'محادثتك',
+    loading: 'جارٍ التحميل...',
+    load_error: 'خطأ في التحميل',
+    no_message: 'لا توجد رسائل',
+    full_name_required: 'يرجى إدخال الاسم الكامل',
+    address_required: 'يرجى إدخال عنوان التوصيل',
+    phone_required: 'يرجى إدخال رقم الهاتف',
+    city_required: 'يرجى اختيار المدينة',
+    payment_required: 'يرجى اختيار طريقة الدفع',
+    delivery_24_48: 'توصيل خلال 24-48 ساعة',
+    secure_payment: 'دفع آمن',
+    support_7_7: 'خدمة العملاء 7/7',
+    color: 'اللون',
+    size: 'المقاس'
+  }
+};
+
+let currentLang = 'fr';
+function getStoreLangKey(){return 'store_lang_'+STORE_SLUG}
+function getStoreLang(){var v=localStorage.getItem(getStoreLangKey());return (v==='fr'||v==='en'||v==='ar')?v:'fr'}
+function t(k){var d=I18N[currentLang]||I18N.fr;return d[k]||I18N.fr[k]||k}
+function setText(id, value){var el=document.getElementById(id);if(el)el.textContent=value}
+function setPlaceholder(id, value){var el=document.getElementById(id);if(el)el.setAttribute('placeholder',value)}
+
+function applyLang(){
+  currentLang=getStoreLang();
+  document.documentElement.setAttribute('lang', currentLang);
+  document.documentElement.setAttribute('dir', currentLang==='ar'?'rtl':'ltr');
+
+  document.querySelectorAll('#langSwitch button').forEach(function(btn){
+    btn.classList.toggle('active', (btn.dataset.lang||'')===currentLang);
+  });
+
+  setText('trustDelivery', t('delivery_24_48'));
+  setText('trustSecurePayment', t('secure_payment'));
+  setText('trustSupport', t('support_7_7'));
+
+  setText('productsTitle', t('products'));
+  setText('cartTitleEl', t('cart'));
+  setText('orderConfirmationTitleEl', t('order_confirmation'));
+  setText('closeOrderModalBtn', t('close'));
+  setPlaceholder('search-input', t('search_products'));
+  setPlaceholder('couponCode', t('coupon_code'));
+  setText('applyCouponBtn', t('apply_coupon'));
+  setText('discountLabelEl', t('discount'));
+  var r=document.getElementById('removeCouponBtn');if(r)r.setAttribute('title',t('remove_coupon'));
+  var chatBtn=document.getElementById('chatFab');if(chatBtn)chatBtn.setAttribute('title',t('contact_store'));
+  var headerChatBtn=document.getElementById('headerChatBtn');if(headerChatBtn)headerChatBtn.setAttribute('title',t('contact_store'));
+  setText('chatModalTitle', t('contact_store'));
+  setText('chatSubmitBtn', t('send'));
+  setPlaceholder('chatMessage', t('write_message'));
+  setPlaceholder('chatReplyInput', t('write_message'));
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('#langSwitch button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var lang=this.dataset.lang||'fr';
+      localStorage.setItem(getStoreLangKey(),lang);
+      applyLang();
+      updateCartUI();
+    });
+  });
+  applyLang();
+});
 
 // --- Cart ---
 let cart=JSON.parse(localStorage.getItem('cart_'+STORE_SLUG)||'[]');(function(){var _c=cart.filter(function(i){return i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null});if(_c.length!==cart.length){cart=_c;localStorage.setItem('cart_'+STORE_SLUG,JSON.stringify(cart))}})();
@@ -659,9 +964,95 @@ function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id&&!i.
 function addToCartOptions(id,name,price,img,color,size,qty){qty=Math.max(1,Number(qty)||1);const existing=cart.find(i=>i.id===id&&(i.color||'')===(color||'')&&(i.size||'')===(size||''));if(existing)existing.qty+=qty;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:qty,color:color||'',size:size||''});saveCart()}
 function removeFromCart(id,color,size){cart=cart.filter(i=>!(i.id===id&&(i.color||'')===(color||'')&&(i.size||'')===(size||'')));saveCart()}
 function changeQty(id,delta){const item=cart.find(i=>i.id===id);if(item){item.qty=Math.max(1,item.qty+delta);saveCart()}}
-function updateCartUI(){const count=cart.reduce(function(s,i){return s+(i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null?i.qty:0)},0);document.getElementById('cartCount').textContent=count;const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-shopping-bag" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i><p>Votre panier est vide</p></div>';document.getElementById('total-price').textContent=CURRENCY_SYMBOL+'0.00';document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+'0.00';return}let html='';let sub=0;cart.forEach(i=>{if(!i||!i.id||!String(i.id).trim()||!i.name||!String(i.name).trim()||i.price==null)return;const price=Number(i.price)||0;const ck=escAttr(i.id+'||'+(i.color||'')+'||'+(i.size||''));sub+=price*i.qty;var opt='';if(i.color)opt+='<div style="font-size:0.75rem;color:var(--muted)">Couleur: '+escHtml(i.color)+'</div>';if(i.size)opt+='<div style="font-size:0.75rem;color:var(--muted)">Taille: '+escHtml(i.size)+'</div>';html+='<div class="t2-cart-item"><img src="'+escAttr(productImg(i.img))+'" alt="'+escAttr(i.name)+'" onerror="this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE"><div class="t2-cart-item__info"><div class="t2-cart-item__name">'+escHtml(i.name)+'</div>'+opt+'<div class="t2-cart-item__price">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div><div class="t2-cart-item__qty"><button type="button" data-cart-action="dec" data-cart-key="'+ck+'">-</button><span>'+i.qty+'</span><button type="button" data-cart-action="inc" data-cart-key="'+ck+'">+</button></div></div><button type="button" class="t2-cart-item__remove" data-cart-action="remove" data-cart-key="'+ck+'"><i class="fas fa-trash-alt"></i></button></div>'});container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){var k=this.dataset.cartKey;if(!k)return;var parts=k.split('||');var id=parts[0],col=parts[1]||'',sz=parts[2]||'';var a=this.dataset.cartAction;if(a==='inc'){var item=cart.find(function(i){return i.id===id&&(i.color||'')===col&&(i.size||'')===sz});if(item)item.qty+=1;saveCart()}else if(a==='dec'){changeQty(id,-1)}else if(a==='remove'){removeFromCart(id,col,sz)}})});document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);var gt=sub+DELIVERY_FEES;document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+gt.toFixed(2)}
+function updateCartUI(){const count=cart.reduce(function(s,i){return s+(i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null?i.qty:0)},0);document.getElementById('cartCount').textContent=count;const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-shopping-bag" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i><p>'+t('cart_empty')+'</p></div>';document.getElementById('total-price').textContent=CURRENCY_SYMBOL+'0.00';document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+'0.00';return}let html='';let sub=0;cart.forEach(i=>{if(!i||!i.id||!String(i.id).trim()||!i.name||!String(i.name).trim()||i.price==null)return;const price=Number(i.price)||0;const ck=escAttr(i.id+'||'+(i.color||'')+'||'+(i.size||''));sub+=price*i.qty;var opt='';if(i.color)opt+='<div style="font-size:0.75rem;color:var(--muted)">'+t('color')+': '+escHtml(i.color)+'</div>';if(i.size)opt+='<div style="font-size:0.75rem;color:var(--muted)">'+t('size')+': '+escHtml(i.size)+'</div>';html+='<div class="t2-cart-item"><img src="'+escAttr(productImg(i.img))+'" alt="'+escAttr(i.name)+'" onerror="this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE"><div class="t2-cart-item__info"><div class="t2-cart-item__name">'+escHtml(i.name)+'</div>'+opt+'<div class="t2-cart-item__price">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div><div class="t2-cart-item__qty"><button type="button" data-cart-action="dec" data-cart-key="'+ck+'">-</button><span>'+i.qty+'</span><button type="button" data-cart-action="inc" data-cart-key="'+ck+'">+</button></div></div><button type="button" class="t2-cart-item__remove" data-cart-action="remove" data-cart-key="'+ck+'"><i class="fas fa-trash-alt"></i></button></div>'});container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){var k=this.dataset.cartKey;if(!k)return;var parts=k.split('||');var id=parts[0],col=parts[1]||'',sz=parts[2]||'';var a=this.dataset.cartAction;if(a==='inc'){var item=cart.find(function(i){return i.id===id&&(i.color||'')===col&&(i.size||'')===sz});if(item)item.qty+=1;saveCart()}else if(a==='dec'){changeQty(id,-1)}else if(a==='remove'){removeFromCart(id,col,sz)}})});document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);var d=appliedCoupon?Number(appliedCoupon.discountAmount)||0:0;var gt=sub+DELIVERY_FEES-d;document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+gt.toFixed(2)}
 
-function submitOrder(e){e.preventDefault();const f=e.target;if(!cart.length){alert('Votre panier est vide');return false}const fn=f['full-name']?f['full-name'].value.trim():'';const addr=f['billing-address']?f['billing-address'].value.trim():'';const ph=f['phone_number']?f['phone_number'].value.trim():'';const ct=f['city']?f['city'].value:'';const pm=f['payment-method']?f['payment-method'].value:'';if(!fn){alert('Veuillez entrer votre nom complet');return false}if(!addr){alert('Veuillez entrer votre adresse de livraison');return false}if(!ph){alert('Veuillez entrer votre numéro de téléphone');return false}if(!ct){alert('Veuillez sélectionner votre ville');return false}if(!pm){alert('Veuillez sélectionner un moyen de paiement');return false}const order={boutiqueId:BOUTIQUE_ID,fullName:fn,email:(f['email']?f['email'].value:''),phone:ph,billingAddress:addr,city:ct,country:(f['country']?f['country'].value:''),paymentMethod:pm,items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price,color:i.color||'',size:i.size||''}))};fetch('/api/public/store/'+STORE_SLUG+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)}).then(r=>r.json()).then(d=>{if(d.success){document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;document.getElementById('customUserCity').textContent=d.city||order.city;document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}else{alert('Erreur: '+(d.message||'Commande non acceptée'))}}).catch(function(e){alert('Erreur réseau. Vérifiez votre connexion.')});return false}
+let appliedCoupon=null;
+
+function getSubtotal(){var s=0;cart.forEach(function(i){if(!i||!i.id||!String(i.id).trim()||!i.name||!String(i.name).trim()||i.price==null)return;s+=Number(i.price)*(i.qty||1)});return s}
+
+function applyCoupon(){
+  var code=document.getElementById('couponCode').value.trim();
+  if(!code)return;
+  var subtotal=getSubtotal();
+  if(subtotal<=0){alert(t('cart_empty_alert'));return}
+  fetch('/api/public/stores/'+STORE_SLUG+'/coupons/validate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:code,subtotal:subtotal})
+  }).then(function(r){return r.json()}).then(function(d){
+    if(d.valid){
+      appliedCoupon={code:code,discountAmount:Number(d.discountAmount)||0};
+      document.getElementById('couponInputRow').style.display='none';
+      document.getElementById('discountRow').style.display='flex';
+      document.getElementById('discount-amount').textContent='-'+CURRENCY_SYMBOL+appliedCoupon.discountAmount.toFixed(2);
+      document.getElementById('orderCouponCode').value=code;
+      updateCartUI();
+    }else{
+      alert(d.message||t('invalid_coupon'));
+    }
+  }).catch(function(){alert(t('network_error'))});
+}
+
+function removeCoupon(){
+  appliedCoupon=null;
+  document.getElementById('couponInputRow').style.display='flex';
+  document.getElementById('discountRow').style.display='none';
+  document.getElementById('orderCouponCode').value='';
+  updateCartUI();
+}
+
+function submitOrder(e){
+  e.preventDefault();
+  const f=e.target;
+  if(!cart.length){alert(t('cart_empty'));return false}
+  const fn=f['full-name']?f['full-name'].value.trim():'';
+  const addr=f['billing-address']?f['billing-address'].value.trim():'';
+  const ph=f['phone_number']?f['phone_number'].value.trim():'';
+  const ct=f['city']?f['city'].value:'';
+  const pm=f['payment-method']?f['payment-method'].value:'';
+  if(!fn){alert(t('full_name_required'));return false}
+  if(!addr){alert(t('address_required'));return false}
+  if(!ph){alert(t('phone_required'));return false}
+  if(!ct){alert(t('city_required'));return false}
+  if(!pm){alert(t('payment_required'));return false}
+  const cc=document.getElementById('orderCouponCode')?document.getElementById('orderCouponCode').value:'';
+  const order={
+    boutiqueId:BOUTIQUE_ID,
+    fullName:fn,
+    email:(f['email']?f['email'].value:''),
+    phone:ph,
+    billingAddress:addr,
+    city:ct,
+    country:(f['country']?f['country'].value:''),
+    paymentMethod:pm,
+    couponCode:cc,
+    items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price,color:i.color||'',size:i.size||''}))
+  };
+  fetch('/api/public/store/'+STORE_SLUG+'/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.success){
+        document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;
+        document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;
+        document.getElementById('customUserCity').textContent=d.city||order.city;
+        document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;
+        document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;
+        if(d.discount&&Number(d.discount)>0){
+          document.getElementById('customDiscountRow').style.display='flex';
+          document.getElementById('customDiscountValue').textContent='-'+CURRENCY_SYMBOL+Number(d.discount).toFixed(2);
+        }
+        document.getElementById('customOrderConfirmationModal').classList.add('open');
+        cart=[];
+        appliedCoupon=null;
+        saveCart();
+        toggleCartSidebar();
+      }else{
+        alert(t('error_prefix')+' '+(d.message||t('order_not_accepted')));
+      }
+    })
+    .catch(function(){alert(t('network_error'))});
+  return false;
+}
 
 // --- Categories filter (delegated) ---
 document.addEventListener('click',function(e){var chip=e.target.closest('#categoryChips .chip');if(!chip)return;var catId=chip.dataset.cat||'';document.querySelectorAll('#categoryChips .chip').forEach(function(c){c.classList.remove('active')});chip.classList.add('active');document.querySelectorAll('.product-card').forEach(function(c){var pc=c.dataset.productCategory||'';c.style.display=(!catId||pc===catId)?'':'none'})});
@@ -673,6 +1064,204 @@ document.getElementById('search-input')&&document.getElementById('search-input')
 // --- Visit tracking ---
 function trackVisit(){var data={page:'/store/'+STORE_SLUG,referrer:document.referrer||'',userAgent:navigator.userAgent};if(navigator.geolocation){navigator.geolocation.getCurrentPosition(function(pos){data.latitude=pos.coords.latitude;data.longitude=pos.coords.longitude;sendVisit(data)},function(){sendVisit(data)},{timeout:5000,enableHighAccuracy:false})}else{sendVisit(data)}}
 function sendVisit(data){fetch('/api/public/stores/'+STORE_SLUG+'/visit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){})}
+
+// --- Guest messaging ---
+function getGuestStorageKey(){return 'guest_chat_'+STORE_SLUG}
+function getGuestData(){try{return JSON.parse(localStorage.getItem(getGuestStorageKey())||'{}')}catch(e){return {}}}
+function saveGuestData(data){localStorage.setItem(getGuestStorageKey(),JSON.stringify(data))}
+function clearGuestData(){localStorage.removeItem(getGuestStorageKey())}
+function hasGuestConversation(){var d=getGuestData();return d.conversationId&&d.guestToken}
+
+function openContactModal(){
+  var modal=document.getElementById('contactModal');
+  document.getElementById('contactFormContainer').style.display='block';
+  document.getElementById('chatConversationContainer').style.display='none';
+  document.getElementById('chatStatusMsg').style.display='none';
+  document.getElementById('chatModalTitle').textContent=t('contact_store');
+  document.getElementById('contactForm').reset();
+
+  // If existing conversation, switch to chat view
+  if(hasGuestConversation()){
+    loadGuestConversation();
+  }
+  modal.classList.add('open');
+}
+function closeContactModal(){document.getElementById('contactModal').classList.remove('open')}
+
+function submitContactForm(e){
+  e.preventDefault();
+  var name=document.getElementById('chatName').value.trim();
+  var email=document.getElementById('chatEmail').value.trim();
+  var phone=document.getElementById('chatPhone').value.trim();
+  var message=document.getElementById('chatMessage').value.trim();
+  if(!name||!message)return;
+
+  var btn=document.getElementById('chatSubmitBtn');
+  btn.disabled=true;btn.textContent=t('sending');
+
+  var body={customerName:name,message:message};
+  if(email)body.email=email;
+  if(phone)body.phone=phone;
+
+  fetch('/api/public/stores/'+STORE_SLUG+'/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json()}).then(function(res){
+    if(res.success){
+      saveGuestData({conversationId:res.conversationId,guestToken:res.guestToken,customerName:name});
+      document.getElementById('headerChatBtn').innerHTML='<i class="fas fa-comment-dots" style="color:var(--accent)"></i>';
+      showChatStatus(t('message_sent'),'success');
+      // Connect real-time WebSocket for incoming merchant replies
+      connectGuestWebSocket(res.conversationId);
+      setTimeout(function(){loadGuestConversation()},800);
+    }else{
+      showChatStatus(res.message||t('send_error'),'error');
+      btn.disabled=false;btn.textContent=t('send');
+    }
+  }).catch(function(){
+    showChatStatus(t('network_error'),'error');
+    btn.disabled=false;btn.textContent=t('send');
+  });
+  return false;
+}
+
+function loadGuestConversation(){
+  var data=getGuestData();
+  if(!data.conversationId||!data.guestToken)return;
+
+  document.getElementById('contactFormContainer').style.display='none';
+  document.getElementById('chatConversationContainer').style.display='flex';
+  document.getElementById('chatConversationContainer').style.flexDirection='column';
+  document.getElementById('chatStatusMsg').style.display='none';
+  document.getElementById('chatModalTitle').textContent=t('conversation');
+  document.getElementById('chatMessages').innerHTML='<div class="chat-loading">'+t('loading')+'</div>';
+
+  // Connect real-time WebSocket if not already connected
+  connectGuestWebSocket(data.conversationId);
+
+  fetch('/api/public/conversations/'+data.conversationId+'?token='+encodeURIComponent(data.guestToken))
+    .then(function(r){return r.json()})
+    .then(function(res){
+      var msgs=res.messages||[];
+      renderChatMessages(msgs);
+    })
+    .catch(function(){
+      document.getElementById('chatMessages').innerHTML='<div class="chat-loading">'+t('load_error')+'</div>';
+    });
+}
+
+function renderChatMessages(messages){
+  var container=document.getElementById('chatMessages');
+  if(!messages.length){
+    container.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted)">'+t('no_message')+'</div>';
+    return;
+  }
+  var html='';
+  messages.forEach(function(m){
+    var isMine=m.senderType==='CUSTOMER';
+    var time='';
+    if(m.createdAt){
+      try{
+        var d=new Date(m.createdAt);
+        time=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+      }catch(e){}
+    }
+    html+='<div class="chat-bubble '+(isMine?'mine':'theirs')+'">';
+    html+='<div class="chat-bubble-text">'+escHtml(m.content)+'</div>';
+    if(time)html+='<div class="chat-time">'+time+'</div>';
+    html+='</div>';
+  });
+  container.innerHTML=html;
+  container.scrollTop=container.scrollHeight;
+}
+
+function sendChatReply(){
+  var input=document.getElementById('chatReplyInput');
+  var content=input.value.trim();
+  if(!content)return;
+
+  var data=getGuestData();
+  if(!data.conversationId||!data.guestToken)return;
+
+  input.value='';
+  fetch('/api/public/conversations/'+data.conversationId+'/reply?token='+encodeURIComponent(data.guestToken),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:content})
+  }).then(function(r){return r.json()}).then(function(res){
+    if(res.success&&res.data){
+      var container=document.getElementById('chatMessages');
+      var m=res.data;
+      var time='';
+      if(m.createdAt){try{var d=new Date(m.createdAt);time=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}catch(e){}}
+      container.innerHTML+='<div class="chat-bubble mine"><div class="chat-bubble-text">'+escHtml(m.content)+'</div>'+(time?'<div class="chat-time">'+time+'</div>':'')+'</div>';
+      container.scrollTop=container.scrollHeight;
+    }
+  }).catch(function(){});
+}
+
+function showChatStatus(msg,type){
+  var el=document.getElementById('chatStatusMsg');
+  el.textContent=msg;
+  el.style.display='block';
+  el.className='chat-msg '+(type||'');
+}
+
+// --- WebSocket / STOMP real-time ---
+var stompClient=null;
+
+function connectGuestWebSocket(conversationId){
+  if(stompClient&&stompClient.connected)return;
+  if(typeof SockJS==='undefined'||typeof Stomp==='undefined')return;
+  try{
+    var socket=new SockJS('/ws');
+    stompClient=Stomp.over(socket);
+    stompClient.debug=function(){};
+    stompClient.connect({},function(){
+      stompClient.subscribe('/topic/public/conversations/'+conversationId,function(msg){
+        try{
+          var data=JSON.parse(msg.body);
+          if(data.type==='NEW_MESSAGE'&&data.senderType==='MERCHANT'){
+            var container=document.getElementById('chatMessages');
+            if(!container)return;
+            // Ensure conversation view is showing
+            document.getElementById('contactFormContainer').style.display='none';
+            document.getElementById('chatConversationContainer').style.display='flex';
+            document.getElementById('chatConversationContainer').style.flexDirection='column';
+            document.getElementById('chatModalTitle').textContent='Votre conversation';
+            var time='';
+            if(data.createdAt){try{var d=new Date(data.createdAt);time=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}catch(e){}}
+            container.innerHTML+='<div class="chat-bubble theirs"><div class="chat-bubble-text">'+escHtml(data.content)+'</div>'+(time?'<div class="chat-time">'+time+'</div>':'')+'</div>';
+            container.scrollTop=container.scrollHeight;
+          }
+        }catch(e){}
+      });
+    });
+  }catch(e){}
+}
+
+function disconnectGuestWebSocket(){
+  if(stompClient&&stompClient.connected){
+    try{stompClient.disconnect()}catch(e){}
+    stompClient=null;
+  }
+}
+
+// Reconnect WS after loading guest conversation
+function reconnectGuestWS(conversationId){
+  disconnectGuestWebSocket();
+  setTimeout(function(){connectGuestWebSocket(conversationId)},300);
+}
+
+// --- On page load ---
+document.addEventListener('DOMContentLoaded',function(){
+  if(hasGuestConversation()){
+    var data=getGuestData();
+    document.getElementById('headerChatBtn').innerHTML='<i class="fas fa-comment-dots" style="color:var(--accent)"></i>';
+    if(data.conversationId)connectGuestWebSocket(data.conversationId);
+  }
+});
 
 // --- Add-to-cart from grid (delegated) ---
 document.addEventListener('click',function(e){var btn=e.target.closest('.product-card .add-cart');if(!btn||btn.disabled)return;e.preventDefault();var card=btn.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg)});

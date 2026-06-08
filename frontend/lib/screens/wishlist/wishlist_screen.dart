@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_skeleton.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../models/wishlist_item.dart';
 
 class WishlistScreen extends StatefulWidget {
@@ -27,12 +29,15 @@ class _WishlistScreenState extends State<WishlistScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes favoris')),
+      appBar: AppBar(
+        leading: const AppBackArrow(),
+        title: Text('wishlist.title'.tr()),
+      ),
       body: Consumer<WishlistProvider>(
         builder: (_, wl, __) {
           if (wl.loading && wl.items.isEmpty) return const LoadingSkeleton();
           if (wl.error != null && wl.items.isEmpty) return ErrorState(message: wl.error!, onRetry: () => wl.loadWishlist());
-          if (wl.items.isEmpty) return const EmptyState(title: 'Aucun favori', subtitle: 'Ajoutez des produits à vos favoris', icon: Icons.favorite_border);
+          if (wl.items.isEmpty) return EmptyState(title: 'wishlist.empty'.tr(), icon: Icons.favorite_border);
           return RefreshIndicator(
             onRefresh: () => wl.loadWishlist(),
             child: ListView.separated(

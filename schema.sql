@@ -125,6 +125,7 @@ CREATE TABLE orders (
   subtotal DECIMAL(10,2) NOT NULL,
   shipping_fee DECIMAL(10,2) DEFAULT 0,
   discount DECIMAL(10,2) DEFAULT 0,
+  coupon_code VARCHAR(50),
   total DECIMAL(10,2) NOT NULL,
   payment_method VARCHAR(30),
   payment_status VARCHAR(20) DEFAULT 'UNPAID',

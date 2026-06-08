@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../../models/traffic_stats.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/traffic_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_button.dart';
 
 import 'dart:async';
 
@@ -87,11 +89,12 @@ class _TrafficAnalyticsScreenState extends State<TrafficAnalyticsScreen>
   Widget build(BuildContext context) {
     final tp = context.watch<TrafficProvider>();
     final bp = context.watch<BoutiqueProvider>();
-    final boutiqueName = bp.activeBoutique?.name ?? 'Boutique';
+    final boutiqueName = bp.activeBoutique?.name ?? 'menu.store'.tr();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Row(
           children: [
             const Icon(Icons.analytics_outlined,
@@ -99,7 +102,7 @@ class _TrafficAnalyticsScreenState extends State<TrafficAnalyticsScreen>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Analytics – $boutiqueName',
+                '${'menu.analytics'.tr()} – $boutiqueName',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 18,
@@ -112,7 +115,7 @@ class _TrafficAnalyticsScreenState extends State<TrafficAnalyticsScreen>
               icon: const Icon(Icons.refresh, size: 20),
               onPressed: _refresh,
               color: AppColors.primary,
-              tooltip: 'Actualiser',
+              tooltip: 'common.refresh'.tr(),
             ),
           ],
         ),
@@ -125,18 +128,18 @@ class _TrafficAnalyticsScreenState extends State<TrafficAnalyticsScreen>
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textHint,
           labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-          tabs: const [
-            Tab(text: 'Vue d\'ensemble'),
-            Tab(text: 'Visiteurs'),
-            Tab(text: 'Graphiques'),
-            Tab(text: 'Détails'),
+          tabs: [
+            Tab(text: 'traffic.overview'.tr()),
+            Tab(text: 'traffic.visitors'.tr()),
+            Tab(text: 'Charts'.tr()),
+            Tab(text: 'Details'.tr()),
           ],
         ),
       ),
       body: tp.loading && tp.stats == null
           ? const Center(child: CircularProgressIndicator())
           : tp.error != null && tp.stats == null
-              ? _buildError(tp.error ?? 'Erreur inconnue', _refresh)
+              ? _buildError(tp.error ?? 'common.error'.tr(), _refresh)
               : TabBarView(
                   controller: _tabController,
                   children: [
@@ -178,17 +181,17 @@ return RefreshIndicator(
                    child: Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
-                       Text(
-                         '${stats.activeVisitors} visiteurs actifs',
-                         style: const TextStyle(
-                           color: Colors.white,
-                           fontSize: 20,
-                           fontWeight: FontWeight.bold,
-                         ),
-                       ),
-                       const SizedBox(height: 2),
-                       Text(
-                         'Mise à jour en temps réel',
+                        Text(
+                          '${stats.activeVisitors} ${'traffic.visitors'.tr()}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Real-time update'.tr(),
                          style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.8),
                            fontSize: 12,
@@ -212,17 +215,17 @@ return RefreshIndicator(
             crossAxisSpacing: 12,
             childAspectRatio: kIsWeb ? 2.2 : 1.8,
             children: [
-              _buildStatCard('Visites totales',
+              _buildStatCard('traffic.visitors'.tr(),
                   '${stats.totalVisits}', Icons.people_outlined, AppColors.primary),
-              _buildStatCard('Visiteurs uniques',
+              _buildStatCard('traffic.unique_visitors'.tr(),
                   '${stats.uniqueVisitors}', Icons.person_pin, AppColors.success),
-              _buildStatCard("Aujourd'hui",
+              _buildStatCard('traffic.today'.tr(),
                   '${stats.todayVisits}', Icons.calendar_today, AppColors.warning),
-              _buildStatCard('Cette semaine',
+              _buildStatCard('traffic.this_week'.tr(),
                   '${stats.weekVisits}', Icons.timeline, AppColors.primaryLight),
-              _buildStatCard('Ce mois',
+              _buildStatCard('traffic.this_month'.tr(),
                   '${stats.monthVisits}', Icons.calendar_month, AppColors.success),
-              _buildStatCard('En ligne maintenant',
+              _buildStatCard('Online now'.tr(),
                   '${stats.activeVisitors}', Icons.wifi, AppColors.danger),
             ],
           ),
@@ -235,17 +238,17 @@ return RefreshIndicator(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Répartition des visiteurs',
+                  Text('Visitor distribution'.tr(),
                       style: AppTypography.heading3),
                   const SizedBox(height: 12),
                   _buildHorizontalBar(
-                      'Authentifiés',
+                      'Authenticated'.tr(),
                       stats.authenticatedVisitors,
                       stats.totalVisits,
                       AppColors.primary),
                   const SizedBox(height: 8),
                   _buildHorizontalBar(
-                      'Anonymes',
+                      'Anonymous'.tr(),
                       stats.anonymousVisitors,
                       stats.totalVisits,
                       AppColors.success),
@@ -268,7 +271,7 @@ return RefreshIndicator(
                         const Icon(Icons.public,
                             color: AppColors.primary, size: 18),
                         const SizedBox(width: 8),
-                        Text('Top Pays', style: AppTypography.heading3),
+                        Text('traffic.countries'.tr(), style: AppTypography.heading3),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -286,9 +289,9 @@ return RefreshIndicator(
                       ),
                     )),
                     if (tp.overview!.topCountries.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Aucune donnée disponible',
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text('common.no_data'.tr(),
                             style: TextStyle(color: AppColors.textHint)),
                       ),
                   ],
@@ -326,13 +329,13 @@ return RefreshIndicator(
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: _period,
-                          items: const [
+                          items: [
                             DropdownMenuItem(
-                                value: 'daily', child: Text('Quotidien')),
+                                value: 'daily', child: Text('Daily'.tr())),
                             DropdownMenuItem(
-                                value: 'weekly', child: Text('Hebdomadaire')),
+                                value: 'weekly', child: Text('Weekly'.tr())),
                             DropdownMenuItem(
-                                value: 'monthly', child: Text('Mensuel')),
+                                value: 'monthly', child: Text('Monthly'.tr())),
                           ],
                           onChanged: (v) {
                             setState(() => _period = v!);
@@ -349,8 +352,8 @@ return RefreshIndicator(
                                   );
                             }
                           },
-                          decoration: const InputDecoration(
-                            labelText: 'Période',
+                          decoration: InputDecoration(
+                            labelText: 'traffic.period'.tr(),
                             border: OutlineInputBorder(),
                             contentPadding:
                                 EdgeInsets.symmetric(horizontal: 12),
@@ -372,24 +375,24 @@ return RefreshIndicator(
               child: DataTable(
                 headingRowColor:
                     WidgetStateProperty.all(AppColors.surfaceAlt),
-                columns: const [
+                columns: [
                   DataColumn(
                       label: Text('IP Hash',
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
-                      label: Text('Pays',
+                      label: Text('common.country'.tr(),
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
-                      label: Text('Appareil',
+                      label: Text('Device'.tr(),
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
-                      label: Text('Navigateur',
+                      label: Text('Browser'.tr(),
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
-                      label: Text('Visites',
+                      label: Text('Visits'.tr(),
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
-                      label: Text('Dernière activité',
+                      label: Text('Last activity'.tr(),
                           style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
                 rows: tp.visitors.map((v) {
@@ -425,11 +428,11 @@ return RefreshIndicator(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Page ${(tp.visitorsPage!['currentPage'] ?? 0) + 1} / ${tp.visitorsPage!['totalPages'] ?? 1}',
+                  '${'Page'.tr()} ${(tp.visitorsPage!['currentPage'] ?? 0) + 1} / ${tp.visitorsPage!['totalPages'] ?? 1}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 Text(
-                  '${tp.visitorsPage!['totalElements'] ?? 0} visiteurs au total',
+                  '${tp.visitorsPage!['totalElements'] ?? 0} ${'traffic.visitors'.tr()}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
@@ -460,7 +463,7 @@ return RefreshIndicator(
                 height: 36,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.arrow_back, size: 16),
-                  label: const Text('Précédent'),
+                  label: Text('Previous'.tr()),
                   onPressed: () {
                     final id = _boutiqueId;
                     if (id == null) return;
@@ -477,7 +480,7 @@ return RefreshIndicator(
                 height: 36,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.arrow_forward, size: 16),
-                  label: const Text('Suivant'),
+                  label: Text('common.next'.tr()),
                   onPressed: () {
                     final id = _boutiqueId;
                     if (id == null) return;
@@ -511,7 +514,7 @@ onRefresh: _refresh,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Visites dans le temps',
+                  Text('Visits over time'.tr(),
                       style: AppTypography.heading3),
                   const SizedBox(height: 16),
                   if (tp.timeline.isNotEmpty)
@@ -526,14 +529,14 @@ onRefresh: _refresh,
                             touchTooltipData: BarTouchTooltipData(
                               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                 return BarTooltipItem(
-                                  '${tp.timeline[groupIndex].visits} visites\n',
+                                  '${tp.timeline[groupIndex].visits} ${'Visits'.tr()}\n',
                                   const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold),
                                   children: [
                                     TextSpan(
                                       text:
-                                          '${tp.timeline[groupIndex].uniqueVisitors} uniques',
+                                          '${tp.timeline[groupIndex].uniqueVisitors} ${'Unique'.tr()}',
                                       style: const TextStyle(
                                           color: Colors.white70, fontSize: 11),
                                     ),
@@ -595,10 +598,10 @@ onRefresh: _refresh,
                       ),
                     )
                   else
-                    const SizedBox(
+                    SizedBox(
                       height: 200,
                       child: Center(
-                          child: Text('Aucune donnée pour cette période',
+                          child: Text('common.no_data'.tr(),
                               style: TextStyle(color: AppColors.textHint))),
                     ),
                 ],
@@ -616,7 +619,7 @@ onRefresh: _refresh,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Appareils', style: AppTypography.heading3),
+                    Text('traffic.devices'.tr(), style: AppTypography.heading3),
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 200,
@@ -653,8 +656,8 @@ onRefresh: _refresh,
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
-                     Text('Navigateurs',
-                         style: AppTypography.heading3),
+                      Text('traffic.browsers'.tr(),
+                          style: AppTypography.heading3),
                      const SizedBox(height: 12),
                      ...tp.overview!.browserBreakdown.map((b) => Padding(
                        padding:
@@ -731,7 +734,7 @@ onRefresh: _refresh,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sources de trafic',
+                    Text('traffic.traffic_sources'.tr(),
                         style: AppTypography.heading3),
                     const SizedBox(height: 12),
                     ...tp.overview!.referralSources.map((r) => Padding(
@@ -791,7 +794,7 @@ onRefresh: _refresh,
                         const Icon(Icons.wifi_tethering,
                             color: AppColors.danger, size: 18),
                         const SizedBox(width: 8),
-                        Text('Visiteurs actifs',
+                        Text('Active visitors'.tr(),
                             style: AppTypography.heading3),
                         const Spacer(),
                         Container(
@@ -818,8 +821,8 @@ child: Text(
                           AppColors.danger),
                     ),
                     const SizedBox(height: 4),
-                    const Text('Mis à jour automatiquement toutes les 30s',
-                        style: TextStyle(
+                    Text('Auto-refresh every 30s'.tr(),
+                        style: const TextStyle(
                             fontSize: 11, color: AppColors.textHint)),
                   ],
                 ),
@@ -919,7 +922,7 @@ child: Text(
           const SizedBox(height: 8),
           ElevatedButton.icon(
             icon: const Icon(Icons.refresh),
-            label: const Text('Réessayer'),
+            label: Text('common.retry'.tr()),
             onPressed: onRetry,
           ),
         ],

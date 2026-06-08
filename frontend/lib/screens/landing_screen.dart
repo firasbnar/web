@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/storage.dart';
 import '../theme/app_colors.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -86,7 +88,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'MakeWebsite.io',
+                  'app_name'.tr(),
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -106,8 +108,39 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _buildLangButton() {
+    final code = context.locale.languageCode;
+    final flag = code == 'en' ? '\u{1F1EC}\u{1F1E7}' : code == 'ar' ? '\u{1F1F8}\u{1F1E6}' : '\u{1F1EB}\u{1F1F7}';
+    final label = code.toUpperCase();
     return GestureDetector(
-      onTap: () {},
+      onTap: () async {
+        final selected = await showModalBottomSheet<String>(
+          context: context,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          builder: (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: Text('profile.english'.tr()),
+                  onTap: () => Navigator.pop(ctx, 'en'),
+                ),
+                ListTile(
+                  title: Text('profile.french'.tr()),
+                  onTap: () => Navigator.pop(ctx, 'fr'),
+                ),
+                ListTile(
+                  title: Text('profile.arabic'.tr()),
+                  onTap: () => Navigator.pop(ctx, 'ar'),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (selected == null) return;
+        await AppStorage().saveLocaleCode(selected);
+        if (!mounted) return;
+        await context.setLocale(Locale(selected));
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         constraints: const BoxConstraints(minHeight: 36),
@@ -118,10 +151,10 @@ class _LandingScreenState extends State<LandingScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('\u{1F1EB}\u{1F1F7}', style: TextStyle(fontSize: 14)),
+            Text(flag, style: const TextStyle(fontSize: 14)),
             const SizedBox(width: 3),
             Text(
-              'FR',
+              label,
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -146,7 +179,7 @@ class _LandingScreenState extends State<LandingScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          'Connexion',
+          'auth.login'.tr(),
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -996,7 +1029,7 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
               const SizedBox(width: 6),
               Text(
-                'MakeWebsite.io',
+                'app_name'.tr(),
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1007,7 +1040,7 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            '\u00A9 2026 MakeWebsite.io. Tous droits r\u00E9serv\u00E9s.',
+            'landing.copyright'.tr(),
             style: GoogleFonts.inter(
               fontSize: 11,
               color: Colors.white.withAlpha(100),

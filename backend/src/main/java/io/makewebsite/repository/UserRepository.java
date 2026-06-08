@@ -34,5 +34,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByPhone(String phone);
 
+    boolean existsByTelegramConnectionCode(String telegramConnectionCode);
+
     long countByRole(String role);
 }

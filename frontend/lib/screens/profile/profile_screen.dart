@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../widgets/app_button.dart';
 import '../../providers/auth_provider.dart';
 
@@ -34,12 +36,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _language = context.locale.languageCode;
       final user = context.read<AuthProvider>().user;
       if (user != null) {
         _nameCtrl.text = user.fullName;
         _phoneCtrl.text = user.phone ?? '';
-        _language = user.language ?? 'fr';
       }
+      setState(() {});
     });
   }
 
@@ -64,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (url != null && mounted) {
         context.read<AuthProvider>().updateAvatar(url);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo de profil mise à jour'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('profile.profile_picture_updated'.tr()), backgroundColor: AppColors.success));
       }
     } catch (e) {
       if (mounted) {
@@ -86,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Profil mis à jour' : ap.error ?? 'Erreur'),
+        content: Text(ok ? 'profile.profile_updated'.tr() : ap.error ?? 'common.error'.tr()),
         backgroundColor: ok ? AppColors.success : AppColors.danger,
       ));
       setState(() => _savingProfile = false);
@@ -99,17 +102,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirm = _confirmPassCtrl.text;
     if (newPass != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Les mots de passe ne correspondent pas'), backgroundColor: AppColors.danger));
+        SnackBar(content: Text('profile.password_mismatch'.tr()), backgroundColor: AppColors.danger));
       return;
     }
     if (newPass.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le mot de passe doit contenir au moins 8 caractères'), backgroundColor: AppColors.danger));
+        SnackBar(content: Text('profile.password_min_length'.tr()), backgroundColor: AppColors.danger));
       return;
     }
     if (current.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez saisir votre mot de passe actuel'), backgroundColor: AppColors.danger));
+        SnackBar(content: Text('profile.enter_current_password'.tr()), backgroundColor: AppColors.danger));
       return;
     }
     setState(() => _savingPassword = true);
@@ -121,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mot de passe changé avec succès'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('profile.password_changed'.tr()), backgroundColor: AppColors.success));
         _oldPassCtrl.clear();
         _newPassCtrl.clear();
         _confirmPassCtrl.clear();
@@ -140,14 +143,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le compte'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer votre compte? Cette action est irréversible.'),
+        title: Text('profile.delete_account_title'.tr()),
+        content: Text('profile.delete_account_confirm'.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Confirmer la suppression'),
+            child: Text('common.confirm'.tr()),
           ),
         ],
       ),
@@ -166,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final initials = (user?.fullName.isNotEmpty == true ? user!.fullName[0] : '?').toUpperCase();
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('profile.title'.tr())),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -228,7 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text(user?.fullName ?? 'Utilisateur', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+          Text(user?.fullName ?? 'menu.profile'.tr(), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
           const SizedBox(height: 4),
           Text(user?.email ?? '', style: TextStyle(fontSize: 14, color: Colors.white.withAlpha(200))),
           const SizedBox(height: 4),
@@ -261,14 +264,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(Icons.person_outline, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Modifier le profil', style: AppTypography.heading4),
+              Text('profile.edit_profile'.tr(), style: AppTypography.heading4),
             ],
           ),
           const SizedBox(height: 20),
           TextFormField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nom complet',
+            decoration: InputDecoration(
+              labelText: 'profile.full_name'.tr(),
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.badge_outlined),
             ),
@@ -276,15 +279,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 14),
           TextFormField(
             controller: _phoneCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Téléphone',
+            decoration: InputDecoration(
+              labelText: 'profile.phone'.tr(),
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.phone_outlined),
             ),
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 20),
-          Text('Langue', style: AppTypography.body2.copyWith(color: AppColors.textSecondary)),
+          Text('profile.language'.tr(), style: AppTypography.body2.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           Row(children: [
             _langOption('FR', 'fr'),
@@ -294,7 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _langOption('AR', 'ar'),
           ]),
           const SizedBox(height: 20),
-          AppButton(label: 'Enregistrer', loading: _savingProfile, onPressed: _saveProfile),
+          AppButton(label: 'common.save'.tr(), loading: _savingProfile, onPressed: _saveProfile),
         ],
       ),
     );
@@ -316,7 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(Icons.lock_outline, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Changer mot de passe', style: AppTypography.heading4),
+              Text('profile.password_change'.tr(), style: AppTypography.heading4),
             ],
           ),
           const SizedBox(height: 20),
@@ -324,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _oldPassCtrl,
             obscureText: !_showOldPass,
             decoration: InputDecoration(
-              labelText: 'Mot de passe actuel',
+              labelText: 'profile.current_password'.tr(),
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
@@ -338,14 +341,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _newPassCtrl,
             obscureText: !_showNewPass,
             decoration: InputDecoration(
-              labelText: 'Nouveau mot de passe',
+              labelText: 'profile.new_password'.tr(),
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.lock),
               suffixIcon: IconButton(
                 icon: Icon(_showNewPass ? Icons.visibility : Icons.visibility_off, size: 20),
                 onPressed: () => setState(() => _showNewPass = !_showNewPass),
               ),
-              helperText: 'Au moins 8 caractères',
+              helperText: 'profile.password_min_length'.tr(),
             ),
           ),
           const SizedBox(height: 14),
@@ -353,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _confirmPassCtrl,
             obscureText: !_showConfirmPass,
             decoration: InputDecoration(
-              labelText: 'Confirmer le mot de passe',
+              labelText: 'profile.confirm_password'.tr(),
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.lock),
               suffixIcon: IconButton(
@@ -363,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          AppButton(label: 'Changer le mot de passe', loading: _savingPassword, onPressed: _changePassword),
+          AppButton(label: 'profile.password_change'.tr(), loading: _savingPassword, onPressed: _changePassword),
         ],
       ),
     );
@@ -380,7 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               context.go('/login');
             },
             icon: const Icon(Icons.logout),
-            label: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.w600)),
+            label: Text('profile.logout'.tr(), style: const TextStyle(fontWeight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.danger,
               side: const BorderSide(color: AppColors.danger),
@@ -394,7 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: _deletingAccount ? null : _confirmDeleteAccount,
           child: _deletingAccount
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : Text('Supprimer mon compte', style: AppTypography.body2.copyWith(color: AppColors.danger)),
+              : Text('profile.delete_account'.tr(), style: AppTypography.body2.copyWith(color: AppColors.danger)),
         ),
       ],
     );
@@ -403,7 +406,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _langOption(String label, String value) {
     final selected = _language == value;
     return GestureDetector(
-      onTap: () => setState(() => _language = value),
+      onTap: () async {
+        setState(() => _language = value);
+        await _api.storage.saveLocaleCode(value);
+        await context.setLocale(Locale(value));
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(

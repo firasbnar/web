@@ -7,7 +7,7 @@ class Message {
   final String? createdAt;
 
   Message({
-    required this.id,
+    this.id = '',
     required this.conversationId,
     required this.senderType,
     required this.content,
@@ -16,8 +16,8 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
-    id: json['id'].toString(),
-    conversationId: json['conversationId'].toString(),
+    id: json['messageId']?.toString() ?? json['id']?.toString() ?? '',
+    conversationId: (json['conversationId'] ?? '').toString(),
     senderType: json['senderType'] ?? 'CUSTOMER',
     content: json['content'] ?? '',
     isRead: json['isRead'] ?? false,

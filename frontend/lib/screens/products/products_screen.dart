@@ -11,8 +11,10 @@ import '../../widgets/product_card.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../providers/products_provider.dart';
 import '../../providers/boutique_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -64,13 +66,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackArrow(),
         title: Consumer<ProductsProvider>(
-          builder: (_, pp, __) => Text('Produits (${pp.products.length})'),
+          builder: (_, pp, __) => Text('products.title'.tr(args: [pp.products.length.toString()])),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.playlist_add, size: 20),
-            tooltip: 'Ajout en masse',
+            tooltip: 'products.bulk_add'.tr(),
             onPressed: () => context.push('/products/bulk-add'),
           ),
           IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
@@ -88,13 +91,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 CsvExportService.download(csv, 'produits.csv');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Export terminé'), backgroundColor: AppColors.success),
+                    SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
+                    SnackBar(content: Text('${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
                   );
                 }
               }
@@ -111,7 +114,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Rechercher un produit...',
+                    hintText: 'products.search_products'.tr(),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.clear),
@@ -130,7 +133,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       children: [
-                        _categoryChip('Tous', null),
+                        _categoryChip('products.all_products'.tr(), null),
                         ...pp.categories.map((c) => _categoryChip(c.name, c.id)),
                       ],
                     ),
@@ -150,10 +153,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     });
                       }
                     if (pp.products.isEmpty) {
-                      return const EmptyState(
+                      return EmptyState(
                       icon: Icons.inventory_2_outlined,
-                      title: 'Aucun produit',
-                      subtitle: 'Ajoutez votre premier produit',
+                      title: 'products.no_products'.tr(),
+                      subtitle: 'products.add_product'.tr(),
                     );
                     }
                     return GridView.builder(
@@ -220,14 +223,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le produit'),
-        content: Text('Voulez-vous vraiment supprimer « $name » ?'),
+        title: Text('products.delete_product'.tr()),
+        content: Text('products.delete_confirm'.tr(args: [name])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Supprimer'),
+            child: Text('common.delete'.tr()),
           ),
         ],
       ),
@@ -237,7 +240,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final ok = await pp.deleteProduct(id);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok ? 'Produit supprimé' : 'Erreur: ${pp.error ?? "inconnue"}'),
+      content: Text(ok ? 'products.product_deleted'.tr() : '${'common.error'.tr()}: ${pp.error ?? 'common.error'.tr()}'),
       backgroundColor: ok ? AppColors.success : AppColors.danger,
     ));
   }

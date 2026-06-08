@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -6,6 +7,7 @@ import '../../widgets/app_button.dart';
 import '../../widgets/empty_state.dart';
 import '../../providers/coupons_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class CouponsScreen extends StatefulWidget {
   const CouponsScreen({super.key});
@@ -47,27 +49,27 @@ class _CouponsScreenState extends State<CouponsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Nouveau code promo', style: AppTypography.heading3),
+              Text('coupons.add_coupon'.tr(), style: AppTypography.heading3),
               const SizedBox(height: 16),
-              TextFormField(controller: codeCtrl, decoration: const InputDecoration(labelText: 'Code *')),
+              TextFormField(controller: codeCtrl, decoration: InputDecoration(labelText: '${'coupons.code'.tr()} *')),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: type,
-                items: const [
-                  DropdownMenuItem(value: 'PERCENT', child: Text('Pourcentage')),
-                  DropdownMenuItem(value: 'FIXED', child: Text('Montant fixe')),
+                items: [
+                  DropdownMenuItem(value: 'PERCENT', child: Text('coupons.percentage'.tr())),
+                  DropdownMenuItem(value: 'FIXED', child: Text('coupons.fixed_amount'.tr())),
                 ],
                 onChanged: (v) => setSheetState(() => type = v ?? 'PERCENT'),
-                decoration: const InputDecoration(labelText: 'Type'),
+                decoration: InputDecoration(labelText: 'coupons.discount_type'.tr()),
               ),
               const SizedBox(height: 12),
-              TextFormField(controller: valueCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: type == 'PERCENT' ? 'Valeur (%) *' : 'Valeur (TND) *')),
+              TextFormField(controller: valueCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: '${'coupons.discount_value'.tr()} *')),
               const SizedBox(height: 12),
-              TextFormField(controller: minCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Montant minimum')),
+              TextFormField(controller: minCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'coupons.min_order_amount'.tr())),
               const SizedBox(height: 12),
-              TextFormField(controller: maxCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Max utilisations')),
+              TextFormField(controller: maxCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'coupons.max_uses'.tr())),
               const SizedBox(height: 20),
-              AppButton(label: 'Créer', onPressed: () {
+              AppButton(label: 'coupons.add_coupon'.tr(), onPressed: () {
                 if (codeCtrl.text.isEmpty) return;
                 final bp = context.read<BoutiqueProvider>();
                 final boutiqueId = bp.activeBoutique?.id;
@@ -93,15 +95,18 @@ class _CouponsScreenState extends State<CouponsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Codes promo')),
+      appBar: AppBar(
+        leading: const AppBackArrow(),
+        title: Text('coupons.title'.tr()),
+      ),
       body: Consumer<CouponsProvider>(
         builder: (_, cp, __) {
           if (cp.loading) return const Center(child: CircularProgressIndicator());
           if (cp.coupons.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
             icon: Icons.local_offer_outlined,
-            title: 'Aucun code promo',
-            subtitle: 'Créez votre premier code promo',
+            title: 'coupons.no_coupons'.tr(),
+            subtitle: 'coupons.add_coupon'.tr(),
           );
           }
           return ListView.builder(
@@ -152,12 +157,12 @@ class _CouponsScreenState extends State<CouponsScreen> {
                           children: [
                             Text(
                               coupon.discountType == 'PERCENT'
-                                  ? '${coupon.discountValue.toStringAsFixed(0)}% de réduction'
-                                  : '${coupon.discountValue.toStringAsFixed(2)} TND de réduction',
+                                  ? '${coupon.discountValue.toStringAsFixed(0)}% ${'coupons.percentage'.tr()}'
+                                  : '${'coupons.fixed_amount'.tr()} ${coupon.discountValue.toStringAsFixed(2)} TND',
                               style: AppTypography.body2,
                             ),
                             if (coupon.maxUses != null)
-                              Text('Utilisé ${coupon.usedCount ?? 0}/${coupon.maxUses} fois', style: AppTypography.caption),
+                              Text('${'coupons.used_count'.tr()}: ${coupon.usedCount ?? 0}/${coupon.maxUses}', style: AppTypography.caption),
                           ],
                         ),
                       ),

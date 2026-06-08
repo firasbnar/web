@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../services/csv_export_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -6,6 +7,7 @@ import '../../providers/boutique_provider.dart';
 import '../../providers/journal_activite_provider.dart';
 import '../../models/activity_log.dart';
 import 'package:provider/provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class JournalActiviteScreen extends StatefulWidget {
   const JournalActiviteScreen({super.key});
@@ -56,7 +58,8 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
       child: Consumer<JournalActiviteProvider>(
         builder: (_, p, __) => Scaffold(
           appBar: AppBar(
-            title: const Text('Journal d\'activité'),
+            leading: const AppBackArrow(),
+            title: Text('admin.logs'.tr()),
             actions: [
               if (p.onlineCount > 0)
                 Padding(
@@ -76,12 +79,12 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
               IconButton(
                 icon: const Icon(Icons.file_download_outlined),
                 onPressed: () => _exportLogs(p),
-                tooltip: 'Exporter',
+                tooltip: 'common.export'.tr(),
               ),
               IconButton(
                 icon: const Icon(Icons.refresh),
                 onPressed: p.refresh,
-                tooltip: 'Actualiser',
+                tooltip: 'common.refresh'.tr(),
               ),
             ],
           ),
@@ -106,7 +109,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
-                hintText: 'Rechercher un utilisateur ou une activité...',
+                hintText: 'admin.search'.tr(),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -130,7 +133,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
               controller: _startDateCtrl,
               readOnly: true,
               decoration: InputDecoration(
-                hintText: 'Date début',
+                hintText: 'common.date'.tr(),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -148,7 +151,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
               controller: _endDateCtrl,
               readOnly: true,
               decoration: InputDecoration(
-                hintText: 'Date fin',
+                hintText: 'common.date'.tr(),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -171,20 +174,20 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _filterChip('Toutes', p.actionFilter == '', () => p.setActionFilter('')),
-            _filterChip('Connexion', p.actionFilter == 'CONNEXION_CAISSE_REUSSIE', () => p.setActionFilter('CONNEXION_CAISSE_REUSSIE')),
-            _filterChip('Échec', p.actionFilter == 'CONNEXION_CAISSE_ECHOUEE', () => p.setActionFilter('CONNEXION_CAISSE_ECHOUEE')),
-            _filterChip('Déconnexion', p.actionFilter == 'DECONNEXION_CAISSE', () => p.setActionFilter('DECONNEXION_CAISSE')),
-            _filterChip('Caisse', p.actionFilter == 'OUVERTURE_CAISSE', () => p.setActionFilter('OUVERTURE_CAISSE')),
-            _filterChip('Commande', p.actionFilter == 'CREATION_COMMANDE', () => p.setActionFilter('CREATION_COMMANDE')),
-            _filterChip('Annulation', p.actionFilter == 'ANNULATION_COMMANDE', () => p.setActionFilter('ANNULATION_COMMANDE')),
+            _filterChip('common.all'.tr(), p.actionFilter == '', () => p.setActionFilter('')),
+            _filterChip('auth.login'.tr(), p.actionFilter == 'CONNEXION_CAISSE_REUSSIE', () => p.setActionFilter('CONNEXION_CAISSE_REUSSIE')),
+            _filterChip('common.error'.tr(), p.actionFilter == 'CONNEXION_CAISSE_ECHOUEE', () => p.setActionFilter('CONNEXION_CAISSE_ECHOUEE')),
+            _filterChip('auth.logout'.tr(), p.actionFilter == 'DECONNEXION_CAISSE', () => p.setActionFilter('DECONNEXION_CAISSE')),
+            _filterChip('pos.title'.tr(), p.actionFilter == 'OUVERTURE_CAISSE', () => p.setActionFilter('OUVERTURE_CAISSE')),
+            _filterChip('orders.title'.tr(), p.actionFilter == 'CREATION_COMMANDE', () => p.setActionFilter('CREATION_COMMANDE')),
+            _filterChip('orders.status_cancelled'.tr(), p.actionFilter == 'ANNULATION_COMMANDE', () => p.setActionFilter('ANNULATION_COMMANDE')),
             const SizedBox(width: 8),
             Container(width: 1, height: 24, color: AppColors.border),
             const SizedBox(width: 8),
-            _filterChip('Tous statuts', p.statusFilter == '', () => p.setStatusFilter('')),
-            _filterChip('Succès', p.statusFilter == 'SUCCESS', () => p.setStatusFilter('SUCCESS')),
-            _filterChip('Échec', p.statusFilter == 'FAILED', () => p.setStatusFilter('FAILED')),
-            _filterChip('Expiré', p.statusFilter == 'EXPIRED', () => p.setStatusFilter('EXPIRED')),
+            _filterChip('common.all'.tr(), p.statusFilter == '', () => p.setStatusFilter('')),
+            _filterChip('common.success'.tr(), p.statusFilter == 'SUCCESS', () => p.setStatusFilter('SUCCESS')),
+            _filterChip('common.error'.tr(), p.statusFilter == 'FAILED', () => p.setStatusFilter('FAILED')),
+            _filterChip('subscription.expired'.tr(), p.statusFilter == 'EXPIRED', () => p.setStatusFilter('EXPIRED')),
             if (p.searchQuery.isNotEmpty || p.actionFilter.isNotEmpty || p.statusFilter.isNotEmpty || p.startDate.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 8),
@@ -201,7 +204,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
                       color: AppColors.danger.withAlpha(30),
                       borderRadius: BorderRadius.circular(100),
                     ),
-                    child: const Text('Effacer filtres', style: TextStyle(fontSize: 11, color: AppColors.danger)),
+                    child: Text('common.clear'.tr(), style: TextStyle(fontSize: 11, color: AppColors.danger)),
                   ),
                 ),
               ),
@@ -251,7 +254,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
             const SizedBox(height: 8),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: p.refresh,
             ),
           ],
@@ -259,7 +262,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
       );
     }
     if (p.activities.isEmpty) {
-      return const Center(child: Text('Aucune activité enregistrée'));
+      return Center(child: Text('common.no_data'.tr()));
     }
     return RefreshIndicator(
       onRefresh: () async { p.refresh(); },
@@ -385,9 +388,9 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
 
   String _statusLabel(String status) {
     switch (status) {
-      case 'SUCCESS': return 'Succès';
-      case 'FAILED': return 'Échec';
-      case 'EXPIRED': return 'Expiré';
+      case 'SUCCESS': return 'common.success'.tr();
+      case 'FAILED': return 'common.error'.tr();
+      case 'EXPIRED': return 'subscription.expired'.tr();
       default: return status;
     }
   }
@@ -444,12 +447,12 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _detailRow('Utilisateur', a.userName),
+            _detailRow('common.name'.tr(), a.userName),
             if (a.ipAddress != null) _detailRow('Adresse IP', a.ipAddress!),
             if (a.deviceInfo != null) _detailRow('Appareil', a.deviceInfo!),
-            if (a.createdAt != null) _detailRow('Date', _formatDate(a.createdAt!)),
+            if (a.createdAt != null) _detailRow('common.date'.tr(), _formatDate(a.createdAt!)),
             if (a.createdAt != null && a.createdAt!.length >= 16) _detailRow('Heure', a.createdAt!.substring(11, 16)),
-            if (a.details != null && a.details!.isNotEmpty) _detailRow('Détails', a.details!),
+            if (a.details != null && a.details!.isNotEmpty) _detailRow('common.description'.tr(), a.details!),
           ],
         ),
       ),
@@ -490,7 +493,7 @@ class _JournalActiviteScreenState extends State<JournalActiviteScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(csv != null ? 'Export terminé (${csv.length} caractères)' : 'Erreur lors de l\'export'),
+          content: Text(csv != null ? 'common.export'.tr() : 'errors.unknown'.tr()),
           backgroundColor: csv != null ? AppColors.success : AppColors.danger,
         ),
       );

@@ -11,6 +11,8 @@ import '../../core/api_client.dart';
 import '../../models/product.dart';
 import '../../providers/products_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../widgets/app_back_button.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final String? productId;
@@ -128,7 +130,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Erreur upload ${img.name}: $e'),
+              content: Text('${'common.error'.tr()} ${img.name}: $e'),
               backgroundColor: AppColors.danger,
             ));
           }
@@ -156,8 +158,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isUploading) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Attendez la fin de l'upload des images"),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('common.upload'.tr()),
         backgroundColor: AppColors.warning,
       ));
       return;
@@ -169,7 +171,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     if (boutiqueId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aucune boutique sélectionnée')),
+          SnackBar(content: Text('common.error'.tr())),
         );
       }
       setState(() => _saving = false);
@@ -181,8 +183,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       price = double.parse(_sellingPriceCtrl.text.trim());
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Prix de vente invalide'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('common.error'.tr()),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -221,14 +223,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       if (!context.mounted) return;
       if (product != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isEditing ? 'Produit mis à jour' : 'Produit créé'),
+          content: Text(isEditing ? 'products.product_updated'.tr() : 'products.product_created'.tr()),
           backgroundColor: AppColors.success,
         ));
         if (!context.mounted) return;
           context.pop();
         } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(pp.error ?? "Erreur lors de l'enregistrement"),
+          content: Text(pp.error ?? 'common.operation_failed'.tr()),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -237,7 +239,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       setState(() => _saving = false);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: $e'),
+        content: Text('${'common.error'.tr()}: $e'),
         backgroundColor: AppColors.danger,
       ));
     }
@@ -249,16 +251,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: const AppBackButton(),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.radio_button_unchecked, color: AppColors.primary, size: 20),
             const SizedBox(width: 8),
-            Text(isEditing ? 'Modifier le Produit' : 'Ajouter un Produit'),
+            Text(isEditing ? 'products.edit_product'.tr() : 'products.add_product'.tr()),
           ],
         ),
         backgroundColor: Colors.white,
@@ -279,30 +278,30 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sectionHeader('Informations du Produit'),
+                    _sectionHeader('products.product_details'.tr()),
                     const SizedBox(height: 16),
-                    _buildLabel('Nom du Produit'),
+                    _buildLabel('products.product_name'.tr()),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _nameCtrl,
-                      decoration: _inputDecoration(hint: 'T-shirts ...'),
-                      validator: (v) => v?.isEmpty == true ? 'Requis' : null,
+                      decoration: _inputDecoration(hint: 'products.product_name'.tr()),
+                      validator: (v) => v?.isEmpty == true ? 'common.required'.tr() : null,
                     ),
                     const SizedBox(height: 16),
-                    _buildLabel('Quantité'),
+                    _buildLabel('products.stock'.tr()),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _qtyCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: _inputDecoration(hint: '0'),
+                      decoration: _inputDecoration(hint: 'products.stock'.tr()),
                     ),
                     const SizedBox(height: 16),
-                    _buildLabel("Prix d'achat (coût)"),
+                    _buildLabel('products.price'.tr()),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _purchasePriceCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: _inputDecoration(hint: 'Ex. ce que vous avez payé au fournisseur'),
+                      decoration: _inputDecoration(hint: 'products.price'.tr()),
                     ),
                     const SizedBox(height: 16),
                     IntrinsicHeight(
@@ -313,12 +312,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('Ancien Prix (Optionnel)'),
+                                _buildLabel('products.compare_price'.tr()),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _comparePriceCtrl,
                                   keyboardType: TextInputType.number,
-                                  decoration: _inputDecoration(hint: '15'),
+                                  decoration: _inputDecoration(hint: 'products.compare_price'.tr()),
                                 ),
                               ],
                             ),
@@ -328,15 +327,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('Prix de vente'),
+                                _buildLabel('products.price'.tr()),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _sellingPriceCtrl,
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: _inputDecoration(hint: '12'),
+                                  decoration: _inputDecoration(hint: 'products.price'.tr()),
                                   validator: (v) {
-                                    if (v?.isEmpty == true) return 'Requis';
-                                    if (double.tryParse(v!.trim()) == null) return 'Nombre invalide';
+                                    if (v?.isEmpty == true) return 'common.required'.tr();
+                                    if (double.tryParse(v!.trim()) == null) return 'common.error'.tr();
                                     return null;
                                   },
                                 ),
@@ -347,17 +346,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildLabel('Catégorie'),
+                    _buildLabel('products.category'.tr()),
                     const SizedBox(height: 6),
                     InputDecorator(
-                      decoration: _inputDecoration(hint: 'Choisir une catégorie'),
+                      decoration: _inputDecoration(hint: 'products.select_category'.tr()),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _categoryId,
                           isExpanded: true,
                           isDense: true,
-                          hint: const Text('Choisir une catégorie',
-                              style: TextStyle(color: Color(0xFF9B97B8), fontSize: 14)),
+                          hint: Text('products.select_category'.tr(),
+                              style: const TextStyle(color: Color(0xFF9B97B8), fontSize: 14)),
                           items: categories
                               .map((c) => DropdownMenuItem(
                                     value: c.id,
@@ -369,7 +368,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _sectionHeader('Description du Produit'),
+                    _sectionHeader('products.product_description'.tr()),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(
@@ -402,8 +401,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             padding: const EdgeInsets.all(12),
                             child: QuillEditor.basic(
                               controller: _quillCtrl,
-                              config: const QuillEditorConfig(
-                                placeholder: 'Description du produit...',
+                              config: QuillEditorConfig(
+                                placeholder: 'products.product_description'.tr(),
                               ),
                             ),
                           ),
@@ -411,23 +410,23 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _sectionHeader('Couleurs et Tailles'),
+                    _sectionHeader('products.variants'.tr()),
                     const SizedBox(height: 16),
-                    _buildLabel('Couleurs (séparées par des virgules) - Optionnel'),
+                    _buildLabel('products.colors'.tr()),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _colorsCtrl,
-                      decoration: _inputDecoration(hint: 'ex: Rouge, Bleu, Vert'),
+                      decoration: _inputDecoration(hint: 'products.colors'.tr()),
                     ),
                     const SizedBox(height: 16),
-                    _buildLabel('Tailles (séparées par des virgules) - Optionnel'),
+                    _buildLabel('products.sizes'.tr()),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _sizesCtrl,
-                      decoration: _inputDecoration(hint: 'ex: S, M, L, XL'),
+                      decoration: _inputDecoration(hint: 'products.sizes'.tr()),
                     ),
                     const SizedBox(height: 24),
-                    _sectionHeader('Images du Produit'),
+                    _sectionHeader('products.images'.tr()),
                     const SizedBox(height: 16),
                     InkWell(
                       onTap: _isUploading ? null : _pickImages,
@@ -447,12 +446,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _isUploading ? 'Upload en cours...' : 'Cliquez pour ajouter des images',
+                              _isUploading ? 'common.upload'.tr() : 'products.images'.tr(),
                               style: AppTypography.body2.copyWith(color: AppColors.textHint),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${_uploadedImageUrls.length} image(s) uploadée(s)',
+                              'products.images'.tr(),
                               style: AppTypography.caption.copyWith(color: AppColors.textHint),
                             ),
                           ],
@@ -506,7 +505,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                                 child: CircularProgressIndicator(
                                     color: Colors.white, strokeWidth: 2))
                             : const Icon(Icons.save, size: 16),
-                        label: Text(isEditing ? 'Mettre à jour' : 'Ajouter le Produit'),
+                        label: Text(isEditing ? 'common.save'.tr() : 'products.add_product'.tr()),
                         onPressed: (_saving || _isUploading) ? null : _saveProduct,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,

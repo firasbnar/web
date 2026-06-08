@@ -12,6 +12,8 @@ import '../../providers/products_provider.dart';
 import '../../models/boutique.dart';
 import '../../models/delivery_zone.dart';
 import '../../models/product.dart';
+import '../../widgets/app_back_arrow.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class BoutiqueSettingsScreen extends StatefulWidget {
   const BoutiqueSettingsScreen({super.key});
@@ -255,7 +257,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
         await _api.post('/boutiques/$bid/delivery-zones', data: data);
       }
       await _loadDeliveryZones();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone de livraison sauvegardée'), backgroundColor: AppColors.success));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('boutique.updated'.tr()), backgroundColor: AppColors.success));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
     }
@@ -266,11 +268,11 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer'),
-        content: Text('Supprimer "${dz.name}" ?'),
+        title: Text('common.delete'.tr()),
+        content: Text('common.delete_confirm'.tr(args: [dz.name])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('common.delete'.tr())),
         ],
       ),
     );
@@ -279,7 +281,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       final bid = context.read<BoutiqueProvider>().currentBoutique!.id.toString();
       await _api.delete('/boutiques/$bid/delivery-zones/${dz.id}');
       await _loadDeliveryZones();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone supprimée'), backgroundColor: AppColors.success));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('boutique.updated'.tr()), backgroundColor: AppColors.success));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.extractErrorMessage(e)), backgroundColor: AppColors.danger));
     }
@@ -297,23 +299,23 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(existing != null ? 'Modifier la zone' : 'Nouvelle zone'),
+          title: Text(existing != null ? 'boutique.edit_zone'.tr() : 'boutique.new_zone'.tr()),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nom', hintText: 'Tunis, Sfax, ...')),
+                TextField(controller: nameCtrl, decoration: InputDecoration(labelText: 'boutique.name'.tr(), hintText: 'boutique.zone_name_hint'.tr())),
                 const SizedBox(height: 8),
-                TextField(controller: feeCtrl, decoration: const InputDecoration(labelText: 'Frais de livraison (DT)'), keyboardType: TextInputType.number),
+                TextField(controller: feeCtrl, decoration: InputDecoration(labelText: 'boutique.delivery_fees'.tr()), keyboardType: TextInputType.number),
                 const SizedBox(height: 8),
-                TextField(controller: minCtrl, decoration: const InputDecoration(labelText: 'Montant minimum (DT, optionnel)'), keyboardType: TextInputType.number),
+                TextField(controller: minCtrl, decoration: InputDecoration(labelText: 'boutique.min_amount'.tr()), keyboardType: TextInputType.number),
                 const SizedBox(height: 8),
-                TextField(controller: daysCtrl, decoration: const InputDecoration(labelText: 'Jours estimés (optionnel)'), keyboardType: TextInputType.number),
+                TextField(controller: daysCtrl, decoration: InputDecoration(labelText: 'boutique.estimated_days'.tr()), keyboardType: TextInputType.number),
                 const SizedBox(height: 8),
-                TextField(controller: countriesCtrl, decoration: const InputDecoration(labelText: 'Pays (optionnel)')),
+                TextField(controller: countriesCtrl, decoration: InputDecoration(labelText: 'boutique.countries'.tr())),
                 const SizedBox(height: 8),
                 SwitchListTile(
-                  title: const Text('Active'),
+                  title: Text('common.active'.tr()),
                   value: active,
                   onChanged: (v) => setDialogState(() => active = v),
                   contentPadding: EdgeInsets.zero,
@@ -322,7 +324,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
             ElevatedButton(
               onPressed: _savingZone ? null : () async {
                 final data = {
@@ -338,7 +340,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
               },
               child: _savingZone
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(existing != null ? 'Modifier' : 'Créer'),
+                  : Text(existing != null ? 'common.edit'.tr() : 'common.add'.tr()),
             ),
           ],
         ),
@@ -391,14 +393,14 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     if (value == _originalName) {
       setState(() {
         _nameAvailable = true;
-        _nameHelperText = 'Nom original';
+        _nameHelperText = 'boutique.original_name'.tr();
         _nameHelperColor = AppColors.success;
       });
       return;
     }
     setState(() {
       _nameAvailable = false;
-      _nameHelperText = 'Vérification...';
+      _nameHelperText = 'common.loading'.tr();
       _nameHelperColor = AppColors.primary;
     });
     _debounce?.cancel();
@@ -414,8 +416,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     setState(() {
       _nameAvailable = available;
       _nameHelperText = available
-          ? 'Disponible - Vous pouvez sauvegarder'
-          : 'Nom non disponible - Veuillez choisir un autre';
+          ? 'boutique.name_available'.tr()
+          : 'boutique.name_unavailable'.tr();
       _nameHelperColor = available ? AppColors.success : AppColors.danger;
     });
   }
@@ -461,13 +463,14 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Paramètres'),
+        leading: const AppBackArrow(),
+        title: Text('boutique.title'.tr()),
         centerTitle: true,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : b == null
-              ? const Center(child: Text('Aucune boutique sélectionnée'))
+              ? Center(child: Text('store_catalog.title'.tr()))
               : _buildContent(bp, b),
     );
   }
@@ -480,23 +483,23 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
         children: [
           // ========== 1. BOUTIQUE CONFIG ==========
           _SettingsCard(
-            title: 'Configuration de la boutique',
+            title: 'boutique.general'.tr(),
             icon: Icons.store_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _FormRow(children: [
                   _FormField(
-                      label: 'Email',
+                      label: 'boutique.email'.tr(),
                       controller: _emailCtrl,
                       type: TextInputType.emailAddress),
-                  _FormField(label: 'Adresse', controller: _addressCtrl),
+                  _FormField(label: 'boutique.address'.tr(), controller: _addressCtrl),
                 ]),
                 const SizedBox(height: 12),
                 _FormField(
-                  label: 'Nom de la boutique (minuscules)',
+                  label: 'boutique.name'.tr(),
                   controller: _nameCtrl,
-                  hint: 'ma-boutique',
+                  hint: 'boutique.slug_help'.tr(),
                   onChanged: _onNameChanged,
                   suffix: _nameHelperText != null
                       ? Text(_nameHelperText!,
@@ -507,28 +510,28 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 const SizedBox(height: 12),
                 _FormRow(children: [
                   _FormField(
-                      label: 'Texte promotionnel barre',
+                      label: 'boutique.announcement'.tr(),
                       controller: _topBarTextCtrl,
-                      hint: 'Livraison 48h'),
+                      hint: 'boutique.announcement_hint'.tr()),
                   _FormField(
-                      label: 'Téléphone',
+                      label: 'boutique.phone'.tr(),
                       controller: _phoneCtrl,
                       type: TextInputType.phone),
                 ]),
                 const SizedBox(height: 12),
                 _FormRow(children: [
                   _FormField(
-                      label: 'TVA (%)',
+                      label: 'boutique.vat'.tr(),
                       controller: _tvaCtrl,
                       type: TextInputType.number),
                   _FormField(
-                      label: 'Frais de livraison (TND)',
+                      label: 'boutique.delivery_fees'.tr(),
                       controller: _deliveryFeesCtrl,
                       type: TextInputType.number),
                 ]),
                 const SizedBox(height: 16),
                 _SaveButton(
-                  label: 'Enregistrer la configuration',
+                  label: 'common.save'.tr(),
                   loading: _savingConfig,
                   disabled: !_nameAvailable,
                   onPressed: _nameAvailable ? () => _saveConfig(bp) : null,
@@ -546,19 +549,19 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 2. SEO ==========
           _SettingsCard(
-            title: 'SEO - Référencement',
+            title: 'boutique.seo'.tr(),
             icon: Icons.search_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _FormField(label: 'Meta titre', controller: _seoTitleCtrl, hint: 'Titre affiché dans Google'),
+                _FormField(label: 'boutique.meta_title'.tr(), controller: _seoTitleCtrl, hint: 'boutique.meta_title_hint'.tr()),
                 const SizedBox(height: 12),
-                _FormField(label: 'Meta description', controller: _seoDescCtrl, maxLines: 3, hint: 'Description courte pour les moteurs de recherche'),
+                _FormField(label: 'boutique.meta_description'.tr(), controller: _seoDescCtrl, maxLines: 3, hint: 'boutique.meta_desc_hint'.tr()),
                 const SizedBox(height: 12),
-                _FormField(label: 'Mots-clés (SEO)', controller: _seoKeywordsCtrl, hint: 'ex: boutique, mode, tunisie'),
+                _FormField(label: 'boutique.meta_keywords'.tr(), controller: _seoKeywordsCtrl, hint: 'boutique.meta_keywords_hint'.tr()),
                 const SizedBox(height: 16),
                 _SaveButton(
-                  label: 'Sauvegarder SEO',
+                  label: 'common.save'.tr(),
                   onPressed: () async {
                     final ok = await bp.updateSeo({
                       'seoTitle': _seoTitleCtrl.text,
@@ -567,7 +570,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                     });
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(ok ? 'SEO mis à jour' : 'Erreur'),
+                        content: Text(ok ? 'boutique.updated'.tr() : 'common.error'.tr()),
                         backgroundColor: ok ? AppColors.success : AppColors.danger));
                     }
                   },
@@ -579,10 +582,10 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 3. PAIEMENT À LA LIVRAISON ==========
           _SettingsCard(
-            title: 'Paiement à la livraison',
+            title: 'boutique.cash_on_delivery'.tr(),
             icon: Icons.money_outlined,
             child: _ToggleRow(
-              label: 'Activer le paiement à la livraison',
+              label: 'boutique.cash_on_delivery'.tr(),
               value: _cashDelivery,
               onChanged: (v) async {
                 setState(() => _cashDelivery = v);
@@ -594,21 +597,21 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 3. KONNECT PAYMENT ==========
           _SettingsCard(
-            title: 'Konnect Payment',
+            title: 'boutique.konnect'.tr(),
             icon: Icons.payment_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _FormRow(children: [
                   _FormField(
-                      label: 'ID Marchand Konnect',
+                      label: 'boutique.konnect_merchant'.tr(),
                       controller: _konnectMerchantCtrl),
                   _FormField(
-                      label: 'Clé API Konnect', controller: _konnectApiCtrl),
+                      label: 'boutique.konnect_api'.tr(), controller: _konnectApiCtrl),
                 ]),
                 const SizedBox(height: 8),
                 _ToggleRow(
-                  label: 'Activer Konnect',
+                  label: 'boutique.konnect'.tr(),
                   value: _konnectEnabled,
                   loading: _savingKonnect,
                   onChanged: (v) async {
@@ -620,7 +623,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 ),
                 const SizedBox(height: 12),
                 _SaveButton(
-                  label: 'Sauvegarder les clés Konnect',
+                  label: 'common.save'.tr(),
                   onPressed: () => _saveConfig(bp),
                 ),
               ],
@@ -630,15 +633,15 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 4. D17 PAYMENT ==========
           _SettingsCard(
-            title: 'Paiement D17',
+            title: 'boutique.d17'.tr(),
             icon: Icons.qr_code_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _FormField(
-                  label: 'Numéro marchand D17',
+                  label: 'boutique.d17_merchant'.tr(),
                   controller: _d17MerchantCtrl,
-                  hint: 'Ex: 40123456',
+                  hint: 'boutique.d17_hint'.tr(),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -659,8 +662,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.qr_code, size: 18),
                         label: Text(_d17QrCodeUrl == null
-                            ? 'Upload QR Code'
-                            : 'Changer QR Code'),
+                            ? 'boutique.upload_qr'.tr()
+                            : 'boutique.change_qr'.tr()),
                         onPressed: () async {
                           final path = await _pickImage();
                           if (path != null) {
@@ -670,16 +673,16 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                                 setState(() => _d17QrCodeUrl = url);
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('QR Code uploadé'),
+                                      SnackBar(
+                                          content: Text('common.success'.tr()),
                                           backgroundColor: AppColors.success));
                                 }
                               }
                             } catch (_) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Erreur upload QR Code'),
+                                    SnackBar(
+                                        content: Text('common.error'.tr()),
                                         backgroundColor: AppColors.danger));
                               }
                             }
@@ -697,7 +700,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 _ToggleRow(
-                  label: 'Activer D17',
+                  label: 'boutique.d17'.tr(),
                   value: _d17Enabled,
                   loading: _savingD17,
                   onChanged: (v) async {
@@ -709,7 +712,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 ),
                 const SizedBox(height: 12),
                 _SaveButton(
-                  label: 'Sauvegarder les infos D17',
+                  label: 'common.save'.tr(),
                   onPressed: () => _saveConfig(bp),
                 ),
               ],
@@ -719,20 +722,20 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 5. STRIPE ==========
           _SettingsCard(
-            title: 'Stripe',
+            title: 'boutique.stripe'.tr(),
             icon: Icons.payment_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Configuration de Stripe',
+                Text('boutique.stripe_config'.tr(),
                     style: AppTypography.caption),
                 const SizedBox(height: 16),
-                _FormField(label: 'Clé publiable Stripe', controller: _stripePublishableCtrl, hint: 'pk_test_...'),
+                _FormField(label: 'boutique.stripe_publishable'.tr(), controller: _stripePublishableCtrl, hint: 'boutique.stripe_pk_hint'.tr()),
                 const SizedBox(height: 12),
-                _FormField(label: 'Clé secrète Stripe', controller: _stripeSecretCtrl, hint: 'sk_test_...', maxLines: 2),
+                _FormField(label: 'boutique.stripe_secret'.tr(), controller: _stripeSecretCtrl, hint: 'boutique.stripe_sk_hint'.tr(), maxLines: 2),
                 const SizedBox(height: 16),
                 _SaveButton(
-                  label: 'Sauvegarder les clés',
+                  label: 'common.save'.tr(),
                   loading: _savingPayments,
                   onPressed: () async {
                     setState(() => _savingPayments = true);
@@ -742,7 +745,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                     });
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(ok ? 'Clés de paiement sauvegardées' : 'Erreur'),
+                        content: Text(ok ? 'boutique.updated'.tr() : 'common.error'.tr()),
                         backgroundColor: ok ? AppColors.success : AppColors.danger));
                     }
                     setState(() => _savingPayments = false);
@@ -755,17 +758,17 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 6. FORMULAIRE SIMPLIFIÉ ==========
           _SettingsCard(
-            title: 'Formulaire de commande simplifié',
+            title: 'boutique.simplified_checkout'.tr(),
             icon: Icons.receipt_long_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    'Activer pour ne demander que le nom, téléphone et adresse',
+                    'boutique.simplified_checkout_desc'.tr(),
                     style: AppTypography.caption),
                 const SizedBox(height: 8),
                 _ToggleRow(
-                  label: 'Commande simplifiée',
+                  label: 'boutique.simplified_checkout'.tr(),
                   value: _simpleCheckout,
                   onChanged: (v) async {
                     setState(() => _simpleCheckout = v);
@@ -779,24 +782,24 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 6. FACEBOOK META BUSINESS ==========
           _SettingsCard(
-            title: 'Facebook Meta Business',
+            title: 'boutique.facebook'.tr(),
             icon: Icons.facebook_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _FormField(
-                  label: 'Facebook Page Access Token',
+                  label: 'boutique.facebook_token'.tr(),
                   controller: _fbPageTokenCtrl,
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
                 _FormField(
-                  label: 'Facebook Page ID',
+                  label: 'boutique.facebook_page_id'.tr(),
                   controller: _fbPageIdCtrl,
                 ),
                 const SizedBox(height: 16),
                 _SaveButton(
-                  label: 'Sauvegarder Facebook',
+                  label: 'common.save'.tr(),
                   loading: _savingFb,
                   onPressed: () => _saveFacebookConfig(bp),
                 ),
@@ -807,7 +810,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 7. THEME CUSTOMIZATION ==========
           _SettingsCard(
-            title: 'Personnalisation du thème',
+            title: 'boutique.theme'.tr(),
             icon: Icons.palette_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -816,37 +819,37 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 const SizedBox(height: 16),
                 _FormRow(children: [
                   _ColorPickerField(
-                      label: "En-tête",
+                      label: "boutique.header_color".tr(),
                       color: _headerColor,
                       onChanged: (c) => setState(() => _headerColor = c)),
                   _ColorPickerField(
-                      label: 'Pied de page',
+                      label: 'boutique.footer_color'.tr(),
                       color: _footerColor,
                       onChanged: (c) => setState(() => _footerColor = c)),
                   _ColorPickerField(
-                      label: 'Fond',
+                      label: 'boutique.body_color'.tr(),
                       color: _bodyColor,
                       onChanged: (c) => setState(() => _bodyColor = c)),
                 ]),
                 const SizedBox(height: 12),
                 _FormRow(children: [
                   _ColorPickerField(
-                      label: 'Cartes produit',
+                      label: 'boutique.card_color'.tr(),
                       color: _cardProductColor,
                       onChanged: (c) => setState(() => _cardProductColor = c)),
                   _ColorPickerField(
-                      label: 'Boutons',
+                      label: 'boutique.button_color'.tr(),
                       color: _buttonColor,
                       onChanged: (c) => setState(() => _buttonColor = c)),
                   _ColorPickerField(
-                      label: 'Barre promo',
+                      label: 'boutique.top_bar_color'.tr(),
                       color: _topBarColor,
                       onChanged: (c) => setState(() => _topBarColor = c)),
                 ]),
                 const SizedBox(height: 12),
                 _FormRow(children: [
                   _ColorPickerField(
-                      label: 'Texte',
+                      label: 'boutique.text_color'.tr(),
                       color: _textColor,
                       onChanged: (c) => setState(() => _textColor = c)),
                 ]),
@@ -857,7 +860,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Police', style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
+                          Text('boutique.fonts'.tr(), style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
                           const SizedBox(height: 4),
                           DropdownButtonFormField<String>(
                             initialValue: _fontFamily,
@@ -875,7 +878,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Mode sombre', style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
+                          Text('boutique.dark_mode'.tr(), style: AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
                           const SizedBox(height: 4),
                           SwitchListTile(
                             value: _darkMode,
@@ -883,7 +886,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                               setState(() => _darkMode = v);
                               await bp.saveStoreTheme({'darkMode': v ? 'yes' : 'no'});
                             },
-                            title: Text(_darkMode ? 'Activé' : 'Désactivé', style: const TextStyle(fontSize: 13)),
+                            title: Text(_darkMode ? 'common.enabled'.tr() : 'common.disabled'.tr(), style: const TextStyle(fontSize: 13)),
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -897,7 +900,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                   children: [
                     IntrinsicWidth(
                       child: _SaveButton(
-                        label: 'Sauvegarder le thème',
+                        label: 'common.save'.tr(),
                         loading: _savingTheme,
                         onPressed: () => _saveTheme(bp),
                       ),
@@ -906,7 +909,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                     IntrinsicWidth(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.shuffle, size: 18),
-                        label: const Text('Palette aléatoire'),
+                        label: Text('boutique.random_palette'.tr()),
                         onPressed: _generateRandomPalette,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
@@ -926,36 +929,36 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 8. NOTIFICATIONS ==========
           _SettingsCard(
-            title: 'Préférences de notifications',
+            title: 'boutique.notifications'.tr(),
             icon: Icons.notifications_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ToggleRow(label: 'Notifications par email', value: _enableEmailNotif, loading: _savingNotifEmail, onChanged: (v) async {
+                _ToggleRow(label: 'boutique.email_notifications'.tr(), value: _enableEmailNotif, loading: _savingNotifEmail, onChanged: (v) async {
                   setState(() => _savingNotifEmail = true);
                   setState(() => _enableEmailNotif = v);
                   await bp.saveNotificationSettings({'enableEmailNotifications': v ? 'yes' : 'no'});
                   setState(() => _savingNotifEmail = false);
                 }),
-                _ToggleRow(label: 'Notifications par SMS', value: _enableSmsNotif, loading: _savingNotifSms, onChanged: (v) async {
+                _ToggleRow(label: 'boutique.sms_notifications'.tr(), value: _enableSmsNotif, loading: _savingNotifSms, onChanged: (v) async {
                   setState(() => _savingNotifSms = true);
                   setState(() => _enableSmsNotif = v);
                   await bp.saveNotificationSettings({'enableSmsNotifications': v ? 'yes' : 'no'});
                   setState(() => _savingNotifSms = false);
                 }),
-                _ToggleRow(label: 'Notifications push', value: _enablePushNotif, loading: _savingNotifPush, onChanged: (v) async {
+                _ToggleRow(label: 'boutique.push_notifications'.tr(), value: _enablePushNotif, loading: _savingNotifPush, onChanged: (v) async {
                   setState(() => _savingNotifPush = true);
                   setState(() => _enablePushNotif = v);
                   await bp.saveNotificationSettings({'enablePushNotifications': v ? 'yes' : 'no'});
                   setState(() => _savingNotifPush = false);
                 }),
-                _ToggleRow(label: 'Alertes nouvelles commandes', value: _enableOrderAlerts, loading: _savingNotifAlerts, onChanged: (v) async {
+                _ToggleRow(label: 'boutique.order_alerts'.tr(), value: _enableOrderAlerts, loading: _savingNotifAlerts, onChanged: (v) async {
                   setState(() => _savingNotifAlerts = true);
                   setState(() => _enableOrderAlerts = v);
                   await bp.saveNotificationSettings({'enableOrderAlerts': v ? 'yes' : 'no'});
                   setState(() => _savingNotifAlerts = false);
                 }),
-                _ToggleRow(label: 'Emails marketing', value: _enableMarketingEmails, loading: _savingNotifMarketing, onChanged: (v) async {
+                _ToggleRow(label: 'boutique.marketing_emails'.tr(), value: _enableMarketingEmails, loading: _savingNotifMarketing, onChanged: (v) async {
                   setState(() => _savingNotifMarketing = true);
                   setState(() => _enableMarketingEmails = v);
                   await bp.saveNotificationSettings({'enableMarketingEmails': v ? 'yes' : 'no'});
@@ -963,7 +966,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                 }),
                 const SizedBox(height: 12),
                 _SaveButton(
-                  label: 'Sauvegarder préférences',
+                  label: 'common.save'.tr(),
                   loading: _savingNotif,
                   onPressed: () async {
                     setState(() => _savingNotif = true);
@@ -976,7 +979,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                     });
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(ok ? 'Préférences sauvegardées' : 'Erreur'),
+                        content: Text(ok ? 'boutique.updated'.tr() : 'common.error'.tr()),
                         backgroundColor: ok ? AppColors.success : AppColors.danger));
                     }
                     setState(() => _savingNotif = false);
@@ -989,7 +992,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 9. ZONES DE LIVRAISON ==========
           _SettingsCard(
-            title: 'Zones de livraison',
+            title: 'boutique.delivery_zones'.tr(),
             icon: Icons.local_shipping_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1000,16 +1003,16 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                     TextButton.icon(
                       onPressed: () => _showDeliveryZoneDialog(),
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Ajouter'),
+                      label: Text('common.add'.tr()),
                     ),
                   ],
                 ),
                 if (_loadingZones)
                   const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
                 else if (_deliveryZones.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Text('Aucune zone', style: TextStyle(color: AppColors.textHint)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text('boutique.no_zones'.tr(), style: const TextStyle(color: AppColors.textHint)),
                   )
                 else
                   ..._deliveryZones.map((dz) => Container(
@@ -1037,7 +1040,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                                               color: AppColors.textHint.withAlpha(30),
                                               borderRadius: BorderRadius.circular(100),
                                             ),
-                                            child: const Text('Inactif', style: TextStyle(fontSize: 10, color: AppColors.textHint)),
+                                            child: Text('common.inactive'.tr(), style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
                                           ),
                                         ],
                                       ],
@@ -1067,14 +1070,14 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 10. PAYS ACCEPTES ==========
           _SettingsCard(
-            title: 'Pays acceptes',
+            title: 'boutique.countries'.tr(),
             icon: Icons.public_outlined,
             child: _buildAcceptedCountries(bp),
           ),
           const SizedBox(height: 16),
           // ========== 11. CATEGORIES ==========
           _SettingsCard(
-            title: 'Catégories',
+            title: 'boutique.categories'.tr(),
             icon: Icons.category_outlined,
             child: Consumer<ProductsProvider>(
               builder: (_, pp, __) => Column(
@@ -1083,7 +1086,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                   if (pp.categories.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Text('Aucune catégorie ajoutée',
+                      child: Text('boutique.no_categories'.tr(),
                           style: AppTypography.body2),
                     )
                   else
@@ -1095,7 +1098,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                         )),
                   const SizedBox(height: 12),
                   _SaveButton(
-                    label: 'Ajouter une catégorie',
+                    label: 'common.add'.tr(),
                     loading: _savingCategory,
                     onPressed: () => _showCategoryDialog(bp),
                   ),
@@ -1107,7 +1110,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 12. LOGO BOUTIQUE ==========
           _SettingsCard(
-            title: 'Logo de la boutique',
+            title: 'boutique.logo'.tr(),
             icon: Icons.image_outlined,
             child: Column(
               children: [
@@ -1124,11 +1127,11 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(_logoUrl != null ? 'Logo actuel' : 'Aucun logo',
+                Text(_logoUrl != null ? 'boutique.current_logo'.tr() : 'boutique.no_logo'.tr(),
                     style: AppTypography.body2),
                 const SizedBox(height: 16),
                 _SaveButton(
-                  label: 'Uploader un logo',
+                  label: 'common.upload'.tr(),
                   loading: _uploadingLogo,
                   onPressed: () => _uploadLogo(bp),
                 ),
@@ -1139,23 +1142,23 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 13. DEVISE ==========
           _SettingsCard(
-            title: 'Devise',
+            title: 'boutique.currency'.tr(),
             icon: Icons.attach_money_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _ReadOnlyField(
-                    label: 'Devise actuelle', value: b.currency ?? 'TND'),
+                    label: 'boutique.current_currency'.tr(), value: b.currency ?? 'TND'),
                 const SizedBox(height: 12),
                 _DropdownField(
-                  label: 'Nouvelle devise',
+                  label: 'boutique.new_currency'.tr(),
                   value: _currency,
                   items: _currencies,
                   onChanged: (v) => setState(() => _currency = v ?? 'TND'),
                 ),
                 const SizedBox(height: 12),
                 _SaveButton(
-                  label: 'Mettre à jour la devise',
+                  label: 'common.save'.tr(),
                   loading: _savingCurrency,
                   onPressed: () => _saveCurrency(bp),
                 ),
@@ -1166,21 +1169,21 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
           // ========== 14. CODE PERSONNALISÉ ==========
           _SettingsCard(
-            title: 'Code personnalisé',
+            title: 'boutique.custom_code'.tr(),
             icon: Icons.code_outlined,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Ajoutez du JavaScript et CSS personnalisés',
+                Text('boutique.custom_code_desc'.tr(),
                     style: AppTypography.caption),
                 const SizedBox(height: 12),
                 _CodeEditorField(
-                    label: 'JavaScript', controller: _customJsCtrl),
+                    label: 'boutique.custom_js'.tr(), hintText: 'boutique.js_hint'.tr(), controller: _customJsCtrl),
                 const SizedBox(height: 16),
-                _CodeEditorField(label: 'CSS', controller: _customCssCtrl),
+                _CodeEditorField(label: 'boutique.custom_css'.tr(), hintText: 'boutique.css_hint'.tr(), controller: _customCssCtrl),
                 const SizedBox(height: 16),
                 _SaveButton(
-                  label: 'Sauvegarder le code',
+                  label: 'common.save'.tr(),
                   loading: _savingCode,
                   onPressed: () => _saveCustomCode(bp),
                 ),
@@ -1209,13 +1212,13 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
                 color: _topBarColor, borderRadius: BorderRadius.circular(6)),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.local_offer, size: 14, color: Colors.white),
-                SizedBox(width: 6),
-                Text('Promo - Livraison offerte',
-                    style: TextStyle(color: Colors.white, fontSize: 11)),
+                const Icon(Icons.local_offer, size: 14, color: Colors.white),
+                const SizedBox(width: 6),
+                Text('boutique.announcement'.tr(),
+                    style: const TextStyle(color: Colors.white, fontSize: 11)),
               ],
             ),
           ),
@@ -1262,7 +1265,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                   decoration: BoxDecoration(
                       color: _buttonColor,
                       borderRadius: BorderRadius.circular(4)),
-                  child: Text('Ajouter',
+                  child: Text('common.add'.tr(),
                       style: TextStyle(color: _textColor, fontSize: 10)),
                 ),
               ],
@@ -1273,7 +1276,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
                 color: _footerColor, borderRadius: BorderRadius.circular(6)),
-            child: Text('© 2026 Ma Boutique',
+            child: Text('boutique.copyright'.tr(),
                 style: TextStyle(color: _textColor, fontSize: 9)),
           ),
         ],
@@ -1298,8 +1301,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       children: [
         Text(
           selected.isEmpty
-              ? 'Aucun pays selectionne'
-              : '${selected.length} pays selectionne(s)',
+              ? 'boutique.no_countries'.tr()
+              : 'boutique.countries_selected'.tr(args: [selected.length.toString()]),
           style: AppTypography.body2,
         ),
         const SizedBox(height: 12),
@@ -1319,9 +1322,9 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                       final ok = await bp.saveCountries(next.toList());
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(ok
-                            ? 'Pays acceptes mis a jour'
-                            : bp.error ?? 'Erreur pays acceptes'),
+                      content: Text(ok
+                          ? 'boutique.updated'.tr()
+                          : bp.error ?? 'common.error'.tr()),
                         backgroundColor:
                             ok ? AppColors.success : AppColors.danger,
                       ));
@@ -1359,8 +1362,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       'simpleCheckout': _simpleCheckout ? 'yes' : 'no',
     });
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Configuration sauvegardée'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('boutique.updated'.tr()),
           backgroundColor: AppColors.success));
     }
     setState(() => _savingConfig = false);
@@ -1381,7 +1384,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(success ? 'Thème mis à jour' : 'Erreur'),
+          content: Text(success ? 'boutique.updated'.tr() : 'common.error'.tr()),
           backgroundColor: success ? AppColors.success : AppColors.danger));
     }
     setState(() => _savingTheme = false);
@@ -1395,7 +1398,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(success ? 'Facebook sauvegardé' : 'Erreur'),
+          content: Text(success ? 'boutique.updated'.tr() : 'common.error'.tr()),
           backgroundColor: success ? AppColors.success : AppColors.danger));
     }
     setState(() => _savingFb = false);
@@ -1409,7 +1412,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(success ? 'Code mis à jour' : 'Erreur'),
+          content: Text(success ? 'boutique.updated'.tr() : 'common.error'.tr()),
           backgroundColor: success ? AppColors.success : AppColors.danger));
     }
     setState(() => _savingCode = false);
@@ -1420,7 +1423,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     final success = await bp.saveCurrency(_currency);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(success ? 'Devise mise à jour' : 'Erreur'),
+          content: Text(success ? 'boutique.updated'.tr() : 'common.error'.tr()),
           backgroundColor: success ? AppColors.success : AppColors.danger));
     }
     setState(() => _savingCurrency = false);
@@ -1451,21 +1454,21 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text(existing == null
-              ? 'Ajouter une catégorie'
-              : 'Modifier la catégorie'),
+              ? 'boutique.add_category'.tr()
+              : 'boutique.edit_category'.tr()),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _FormField(
-                  label: 'Nom',
+                  label: 'boutique.name'.tr(),
                   controller: _categoryNameCtrl,
-                  hint: 'Ex: T-shirts',
+                  hint: 'boutique.category_name_hint'.tr(),
                 ),
                 const SizedBox(height: 12),
                 _FormField(
-                  label: 'Ordre',
+                  label: 'boutique.sort_order'.tr(),
                   controller: _categorySortCtrl,
                   type: TextInputType.number,
                   hint: '0',
@@ -1499,8 +1502,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                         )
                       : const Icon(Icons.image_outlined, size: 18),
                   label: Text(imageUrl == null || imageUrl!.isEmpty
-                      ? 'Ajouter une image'
-                      : 'Changer l\'image'),
+                      ? 'common.add_image'.tr()
+                      : 'common.change_image'.tr()),
                   onPressed: uploadingImage
                       ? null
                       : () async {
@@ -1513,9 +1516,9 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                           } catch (_) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Erreur upload image catégorie'),
+                              SnackBar(
+                                content:
+                                    Text('common.error'.tr()),
                                   backgroundColor: AppColors.danger,
                                 ),
                               );
@@ -1531,13 +1534,13 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Annuler'),
+              child: Text('common.cancel'.tr()),
             ),
             FilledButton(
               onPressed: uploadingImage
                   ? null
                   : () => Navigator.pop(dialogContext, true),
-              child: const Text('Enregistrer'),
+              child: Text('common.save'.tr()),
             ),
           ],
         ),
@@ -1548,8 +1551,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     final name = _categoryNameCtrl.text.trim();
     if (name.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Le nom de catégorie est requis'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('boutique.category_name_required'.tr()),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -1570,8 +1573,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(result != null
-            ? 'Catégorie enregistrée'
-            : pp.error ?? 'Erreur catégorie'),
+            ? 'boutique.updated'.tr()
+            : pp.error ?? 'common.error'.tr()),
         backgroundColor: result != null ? AppColors.success : AppColors.danger,
       ));
     }
@@ -1582,16 +1585,16 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer la catégorie ?'),
-        content: Text('La catégorie "${category.name}" sera supprimée.'),
+        title: Text('common.delete'.tr()),
+        content: Text('common.delete_confirm'.tr(args: [category.name])),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
+            child: Text('common.cancel'.tr()),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Supprimer'),
+            child: Text('common.delete'.tr()),
           ),
         ],
       ),
@@ -1600,7 +1603,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     final success = await pp.deleteCategory(category.id);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success ? 'Catégorie supprimée' : pp.error ?? 'Erreur'),
+        content: Text(success ? 'boutique.updated'.tr() : pp.error ?? 'common.error'.tr()),
         backgroundColor: success ? AppColors.success : AppColors.danger,
       ));
     }
@@ -1616,7 +1619,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(success ? 'Logo mis à jour' : 'Erreur upload'),
+          content: Text(success ? 'boutique.updated'.tr() : 'common.error'.tr()),
           backgroundColor: success ? AppColors.success : AppColors.danger));
     }
     setState(() => _uploadingLogo = false);
@@ -1681,12 +1684,12 @@ class _CategoryRow extends StatelessWidget {
           ),
           Text('#${category.sortOrder}', style: AppTypography.caption),
           IconButton(
-            tooltip: 'Modifier',
+            tooltip: 'common.edit'.tr(),
             icon: const Icon(Icons.edit_outlined, size: 20),
             onPressed: onEdit,
           ),
           IconButton(
-            tooltip: 'Supprimer',
+            tooltip: 'common.delete'.tr(),
             icon: const Icon(Icons.delete_outline,
                 color: AppColors.danger, size: 20),
             onPressed: onDelete,
@@ -1979,7 +1982,7 @@ class _ColorPickerField extends StatelessWidget {
                       onChanged(picked);
                       Navigator.pop(ctx);
                     },
-                    child: const Text('OK'),
+                      child: Text('common.confirm'.tr()),
                   ),
                 ],
               ),
@@ -2003,8 +2006,9 @@ class _ColorPickerField extends StatelessWidget {
 // ============ CODE EDITOR FIELD ============
 class _CodeEditorField extends StatelessWidget {
   final String label;
+  final String? hintText;
   final TextEditingController? controller;
-  const _CodeEditorField({required this.label, this.controller});
+  const _CodeEditorField({required this.label, this.hintText, this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -2023,8 +2027,7 @@ class _CodeEditorField extends StatelessWidget {
           style: const TextStyle(
               fontFamily: 'monospace', fontSize: 13, color: Color(0xFF1E1E1E)),
           decoration: InputDecoration(
-            hintText:
-                label == 'JavaScript' ? '// JS ici...' : '/* CSS ici... */',
+            hintText: hintText ?? '// code here...'.tr(),
             filled: true,
             fillColor: const Color(0xFF282A36),
             contentPadding: const EdgeInsets.all(12),

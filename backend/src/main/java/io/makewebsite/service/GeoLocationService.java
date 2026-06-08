@@ -2,14 +2,13 @@ package io.makewebsite.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.makewebsite.util.NetworkUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -19,9 +18,6 @@ public class GeoLocationService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${app.geo.localhost-fallback:true}")
-    private boolean localhostFallbackEnabled;
 
     public record GeoData(String country, String city, String region,
                           Double latitude, Double longitude) {}
@@ -50,13 +46,25 @@ public class GeoLocationService {
             if (city == null) city = address != null ? safeText(address.get("municipality")) : null;
             String region = address != null ? safeText(address.get("state")) : null;
             String displayName = safeText(node.get("display_name"));
-            log.info("Reverse geocode lat={} lng={} → country={} city={} region={}",
+            log.info("Reverse geocode lat={} lng={} \u2192 country={} city={} region={}",
                     latitude, longitude, country, city, region);
             return Optional.of(new ReverseGeoData(country, city, region, displayName));
         } catch (Exception e) {
             log.warn("Reverse geocode failed for {}/{}: {}", latitude, longitude, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private static final String DEV_COUNTRY = "Tunisie";
+    private static final String DEV_CITY = "Sousse";
+
+    /**
+     * Detects localhost and private network IPs that cannot be geolocated.
+     * This is a development-only helper so the traffic dashboard shows
+     * meaningful data (Tunisie / Sousse) instead of "Inconnu".
+     */
+    private boolean isLocalIp(String ip) {
+        return NetworkUtils.isPrivateIp(ip);
     }
 
     private String safeText(JsonNode node) {
@@ -66,45 +74,33 @@ public class GeoLocationService {
     @Cacheable(value = "geoLocation", key = "#ip")
     public Optional<GeoData> locate(String ip) {
         if (ip == null || ip.isBlank()) return Optional.empty();
-        // Private/local IPs — return localhost placeholder for development
-        if (localhostFallbackEnabled && isPrivateIp(ip)) {
-            log.debug("Local/dev IP {}, returning default geo (Sousse, Tunisia)", ip);
-            return Optional.of(new GeoData("Tunisie", "Sousse", "Sousse", 35.8256, 10.63699));
+        // Development-only fallback: private/local IPs cannot be geolocated,
+        // so assign a default location so the traffic dashboard shows meaningful data.
+        if (isLocalIp(ip)) {
+            log.debug("Private IP {} detected — assigning development fallback: Tunisie/Sousse", ip);
+            return Optional.of(new GeoData(DEV_COUNTRY, DEV_CITY, null, null, null));
         }
         try {
             String json = restTemplate.getForObject("http://ip-api.com/json/" + ip + "?fields=country,city,regionName,lat,lon,status", String.class);
-            if (json == null) return Optional.empty();
+            if (json == null) return Optional.of(new GeoData("Inconnu", "Inconnu", null, null, null));
             JsonNode node = objectMapper.readTree(json);
-            if (!"success".equals(node.get("status").asText())) return Optional.empty();
+            if (!"success".equals(node.get("status").asText())) {
+                return Optional.of(new GeoData("Inconnu", "Inconnu", null, null, null));
+            }
+            String country = node.has("country") ? node.get("country").asText() : "Inconnu";
+            String city = node.has("city") ? node.get("city").asText() : "Inconnu";
+            if (country == null || country.isBlank() || "null".equalsIgnoreCase(country)) country = "Inconnu";
+            if (city == null || city.isBlank() || "null".equalsIgnoreCase(city)) city = "Inconnu";
             return Optional.of(new GeoData(
-                    node.get("country").asText(),
-                    node.get("city").asText(),
-                    node.get("regionName").asText(),
-                    node.get("lat").asDouble(),
-                    node.get("lon").asDouble()
+                    country,
+                    city,
+                    node.has("regionName") ? node.get("regionName").asText() : null,
+                    node.has("lat") ? node.get("lat").asDouble() : null,
+                    node.has("lon") ? node.get("lon").asDouble() : null
             ));
         } catch (Exception e) {
             log.warn("GeoIP lookup failed for {}: {}", ip, e.getMessage());
-            return Optional.empty();
+            return Optional.of(new GeoData("Inconnu", "Inconnu", null, null, null));
         }
-    }
-
-    private boolean isPrivateIp(String ip) {
-        if (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("127.")
-                || "::1".equals(ip) || "localhost".equalsIgnoreCase(ip)) {
-            return true;
-        }
-        if (ip.startsWith("172.") && ip.length() > 5) {
-            try {
-                int dot = ip.indexOf('.', 4);
-                if (dot > 0) {
-                    int second = Integer.parseInt(ip.substring(4, dot));
-                    return second >= 16 && second <= 31;
-                }
-            } catch (Exception e) {
-                return false;
-            }
-        }
-        return false;
     }
 }

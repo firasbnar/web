@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
@@ -54,13 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final errorMessage = provider.error ?? 'Email ou mot de passe incorrect';
+    final errorMessage = provider.error ?? 'auth.invalid_credentials'.tr();
     final lowerMessage = errorMessage.toLowerCase();
     if (lowerMessage.contains('vérifier') || lowerMessage.contains('verifier')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(errorMessage),
         action: SnackBarAction(
-          label: 'Renvoyer',
+          label: 'auth.resend'.tr(),
           onPressed: () {
             context.go('/verify-email', extra: _emailCtrl.text.trim());
           },
@@ -91,35 +92,35 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
                 AppTextField(
                   controller: _emailCtrl,
-                  label: 'Email',
+                  label: 'auth.email'.tr(),
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v == null || v.isEmpty ? 'Email requis' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'auth.email_required'.tr() : null,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _passwordCtrl,
-                  label: 'Mot de passe',
+                  label: 'auth.password'.tr(),
                   prefixIcon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
                   suffix: IconButton(
                     icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
-                  validator: (v) => v == null || v.isEmpty ? 'Mot de passe requis' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'auth.password_required'.tr() : null,
                 ),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => context.push('/forgot-password'),
-                    child: Text('Mot de passe oublié?', style: AppTypography.body2.copyWith(color: AppColors.primary)),
+                    child: Text('auth.forgot_password'.tr(), style: AppTypography.body2.copyWith(color: AppColors.primary)),
                   ),
                 ),
                 const SizedBox(height: 24),
                 Consumer<AuthProvider>(
                   builder: (_, auth, __) => AppButton(
-                    label: 'Se connecter',
+                    label: 'auth.login'.tr(),
                     loading: auth.loading,
                     onPressed: _login,
                   ),
@@ -130,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.login),
-                      label: Text(auth.loading ? 'Connexion...' : 'Continuer avec Google'),
+                      label: Text(auth.loading ? 'auth.login_loading'.tr() : 'auth.continue_with_google'.tr()),
                       onPressed: auth.loading ? null : () async {
                         final ok = await auth.loginWithGoogle();
                         if (ok && mounted) {
@@ -156,12 +157,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
                 TextButton(
                   onPressed: () => context.go('/register'),
-                  child: Text('Créer un compte', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  child: Text('auth.create_account'.tr(), style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(height: 4),
                 TextButton(
                   onPressed: () => context.go('/verify-email'),
-                  child: Text('Vérifier mon email', style: AppTypography.body2.copyWith(color: AppColors.primary)),
+                  child: Text('auth.verify_email'.tr(), style: AppTypography.body2.copyWith(color: AppColors.primary)),
                 ),
               ],
             ),

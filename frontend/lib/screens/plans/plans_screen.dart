@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../core/api_client.dart';
@@ -48,7 +49,7 @@ class _PlansScreenState extends State<PlansScreen> {
       await _api.post('/subscriptions/subscribe', data: {'planId': planId, 'paymentMethod': 'BANK'});
       if (mounted) {
         context.read<AuthProvider>().setSubscriptionActive(true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abonnement activé!')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('subscription.plan_changed'.tr())));
         final bp = context.read<BoutiqueProvider>();
         await bp.loadBoutiques();
         if (mounted) {
@@ -64,7 +65,7 @@ class _PlansScreenState extends State<PlansScreen> {
         }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${'common.error'.tr()}: $e')));
     }
   }
 
@@ -85,10 +86,10 @@ class _PlansScreenState extends State<PlansScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Abonnement', style: AppTypography.heading2.copyWith(color: Colors.white)),
+                    Text('plans.title'.tr(), style: AppTypography.heading2.copyWith(color: Colors.white)),
                     const SizedBox(height: 4),
                     Text(
-                      _subscription != null ? 'Plan ${_subscription!['planName'] ?? "Gratuit"}' : 'Choisissez votre plan',
+                      _subscription != null ? '${'plans.current'.tr()}: ${_subscription!['planName'] ?? 'plans.free'.tr()}' : 'plans.select'.tr(),
                       style: AppTypography.body1.copyWith(color: Colors.white70),
                     ),
                   ],
@@ -115,10 +116,10 @@ class _PlansScreenState extends State<PlansScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Abonnement actuel', style: AppTypography.heading4),
+                          Text('plans.current_plan'.tr(), style: AppTypography.heading4),
                           const SizedBox(height: 8),
-                          Text('Plan: ${_subscription!['planName'] ?? "Gratuit"}', style: AppTypography.body2),
-                          if (_subscription!['expiresAt'] != null) Text('Expire le: ${_subscription!['expiresAt']}', style: AppTypography.caption),
+                          Text('${'plans.current'.tr()}: ${_subscription!['planName'] ?? 'plans.free'.tr()}', style: AppTypography.body2),
+                          if (_subscription!['expiresAt'] != null) Text('${'subscription.expires'.tr()}: ${_subscription!['expiresAt']}', style: AppTypography.caption),
                           const SizedBox(height: 8),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(100),
@@ -175,14 +176,14 @@ class _PlansScreenState extends State<PlansScreen> {
                     color: AppColors.primarySurface,
                     borderRadius: BorderRadius.circular(100),
                   ),
-                  child: const Text('Économisez 15%', style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  child: Text('subscription.save_with_yearly'.tr(), style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
                 ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('${price.toStringAsFixed(2)} TND${days > 0 ? " / $days jours" : ""}', style: AppTypography.heading2.copyWith(color: AppColors.primary)),
+          Text('${price.toStringAsFixed(2)} TND${days > 0 ? " / $days ${'plans.monthly'.tr().toLowerCase()}" : ""}', style: AppTypography.heading2.copyWith(color: AppColors.primary)),
           const SizedBox(height: 4),
-          Text('Jusqu\'à $maxProducts produits', style: AppTypography.caption),
+          Text('plans.products_limit'.tr(args: [maxProducts.toString()]), style: AppTypography.caption),
           const SizedBox(height: 16),
           if (features.isNotEmpty) ...[
             ...features.replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').split(',').map((f) => Padding(
@@ -207,7 +208,7 @@ class _PlansScreenState extends State<PlansScreen> {
                 side: isCurrentPlan ? const BorderSide(color: AppColors.border) : null,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
               ),
-              child: Text(isCurrentPlan ? 'Plan actuel' : 'Choisir ce plan'),
+              child: Text(isCurrentPlan ? 'plans.current_plan'.tr() : 'plans.select'.tr()),
             ),
           ),
         ],

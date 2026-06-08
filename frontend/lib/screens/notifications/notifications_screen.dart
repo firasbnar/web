@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../widgets/empty_state.dart';
 import '../../providers/notifications_provider.dart';
 
@@ -22,7 +24,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   String _timeAgo(String? dateStr) {
     if (dateStr == null) return '';
-    return 'Récemment';
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return '';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'notifications.just_now'.tr();
+    if (diff.inMinutes < 60) return 'notifications.minutes_ago'.tr(args: [diff.inMinutes.toString()]);
+    if (diff.inHours < 24) return 'notifications.hours_ago'.tr(args: [diff.inHours.toString()]);
+    return 'notifications.days_ago'.tr(args: [diff.inDays.toString()]);
   }
 
   @override
@@ -30,11 +38,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Notifications'),
+        leading: const AppBackArrow(),
+        title: Text('notifications.title'.tr()),
         actions: [
           TextButton(
             onPressed: () => context.read<NotificationsProvider>().markAllAsRead(),
-            child: const Text('Tout marquer lu'),
+            child: Text('notifications.mark_all_read'.tr()),
           ),
         ],
       ),
@@ -42,10 +51,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         builder: (_, np, __) {
           if (np.loading) return const Center(child: CircularProgressIndicator());
           if (np.notifications.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
             icon: Icons.notifications_none,
-            title: 'Aucune notification',
-            subtitle: 'Vous recevrez des notifications ici',
+            title: 'notifications.empty_title'.tr(),
+            subtitle: 'notifications.empty_body'.tr(),
           );
           }
           return RefreshIndicator(

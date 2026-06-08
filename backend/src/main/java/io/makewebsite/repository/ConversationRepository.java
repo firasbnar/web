@@ -14,4 +14,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, UUID
     List<Conversation> findByBoutiqueIdOrderByLastMessageAtDesc(UUID boutiqueId);
 
     Optional<Conversation> findByBoutiqueIdAndCustomerEmail(UUID boutiqueId, String customerEmail);
+
+    Optional<Conversation> findByGuestToken(String guestToken);
+
+    Optional<Conversation> findByIdAndGuestToken(UUID id, String guestToken);
 }

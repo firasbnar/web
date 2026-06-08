@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
@@ -33,17 +34,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> _submit() async {
     final token = widget.token;
     if (token == null || token.isEmpty) {
-      setState(() => _error = 'Lien de réinitialisation invalide');
+      setState(() => _error = 'errors.bad_request'.tr());
       return;
     }
     final password = _passwordCtrl.text;
     final confirm = _confirmCtrl.text;
     if (password.length < 8) {
-      setState(() => _error = 'Le mot de passe doit contenir au moins 8 caractères');
+      setState(() => _error = 'auth.password_min_length'.tr());
       return;
     }
     if (password != confirm) {
-      setState(() => _error = 'Les mots de passe ne correspondent pas');
+      setState(() => _error = 'auth.password_mismatch'.tr());
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -63,7 +64,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Nouveau mot de passe'),
+        title: Text('auth.reset_password_title'.tr()),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -78,10 +79,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               const SizedBox(height: 40),
               Icon(Icons.lock_outline, size: 56, color: AppColors.primary.withAlpha(180)),
               const SizedBox(height: 20),
-              Text('Choisir un mot de passe', style: AppTypography.heading1),
+              Text('auth.reset_password'.tr(), style: AppTypography.heading1),
               const SizedBox(height: 8),
               Text(
-                'Votre nouveau mot de passe doit contenir au moins 8 caractères.',
+                'auth.reset_password_hint'.tr(),
                 style: AppTypography.body2.copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 32),
@@ -99,13 +100,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       const Icon(Icons.check_circle_outline, size: 48, color: AppColors.success),
                       const SizedBox(height: 12),
                       Text(
-                        'Mot de passe réinitialisé avec succès !',
+                        'auth.reset_password_success'.tr(),
                         style: AppTypography.body1.copyWith(color: AppColors.textPrimary),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.',
+                        'auth.login'.tr(),
                         style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                         textAlign: TextAlign.center,
                       ),
@@ -114,13 +115,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
                 const SizedBox(height: 24),
                 AppButton(
-                  label: 'Se connecter',
+                  label: 'auth.login'.tr(),
                   onPressed: () => context.go('/login'),
                 ),
               ] else ...[
                 AppTextField(
                   controller: _passwordCtrl,
-                  label: 'Nouveau mot de passe',
+                  label: 'auth.new_password'.tr(),
                   prefixIcon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
                   suffix: IconButton(
@@ -131,7 +132,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _confirmCtrl,
-                  label: 'Confirmer le mot de passe',
+                  label: 'auth.confirm_password'.tr(),
                   prefixIcon: Icons.lock_outlined,
                   obscureText: _obscureConfirm,
                   suffix: IconButton(
@@ -146,7 +147,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ],
                 const SizedBox(height: 24),
                 AppButton(
-                  label: 'Réinitialiser',
+                  label: 'auth.reset_password'.tr(),
                   loading: _loading,
                   onPressed: _submit,
                   icon: Icons.lock_open,

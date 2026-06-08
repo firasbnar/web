@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -51,7 +52,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
         _loadReviews();
       }
     } catch (e) {
-      if (mounted) setState(() { _error = 'Produit introuvable'; _loading = false; });
+      if (mounted) setState(() { _error = 'public_store.product_not_found'.tr(); _loading = false; });
     }
   }
 
@@ -87,9 +88,9 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Text('Donner votre avis', style: AppTypography.heading4)),
+              Center(child: Text('public_store.write_review'.tr(), style: AppTypography.heading4)),
               const SizedBox(height: 20),
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Votre nom *', border: OutlineInputBorder())),
+              TextField(controller: nameCtrl, decoration: InputDecoration(labelText: 'public_store.your_name'.tr(), border: const OutlineInputBorder())),
               const SizedBox(height: 16),
               Center(
                 child: Row(
@@ -101,11 +102,11 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TextField(controller: commentCtrl, decoration: const InputDecoration(labelText: 'Votre commentaire', border: OutlineInputBorder()), maxLines: 3),
+              TextField(controller: commentCtrl, decoration: InputDecoration(labelText: 'public_store.your_comment'.tr(), border: const OutlineInputBorder()), maxLines: 3),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: AppButton(label: 'Envoyer', onPressed: () async {
+                child: AppButton(label: 'public_store.submit_review'.tr(), onPressed: () async {
                   if (nameCtrl.text.trim().isEmpty) return;
                   try {
                     final res = await _api.post('/products/${widget.productId}/reviews', data: {
@@ -118,7 +119,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                       setState(() => _reviewSubmitted = true);
                       _loadReviews();
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(res['message'] ?? 'Merci pour votre avis !'),
+                        content: Text(res['message'] ?? 'public_store.review_thanks'.tr()),
                         backgroundColor: AppColors.success,
                         duration: const Duration(seconds: 4),
                       ));
@@ -136,14 +137,14 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                 width: double.infinity,
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Annuler'),
+                  child: Text('common.cancel'.tr()),
                 ),
-              ),
-            ],
-          ),
-        )),
-      ),
-    );
+                ),
+              ],
+            ),
+          )),
+        ),
+      );
     if (saved == true) {
       if (mounted) setState(() => _reviewSubmitted = true);
     }
@@ -158,7 +159,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
           children: [
             Row(
               children: [
-                Text('Avis', style: AppTypography.heading4),
+                Text('public_store.reviews'.tr(), style: AppTypography.heading4),
                 if (_totalReviews > 0) ...[
                   const SizedBox(width: 8),
                   Row(
@@ -175,7 +176,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
             ),
             TextButton.icon(
               icon: const Icon(Icons.edit, size: 16),
-              label: const Text('Écrire'),
+              label: Text('public_store.write_review'.tr()),
               onPressed: _showReviewDialog,
             ),
           ],
@@ -197,7 +198,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Votre avis a été soumis et sera visible après validation par le marchand.',
+                    'public_store.review_submitted'.tr(),
                     style: AppTypography.body2.copyWith(color: AppColors.success),
                   ),
                 ),
@@ -219,7 +220,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
               children: [
                 const Icon(Icons.rate_review_outlined, size: 48, color: AppColors.textHint),
                 const SizedBox(height: 12),
-                Text('Soyez le premier à donner votre avis', style: AppTypography.body2),
+                Text('public_store.no_reviews'.tr(), style: AppTypography.body2),
               ],
             ),
           )
@@ -312,13 +313,13 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     final sizes = _getSizes(_product!);
     if (colors.isNotEmpty && _selectedColor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez choisir une couleur.'), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text('public_store.select_color'.tr()), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
       );
       return;
     }
     if (sizes.isNotEmpty && _selectedSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez choisir une taille.'), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text('public_store.select_size'.tr()), backgroundColor: AppColors.danger, behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -337,7 +338,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
       selectedSize: _selectedSize,
     ));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$_quantity x ${p['name']} ajouté au panier'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
+      SnackBar(content: Text('$_quantity x ${p['name']} ${'public_store.added_to_cart'.tr()}'), backgroundColor: AppColors.success, behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -346,8 +347,8 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     if (_loading) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
     if (_error != null || _product == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Produit')),
-        body: Center(child: Text(_error ?? 'Produit introuvable', style: AppTypography.body1)),
+        appBar: AppBar(title: Text('public_store.product'.tr())),
+        body: Center(child: Text(_error ?? 'public_store.product_not_found'.tr(), style: AppTypography.body1)),
       );
     }
     final p = _product!;
@@ -442,7 +443,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                   _stockBadge(stock, stockStatus),
                   if (colors.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    Text('Couleurs', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                    Text('public_store.color'.tr(), style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -455,7 +456,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                   ],
                   if (sizes.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Text('Tailles', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+                    Text('public_store.size'.tr(), style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -468,13 +469,13 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                   ],
                   if (description != null && description.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    Text('Description', style: AppTypography.heading4),
+                    Text('public_store.description'.tr(), style: AppTypography.heading4),
                     const SizedBox(height: 8),
                     Text(description, style: AppTypography.body2),
                   ],
                   if (!outOfStock) ...[
                     const SizedBox(height: 24),
-                    Text('Quantité', style: AppTypography.body2),
+                    Text('public_store.quantity'.tr(), style: AppTypography.body2),
                     const SizedBox(height: 8),
                     Container(
                       decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(12)),
@@ -499,7 +500,7 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       ),
                       onPressed: outOfStock ? null : _addToCart,
-                      child: Text(outOfStock ? 'Produit indisponible' : 'Ajouter au panier', style: AppTypography.button),
+                      child: Text(outOfStock ? 'public_store.out_of_stock'.tr() : 'public_store.add_to_cart'.tr(), style: AppTypography.button),
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -518,11 +519,11 @@ class _PublicProductDetailScreenState extends State<PublicProductDetailScreen> {
     Color color;
     String text;
     if (status == 'OUT_OF_STOCK' || stock <= 0) {
-      color = AppColors.danger; text = 'Rupture de stock';
+      color = AppColors.danger; text = 'public_store.out_of_stock'.tr();
     } else if (status == 'LOW_STOCK' || stock <= 5) {
-      color = AppColors.warning; text = 'Plus que $stock en stock';
+      color = AppColors.warning; text = 'public_store.low_stock'.tr(args: [stock.toString()]);
     } else {
-      color = AppColors.success; text = '$stock en stock';
+      color = AppColors.success; text = 'public_store.in_stock'.tr(args: [stock.toString()]);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

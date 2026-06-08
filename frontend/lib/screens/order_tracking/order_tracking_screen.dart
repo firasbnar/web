@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../providers/orders_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/loading_skeleton.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
   final String orderId;
@@ -15,10 +17,10 @@ class OrderTrackingScreen extends StatefulWidget {
 
 class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   final List<_TimelineStep> _steps = [
-    _TimelineStep('Commande passée', 'Votre commande a été enregistrée', 'PENDING', Icons.receipt_long, 0),
-    _TimelineStep('Confirmée', 'Le vendeur a confirmé votre commande', 'CONFIRMED', Icons.check_circle_outline, 1),
-    _TimelineStep('Expédiée', 'Votre colis est en route', 'SHIPPED', Icons.local_shipping, 2),
-    _TimelineStep('Livrée', 'Colis livré avec succès', 'DELIVERED', Icons.check_circle, 3),
+    _TimelineStep('orders.order_placed', 'orders.order_placed_subtitle', 'PENDING', Icons.receipt_long, 0),
+    _TimelineStep('orders.status_processing', 'orders.confirmed_subtitle', 'CONFIRMED', Icons.check_circle_outline, 1),
+    _TimelineStep('orders.status_shipped', 'orders.shipped_subtitle', 'SHIPPED', Icons.local_shipping, 2),
+    _TimelineStep('orders.status_delivered', 'orders.delivered_subtitle', 'DELIVERED', Icons.check_circle, 3),
   ];
 
   int _statusIndex(String status) {
@@ -44,12 +46,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Suivi de commande')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('orders.tracking'.tr())),
       body: Consumer<OrdersProvider>(
         builder: (_, op, __) {
           if (op.loading && op.selectedOrder == null) return const LoadingSkeleton();
           final o = op.selectedOrder;
-          if (o == null) return const Center(child: Text('Commande non trouvée'));
+          if (o == null) return Center(child: Text('orders.no_orders'.tr()));
 
           final idx = _statusIndex(o.status);
           final cancelled = o.status == 'CANCELLED';
@@ -75,7 +77,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         children: [
                           const Icon(Icons.shopping_bag, color: Colors.white70, size: 16),
                           const SizedBox(width: 6),
-                          Text('${o.items.length} article(s)', style: AppTypography.body2.copyWith(color: Colors.white70)),
+                          Text('${o.items.length} ${'orders.order_items'.tr()}', style: AppTypography.body2.copyWith(color: Colors.white70)),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -97,7 +99,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     children: [
                       Row(
                         children: [
-                          Text('Statut: ', style: AppTypography.body2),
+                          Text('${'orders.order_status'.tr()}: ', style: AppTypography.body2),
                           StatusChip(status: o.status),
                         ],
                       ),
@@ -113,7 +115,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                             children: [
                               const Icon(Icons.cancel, color: AppColors.danger, size: 20),
                               const SizedBox(width: 8),
-                              Expanded(child: Text('Cette commande a été annulée', style: AppTypography.caption.copyWith(color: AppColors.danger))),
+                              Expanded(child: Text('orders.status_cancelled'.tr(), style: AppTypography.caption.copyWith(color: AppColors.danger))),
                             ],
                           ),
                         ),
@@ -123,7 +125,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                 ),
                 if (!cancelled) ...[
                   const SizedBox(height: 24),
-                  Text('Suivi', style: AppTypography.heading4),
+                  Text('orders.tracking'.tr(), style: AppTypography.heading4),
                   const SizedBox(height: 16),
                   ...List.generate(_steps.length, (i) {
                     final step = _steps[i];
@@ -158,12 +160,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(step.title, style: AppTypography.body2.copyWith(
+                                Text(step.title.tr(), style: AppTypography.body2.copyWith(
                                   fontWeight: active ? FontWeight.w600 : FontWeight.normal,
                                   color: active ? AppColors.textPrimary : AppColors.textSecondary,
                                 )),
                                 const SizedBox(height: 2),
-                                Text(step.subtitle, style: AppTypography.caption.copyWith(
+                                Text(step.subtitle.tr(), style: AppTypography.caption.copyWith(
                                   color: active ? AppColors.textSecondary : AppColors.textSecondary.withValues(alpha: 0.6),
                                 )),
                               ],
@@ -187,11 +189,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Transporteur', style: AppTypography.heading4),
+                        Text('delivery.delivery_company'.tr(), style: AppTypography.heading4),
                         const SizedBox(height: 8),
-                        Text(o.deliveryCompany ?? 'Non spécifié', style: AppTypography.body2),
+                        Text(o.deliveryCompany ?? 'delivery.delivery_company'.tr(), style: AppTypography.body2),
                         const SizedBox(height: 4),
-                        Text('Numéro de suivi: ${o.trackingNumber}', style: AppTypography.caption.copyWith(color: AppColors.primary)),
+                        Text('${'orders.tracking_number'.tr()}: ${o.trackingNumber}', style: AppTypography.caption.copyWith(color: AppColors.primary)),
                       ],
                     ),
                   ),

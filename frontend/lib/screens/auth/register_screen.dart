@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -44,8 +45,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (mounted) {
       if (ok) {
         if (auth.emailVerificationRequired) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Compte créé. Vérifiez votre email.'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('register.verification_sent'.tr()),
             backgroundColor: AppColors.success,
           ));
           context.go('/verify-email', extra: _emailCtrl.text.trim().toLowerCase());
@@ -54,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(auth.error ?? 'Impossible de créer le compte'),
+          content: Text(auth.error ?? 'common.operation_failed'.tr()),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -75,30 +76,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 40),
                 const Icon(Icons.store, size: 60, color: AppColors.primary),
                 const SizedBox(height: 16),
-                Text('Créer un compte', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
+                Text('register.title'.tr(), style: AppTypography.heading1.copyWith(color: AppColors.primary)),
                 const SizedBox(height: 40),
                 AppTextField(
                   controller: _nameCtrl,
-                  label: 'Nom complet',
+                  label: 'register.full_name'.tr(),
                   prefixIcon: Icons.person_outlined,
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Nom requis' : null,
+                  validator: (v) => v == null || v.trim().isEmpty ? 'auth.full_name_required'.tr() : null,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _emailCtrl,
-                  label: 'Email',
+                  label: 'register.email'.tr(),
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email requis';
-                    if (!v.contains('@')) return 'Email invalide';
+                    if (v == null || v.trim().isEmpty) return 'auth.email_required'.tr();
+                    if (!v.contains('@')) return 'auth.email_invalid'.tr();
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _passwordCtrl,
-                  label: 'Mot de passe',
+                  label: 'register.password'.tr(),
                   prefixIcon: Icons.lock_outlined,
                   obscureText: _obscurePassword,
                   suffix: IconButton(
@@ -106,14 +107,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                   validator: (v) {
-                    if (v == null || v.length < 8) return 'Minimum 8 caractères';
+                    if (v == null || v.length < 8) return 'auth.password_min_length'.tr();
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _confirmCtrl,
-                  label: 'Confirmer le mot de passe',
+                  label: 'register.confirm_password'.tr(),
                   prefixIcon: Icons.lock_outlined,
                   obscureText: _obscureConfirm,
                   suffix: IconButton(
@@ -121,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                   validator: (v) {
-                    if (v != _passwordCtrl.text) return 'Les mots de passe ne correspondent pas';
+                    if (v != _passwordCtrl.text) return 'auth.password_mismatch'.tr();
                     return null;
                   },
                   onSubmitted: (_) => _register(),
@@ -141,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 Consumer<AuthProvider>(
                   builder: (_, auth, __) => AppButton(
-                    label: 'Créer un compte',
+                    label: 'register.submit'.tr(),
                     loading: auth.loading,
                     onPressed: _register,
                     icon: Icons.person_add,
@@ -151,7 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextButton(
                   onPressed: () => context.go('/login'),
                   child: Text(
-                    'Vous avez déjà un compte ? Connexion',
+                    'auth.already_have_account'.tr(),
                     style: AppTypography.body2.copyWith(color: AppColors.primary),
                   ),
                 ),

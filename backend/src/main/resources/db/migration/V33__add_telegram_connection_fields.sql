@@ -1,0 +1,3 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_connected BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_connection_code VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_connection_code_expires_at TIMESTAMP;

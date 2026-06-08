@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
@@ -42,9 +43,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 child: const Icon(Icons.store, size: 60, color: Colors.white),
               ),
               const SizedBox(height: 20),
-              Text('MakeWebsite', style: AppTypography.heading1.copyWith(color: Colors.white)),
+              Text('app_name'.tr(), style: AppTypography.heading1.copyWith(color: Colors.white)),
               const SizedBox(height: 8),
-              Text('Votre boutique en ligne', style: AppTypography.body1.copyWith(color: Colors.white70)),
+              Text('splash.subtitle'.tr(), style: AppTypography.body1.copyWith(color: Colors.white70)),
               const SizedBox(height: 40),
               const CircularProgressIndicator(color: Colors.white),
             ],

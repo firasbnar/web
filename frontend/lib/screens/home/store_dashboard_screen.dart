@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +12,8 @@ import '../../providers/boutique_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../providers/reviews_provider.dart';
+import '../../providers/messages_provider.dart';
+import '../../providers/websocket_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
 import 'package:shimmer/shimmer.dart';
@@ -70,6 +73,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       context.read<NotificationsProvider>().loadUnreadCount();
       context.read<ReviewsProvider>().loadPendingCount(bp.activeBoutique!.id);
       bp.loadStats();
+      // Connect WebSocket for real-time updates
+      context.read<WebSocketProvider>().connect(
+        bp.activeBoutique!.id,
+        context.read<MessagesProvider>(),
+      );
     }
     developer.log('[DASHBOARD] loadData end active=${bp.activeBoutiqueId} loading=false hasDashboard=${_dashboardData != null}');
     if (mounted) setState(() => _loadingDashboard = false);
@@ -103,7 +111,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               ),
             ),
             title: Consumer<BoutiqueProvider>(
-              builder: (_, bp, __) => Text(bp.activeBoutique?.name ?? 'MakeWebsite', style: AppTypography.heading4),
+              builder: (_, bp, __) => Text(bp.activeBoutique?.name ?? 'app_name'.tr(), style: AppTypography.heading4),
             ),
             actions: [
               Consumer<NotificationsProvider>(
@@ -156,13 +164,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('Boutique gelée',
+                                        Text('dashboard.frozen_store'.tr(),
                                           style: AppTypography.body2.copyWith(
                                             fontWeight: FontWeight.w600,
                                             color: Colors.orange.shade900)),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Votre boutique est gelée. Vous pouvez consulter vos données, mais les ventes sont désactivées.',
+                                          'dashboard.frozen_store_desc'.tr(),
                                           style: AppTypography.caption.copyWith(color: Colors.orange.shade800)),
                                       ],
                                     ),
@@ -224,19 +232,19 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     switch (pubStatus) {
       case 'FROZEN':
         statusColor = Colors.lightBlue;
-        statusLabel = 'GELÉE';
+        statusLabel = 'dashboard.status_frozen'.tr();
         statusIcon = Icons.ac_unit;
       case 'SUSPENDED':
         statusColor = AppColors.danger;
-        statusLabel = 'SUSPENDUE';
+        statusLabel = 'dashboard.status_suspended'.tr();
         statusIcon = Icons.block;
       case 'DRAFT':
         statusColor = Colors.orange;
-        statusLabel = 'BROUILLON';
+        statusLabel = 'products.draft'.tr();
         statusIcon = Icons.edit_note;
       default:
         statusColor = AppColors.success;
-        statusLabel = 'PUBLIÉE';
+        statusLabel = 'products.published'.tr();
         statusIcon = Icons.check_circle;
     }
 
@@ -256,7 +264,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             children: [
               Icon(Icons.public, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              Text('Lien public de votre boutique', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
+              Text('dashboard.public_url'.tr(), style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -280,7 +288,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             onTap: () {
               Clipboard.setData(ClipboardData(text: absUrl));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('URL copiée !'), behavior: SnackBarBehavior.floating));
+                SnackBar(content: Text('dashboard.url_copied'.tr()), behavior: SnackBarBehavior.floating));
             },
             child: Container(
               width: double.infinity,
@@ -307,28 +315,28 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             runSpacing: 8,
             children: [
               if (pubStatus == 'DRAFT')
-                _smallBtn(Icons.publish, 'Publier', AppColors.primary, () async {
+                _smallBtn(Icons.publish, 'dashboard.publish'.tr(), AppColors.primary, () async {
                   final ok = await context.read<BoutiqueProvider>().publishBoutique();
                   if (mounted && ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Boutique publiée !'), behavior: SnackBarBehavior.floating));
+                      SnackBar(content: Text('dashboard.published'.tr()), behavior: SnackBarBehavior.floating));
                   }
                 })
               else if (pubStatus == 'PUBLISHED')
-                _smallBtn(Icons.unpublished, 'Dépublier', Colors.orange, () async {
+                _smallBtn(Icons.unpublished, 'dashboard.unpublish'.tr(), Colors.orange, () async {
                   final ok = await context.read<BoutiqueProvider>().unpublishBoutique();
                   if (mounted && ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Boutique dépubliée'), behavior: SnackBarBehavior.floating));
+                      SnackBar(content: Text('dashboard.unpublished'.tr()), behavior: SnackBarBehavior.floating));
                   }
                 }),
-              _smallBtn(Icons.open_in_new, 'Ouvrir', AppColors.primary, () async {
+              _smallBtn(Icons.open_in_new, 'dashboard.open'.tr(), AppColors.primary, () async {
                 await launchUrl(Uri.parse(absUrl), mode: LaunchMode.externalApplication);
               }),
-              _smallBtn(Icons.share, 'Partager', AppColors.primary, () {
+              _smallBtn(Icons.share, 'dashboard.share'.tr(), AppColors.primary, () {
                 Clipboard.setData(ClipboardData(text: absUrl));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Lien copié: $absUrl'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
+                  SnackBar(content: Text('dashboard.link_copied'.tr(args: [absUrl])), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
               }),
             ],
           ),
@@ -399,7 +407,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                     borderRadius: BorderRadius.circular(100),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const Text('Ecommerce', style: TextStyle(fontSize: 11, color: AppColors.textHint)),
+                  child: Text('dashboard.category_ecommerce'.tr(), style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
                 ),
               ],
             ),
@@ -441,7 +449,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           children: [
             Icon(Icons.error_outline, size: 18, color: AppColors.danger),
             const SizedBox(width: 8),
-            Flexible(child: Text('Impossible de charger les statistiques',
+            Flexible(child: Text('dashboard.stats_error'.tr(),
                 style: AppTypography.caption.copyWith(color: AppColors.danger))),
           ],
         ),
@@ -468,14 +476,14 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
     if (isUnlimited) {
       daysValue = '∞';
-      planLabel = 'Illimité';
+      planLabel = 'dashboard.unlimited'.tr();
     } else if (isExpired) {
       daysValue = '0';
-      planLabel = 'Expiré';
+      planLabel = 'subscription.expired'.tr();
       daysColor = AppColors.danger;
     } else if (isFree) {
       daysValue = '0';
-      planLabel = 'Gratuit';
+      planLabel = 'plans.free'.tr();
     } else {
       daysValue = '${daysRaw ?? 0}';
       planLabel = plan;
@@ -492,13 +500,13 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       child: IntrinsicHeight(
         child: Row(
           children: [
-            Expanded(child: _statColumn(views, 'Views')),
+            Expanded(child: _statColumn(views, 'dashboard.views'.tr())),
             const VerticalDivider(color: AppColors.border, width: 1),
-            Expanded(child: _statColumn(products, 'Products')),
+            Expanded(child: _statColumn(products, 'nav.products'.tr())),
             const VerticalDivider(color: AppColors.border, width: 1),
             Expanded(
               child: _statColumn(
-                daysValue == '∞' ? '∞' : '$daysValue\njours',
+                daysValue == '∞' ? '∞' : 'dashboard.remaining_days'.tr(args: [daysValue]),
                 planLabel,
                 valueColor: daysColor,
               ),
@@ -532,27 +540,27 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _actionChip(Icons.open_in_new, 'Voir la boutique', true, () {
+          _actionChip(Icons.open_in_new, 'dashboard.view_store'.tr(), true, () {
             final b = bp.activeBoutique;
             if (b != null) context.push('/catalog/${b.id}', extra: {'name': b.name, 'slug': b.slug});
           }),
           const SizedBox(width: 8),
-          _actionChip(Icons.settings, 'Paramètres', false, () => context.go('/boutique-settings')),
+          _actionChip(Icons.settings, 'menu.store_settings'.tr(), false, () => context.go('/boutique-settings')),
           const SizedBox(width: 8),
-          _actionChip(Icons.add, 'Ajouter un produit', false, () => context.push('/products/add'), grey: true),
+          _actionChip(Icons.add, 'products.add_product'.tr(), false, () => context.push('/products/add'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.upload_file, 'Ajouter des produits', false, () {
+          _actionChip(Icons.upload_file, 'products.bulk_add'.tr(), false, () {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Import en masse - à venir'), behavior: SnackBarBehavior.floating));
+              SnackBar(content: Text('dashboard.bulk_import_coming'.tr()), behavior: SnackBarBehavior.floating));
           }, grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.inventory_2_outlined, 'Produits', false, () => context.go('/products'), grey: true),
+          _actionChip(Icons.inventory_2_outlined, 'nav.products'.tr(), false, () => context.go('/products'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.shopping_cart_outlined, 'Commandes', false, () => context.go('/orders'), grey: true),
+          _actionChip(Icons.shopping_cart_outlined, 'nav.orders'.tr(), false, () => context.go('/orders'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.people_outline, 'My Clients', false, () => context.go('/customers'), grey: true),
+          _actionChip(Icons.people_outline, 'menu.customers'.tr(), false, () => context.go('/customers'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.local_shipping_outlined, 'Société de livraison', false, () => context.go('/delivery'), grey: true),
+          _actionChip(Icons.local_shipping_outlined, 'menu.delivery'.tr(), false, () => context.go('/delivery'), grey: true),
         ],
       ),
     );
@@ -565,11 +573,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _actionChip(Icons.bar_chart, 'Traffic', false, () => context.go('/analytics'), grey: true),
+          _actionChip(Icons.bar_chart, 'menu.traffic'.tr(), false, () => context.go('/analytics'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.message_outlined, 'Messages', false, () => context.go('/messages'), grey: true),
+          _actionChip(Icons.message_outlined, 'menu.messages'.tr(), false, () => context.go('/messages'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.group_outlined, 'Équipe', false, () => context.go('/team'), grey: true),
+          _actionChip(Icons.group_outlined, 'menu.team'.tr(), false, () => context.go('/team'), grey: true),
           const SizedBox(width: 8),
           Consumer<ReviewsProvider>(
             builder: (_, rp, __) => GestureDetector(
@@ -587,7 +595,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   children: [
                     const Icon(Icons.star_outline, size: 16, color: AppColors.textPrimary),
                     const SizedBox(width: 6),
-                    const Text('Avis', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                    Text('menu.reviews'.tr(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
                     if (rp.pendingCount > 0) ...[
                       const SizedBox(width: 6),
                       Container(
@@ -605,9 +613,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          _actionChip(Icons.palette_outlined, 'Theme', false, () => context.go('/boutique/theme'), grey: true),
+          _actionChip(Icons.palette_outlined, 'menu.theme'.tr(), false, () => context.go('/boutique/theme'), grey: true),
           const SizedBox(width: 8),
-          _actionChip(Icons.layers_outlined, 'Template', false, () => context.go('/boutique/template'), grey: true),
+          _actionChip(Icons.layers_outlined, 'menu.template'.tr(), false, () => context.go('/boutique/template'), grey: true),
           const SizedBox(width: 12),
           Consumer<BoutiqueProvider>(
             builder: (_, bp, __) {
@@ -615,7 +623,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Client messaging', style: AppTypography.caption),
+                  Text('dashboard.client_messaging'.tr(), style: AppTypography.caption),
                   const SizedBox(width: 4),
                   SizedBox(
                     height: 24,
@@ -631,7 +639,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                                 await bp.saveConfig({'clientMessagingEnabled': v ? 'yes' : 'no'});
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Messaging ${v ? 'activé' : 'désactivé'}'), behavior: SnackBarBehavior.floating));
+                                    SnackBar(content: Text(v ? 'dashboard.messaging_enabled'.tr() : 'dashboard.messaging_disabled'.tr()), behavior: SnackBarBehavior.floating));
                                 }
                               } catch (_) {}
                               if (mounted) setState(() => _togglingMessaging = false);
@@ -681,17 +689,17 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: _bigCTA(Icons.dashboard_outlined, 'Ouvrir mon tableau de bord', const Color(0xFF4040C8), () => context.go('/analytics'))),
+              Expanded(child: _bigCTA(Icons.dashboard_outlined, 'dashboard.open_dashboard'.tr(), const Color(0xFF4040C8), () => context.go('/analytics'))),
               const SizedBox(width: 8),
-              Expanded(child: _bigCTA(Icons.point_of_sale, 'Ouvrir mon point de vente', const Color(0xFF1E7D4E), () => context.go('/pos'))),
+              Expanded(child: _bigCTA(Icons.point_of_sale, 'menu.pos'.tr(), const Color(0xFF1E7D4E), () => context.go('/pos'))),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _bigCTA(Icons.admin_panel_settings_outlined, 'Administration Caisse', const Color(0xFF8B2FC9), () => context.go('/pos/admin'))),
+              Expanded(child: _bigCTA(Icons.admin_panel_settings_outlined, 'menu.pos_admin'.tr(), const Color(0xFF8B2FC9), () => context.go('/pos/admin'))),
               const SizedBox(width: 8),
-              Expanded(child: _bigCTA(Icons.telegram, 'Telegram', const Color(0xFF0098C7), () => context.go('/telegram'))),
+              Expanded(child: _bigCTA(Icons.telegram, 'menu.telegram'.tr(), const Color(0xFF0098C7), () => context.go('/telegram'))),
             ],
           ),
         ],
@@ -734,20 +742,20 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionHeader(
-                title: 'Commandes récentes',
-                actionLabel: 'Voir tout',
+                title: 'dashboard.recent_orders'.tr(),
+                actionLabel: 'common.view_all'.tr(),
                 onAction: () => context.go('/orders'),
               ),
               const SizedBox(height: 8),
               if (op.loading)
                 const LoadingSkeleton(itemCount: 3)
-              else               if (op.orders.isEmpty)
-                const AppCard(
+              else if (op.orders.isEmpty)
+                AppCard(
                   padding: EdgeInsets.zero,
                   child: EmptyState(
                     icon: Icons.receipt_long_outlined,
-                    title: 'Aucune commande',
-                    subtitle: 'Les commandes apparaîtront ici',
+                    title: 'orders.no_orders'.tr(),
+                    subtitle: 'dashboard.orders_will_appear'.tr(),
                   ),
                 )
               else
@@ -764,7 +772,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                             children: [
                               Text(order.orderNumber, style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
                               const SizedBox(height: 2),
-                              Text(order.customerName ?? 'Client inconnu', style: AppTypography.caption),
+                              Text(order.customerName ?? 'orders.unknown_customer'.tr(), style: AppTypography.caption),
                             ],
                           ),
                         ),
@@ -790,7 +798,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(title: 'Stock faible'),
+          SectionHeader(title: 'dashboard.low_stock_alert'.tr()),
           const SizedBox(height: 8),
           SizedBox(
             height: 100,
@@ -820,7 +828,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                           color: AppColors.danger.withAlpha(30),
                           borderRadius: BorderRadius.circular(100),
                         ),
-                        child: Text('Stock: ${item['stock'] ?? 0}',
+                        child: Text('dashboard.stock_label'.tr(args: ['${item['stock'] ?? 0}']),
                             style: const TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.w600)),
                       ),
                     ],

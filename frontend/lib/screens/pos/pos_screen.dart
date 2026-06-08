@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -7,6 +8,7 @@ import '../../widgets/loading_skeleton.dart';
 import '../../providers/pos_provider.dart';
 import '../../providers/products_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -42,14 +44,14 @@ class _PosScreenState extends State<PosScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ouvrir session POS'),
+        title: Text('pos.title'.tr()),
         content: TextField(
           controller: cashCtrl,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Montant caisse (TND)'),
+          decoration: InputDecoration(labelText: 'pos.cash'.tr()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
           ElevatedButton(
             onPressed: () {
               final bp = context.read<BoutiqueProvider>();
@@ -61,7 +63,7 @@ class _PosScreenState extends State<PosScreen> {
               }
               Navigator.pop(ctx);
             },
-            child: const Text('Ouvrir'),
+            child: Text('pos.new_order'.tr()),
           ),
         ],
       ),
@@ -107,11 +109,11 @@ class _PosScreenState extends State<PosScreen> {
           children: [
             const Icon(Icons.check_circle, color: AppColors.success, size: 60),
             const SizedBox(height: 16),
-            Text('Vente confirmée!', style: AppTypography.heading2),
+            Text('pos.sale_completed'.tr(), style: AppTypography.heading2),
             const SizedBox(height: 8),
-            Text('Total: ${(transaction['total'] ?? 0).toStringAsFixed(2)} TND', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
+            Text('${'pos.total'.tr()}: ${(transaction['total'] ?? 0).toStringAsFixed(2)} TND', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
             const SizedBox(height: 20),
-            AppButton(label: 'Nouvelle vente', onPressed: () => Navigator.pop(ctx)),
+            AppButton(label: 'pos.new_order'.tr(), onPressed: () => Navigator.pop(ctx)),
           ],
         ),
       ),
@@ -127,13 +129,14 @@ class _PosScreenState extends State<PosScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Point de vente'),
+        leading: const AppBackArrow(),
+        title: Text('pos.title'.tr()),
         actions: [
           if (!hasSession)
             IconButton(
               icon: const Icon(Icons.play_arrow),
               onPressed: _showOpenSessionDialog,
-              tooltip: 'Ouvrir session',
+              tooltip: 'pos.title'.tr(),
             )
           else
             IconButton(
@@ -143,26 +146,26 @@ class _PosScreenState extends State<PosScreen> {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Fermer session'),
+                    title: Text('pos.title'.tr()),
                     content: TextField(
                       controller: closeCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Clôture caisse (TND)'),
+                      decoration: InputDecoration(labelText: 'pos.cash'.tr()),
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
                       ElevatedButton(
                         onPressed: () {
                           pp.closeSession(pp.activeSession!['id'], double.tryParse(closeCtrl.text) ?? 0);
                           Navigator.pop(ctx);
                         },
-                        child: const Text('Fermer'),
+                        child: Text('common.close'.tr()),
                       ),
                     ],
                   ),
                 );
               },
-              tooltip: 'Fermer session',
+              tooltip: 'common.close'.tr(),
             ),
         ],
       ),
@@ -176,9 +179,9 @@ class _PosScreenState extends State<PosScreen> {
                 children: [
                   const Icon(Icons.circle, size: 8, color: AppColors.success),
                   const SizedBox(width: 8),
-                  Text('Session ouverte', style: AppTypography.caption.copyWith(color: AppColors.success)),
+                  Text('pos.title'.tr(), style: AppTypography.caption.copyWith(color: AppColors.success)),
                   const Spacer(),
-                  Text('${pp.cartItems.length} article(s)', style: AppTypography.caption),
+                  Text('${pp.cartItems.length} ${'pos.quantity'.tr()}', style: AppTypography.caption),
                 ],
               ),
             ),
@@ -195,7 +198,7 @@ class _PosScreenState extends State<PosScreen> {
                     child: TextField(
                       controller: _searchCtrl,
                       decoration: InputDecoration(
-                        hintText: 'Rechercher un produit...',
+                        hintText: 'pos.search'.tr(),
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.shopping_cart),
@@ -267,13 +270,13 @@ class _PosScreenState extends State<PosScreen> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('${pp.cartItems.length} article(s)', style: AppTypography.caption),
+                  Text('${pp.cartItems.length} ${'pos.quantity'.tr()}', style: AppTypography.caption),
                               Text('${pp.cartTotal.toStringAsFixed(2)} TND', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
                             ],
                           ),
                         ),
                         AppButton(
-                          label: 'Voir panier',
+                          label: 'pos.cart'.tr(),
                           fullWidth: false,
                           onPressed: () => setState(() => _showCart = !_showCart),
                         ),
@@ -332,20 +335,24 @@ class _PosScreenState extends State<PosScreen> {
             children: [
               DropdownButtonFormField<String>(
                 initialValue: _paymentMethod,
-                items: ['Cash', 'Carte', 'D17'].map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+                items: [
+                  DropdownMenuItem(value: 'Cash', child: Text('pos.cash'.tr())),
+                  DropdownMenuItem(value: 'Carte', child: Text('pos.card'.tr())),
+                  const DropdownMenuItem(value: 'D17', child: Text('D17')),
+                ],
                 onChanged: (v) => setState(() => _paymentMethod = v ?? 'Cash'),
-                decoration: const InputDecoration(labelText: 'Moyen de paiement'),
+                decoration: InputDecoration(labelText: 'pos.payment_method'.tr()),
               ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total', style: AppTypography.heading3),
+                  Text('pos.total'.tr(), style: AppTypography.heading3),
                   Text('${pp.cartTotal.toStringAsFixed(2)} TND', style: AppTypography.heading2.copyWith(color: AppColors.primary)),
                 ],
               ),
               const SizedBox(height: 16),
-              AppButton(label: 'Confirmer la vente', loading: pp.loading, onPressed: _confirmSale),
+              AppButton(label: 'pos.complete_sale'.tr(), loading: pp.loading, onPressed: _confirmSale),
             ],
           ),
         ),

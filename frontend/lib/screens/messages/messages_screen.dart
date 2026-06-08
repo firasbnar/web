@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/messages_provider.dart';
 
@@ -30,7 +32,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Messages'), centerTitle: true),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('messages.title'.tr()), centerTitle: true),
       body: Consumer<MessagesProvider>(
         builder: (_, mp, __) {
           if (mp.loadingConversations) {
@@ -45,7 +47,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   const SizedBox(height: 16),
                   Text(mp.error!, style: AppTypography.body2, textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, child: const Text('Réessayer')),
+                  ElevatedButton(onPressed: _load, child: Text('common.retry'.tr())),
                 ],
               ),
             );
@@ -57,9 +59,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 children: [
                   Icon(Icons.message_outlined, size: 64, color: AppColors.textHint.withAlpha(60)),
                   const SizedBox(height: 16),
-                  Text('Aucun message', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
+                  Text('messages.no_conversations'.tr(), style: AppTypography.body2.copyWith(color: AppColors.textHint)),
                   const SizedBox(height: 8),
-                  Text('Les messages des clients apparaîtront ici', style: AppTypography.caption),
+                  Text('common.no_data'.tr(), style: AppTypography.caption),
                 ],
               ),
             );

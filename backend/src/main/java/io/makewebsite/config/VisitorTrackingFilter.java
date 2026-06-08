@@ -6,6 +6,7 @@ import io.makewebsite.service.GeoLocationService;
 import io.makewebsite.service.GeoLocationService.GeoData;
 import io.makewebsite.service.TrafficService;
 import io.makewebsite.service.WebSocketService;
+import io.makewebsite.util.NetworkUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,8 +75,11 @@ public class VisitorTrackingFilter extends OncePerRequestFilter {
                 return;
             }
 
+            // Resolve real client IP from headers (X-Forwarded-For, X-Real-IP, etc.)
+            String clientIp = NetworkUtils.resolveClientIp(request);
+
             // Extract visitor info
-            String ipHash = hashIp(request.getRemoteAddr());
+            String ipHash = hashIp(clientIp);
             String userAgent = request.getHeader("User-Agent");
             String referrer = request.getHeader("Referer");
             String deviceType = detectDeviceType(userAgent);
@@ -115,39 +119,42 @@ public class VisitorTrackingFilter extends OncePerRequestFilter {
                 else referralSource = "External";
             }
 
-// Geo-enrichment via ip-api.com
-             String country = null;
-             String city = null;
-             String region = null;
-             Double latitude = null;
-             Double longitude = null;
-             try {
-                 Optional<GeoData> geo = geoLocationService.locate(request.getRemoteAddr());
-                 if (geo.isPresent()) {
-                     country = geo.get().country();
-                     city = geo.get().city();
-                     region = geo.get().region();
-                     latitude = geo.get().latitude();
-                     longitude = geo.get().longitude();
-                 }
-             } catch (Exception ex) {
-                 logger.debug("GeoIP lookup failed: {}", ex.getMessage());
-             }
+            // Geo-enrichment via ip-api.com (returns Inconnu/Inconnu for private IPs or failures)
+            String country = "Inconnu";
+            String city = "Inconnu";
+            String region = null;
+            Double latitude = null;
+            Double longitude = null;
+            try {
+                Optional<GeoData> geo = geoLocationService.locate(clientIp);
+                if (geo.isPresent()) {
+                    country = geo.get().country();
+                    city = geo.get().city();
+                    region = geo.get().region();
+                    latitude = geo.get().latitude();
+                    longitude = geo.get().longitude();
+                }
+            } catch (Exception ex) {
+                logger.debug("GeoIP lookup failed: {}", ex.getMessage());
+            }
 
-             Visitor visitor = trafficService.findOrCreateVisitor(
-                     boutiqueId, ipHash, userAgent, country, city, region,
-                     latitude, longitude, deviceType, browser, os, platform,
-                     referralSource, userId, userEmail, userName
-             );
+            Visitor visitor = trafficService.findOrCreateVisitor(
+                    boutiqueId, ipHash, userAgent, country, city, region,
+                    latitude, longitude, deviceType, browser, os, platform,
+                    referralSource, userId, userEmail, userName
+            );
 
-             // Send real-time update via WebSocket
-             try {
-                 TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
-                 webSocketService.sendVisitorUpdate(boutiqueId, stats);
-                 webSocketService.sendActiveVisitorCount(boutiqueId, stats.getActiveVisitors());
-             } catch (Exception ex) {
-                 logger.debug("WebSocket notification skipped: {}", ex.getMessage());
-             }
+            logger.info("Visit tracked: boutiqueId={} path={} ip={} country={} city={} saved={}",
+                    boutiqueId, path, clientIp, country, city, visitor != null);
+
+            // Send real-time update via WebSocket
+            try {
+                TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
+                webSocketService.sendVisitorUpdate(boutiqueId, stats);
+                webSocketService.sendActiveVisitorCount(boutiqueId, stats.getActiveVisitors());
+            } catch (Exception ex) {
+                logger.debug("WebSocket notification skipped: {}", ex.getMessage());
+            }
 
         } catch (Exception e) {
             // Don't let tracking break the main request

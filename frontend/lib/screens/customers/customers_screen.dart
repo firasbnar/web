@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../services/csv_export_service.dart';
 import '../../theme/app_colors.dart';
@@ -11,6 +12,7 @@ import '../../providers/boutique_provider.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -74,13 +76,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
       CsvExportService.download(csv, 'clients.csv');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Export terminé'), backgroundColor: AppColors.success),
+          SnackBar(content: Text('common.success'.tr()), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur export: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
+          SnackBar(content: Text('${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
         );
       }
     }
@@ -91,13 +93,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Mes Clients'),
+        leading: const AppBackArrow(),
+        title: Text('menu.customers'.tr()),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.download_outlined),
-            tooltip: 'Exporter CSV',
+            tooltip: 'common.export'.tr(),
             onPressed: _exportCsv,
           ),
         ],
@@ -109,7 +112,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Rechercher un client...',
+                hintText: 'common.search'.tr(),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(100)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -131,10 +134,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   });
                 }
                 if (cp.customers.isEmpty) {
-                  return const EmptyState(
+                  return EmptyState(
                     icon: Icons.people_outline,
-                    title: 'Aucun client',
-                    subtitle: 'Les clients apparaîtront ici après leurs commandes',
+                    title: 'common.no_data'.tr(),
+                    subtitle: 'common.no_data'.tr(),
                   );
                 }
                 return RefreshIndicator(
@@ -156,16 +159,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         bottom: BorderSide(color: AppColors.border, width: 1),
                       ),
                       columns: [
-                        _col('Nom'),
-                        _col('Contact'),
-                        _col('Adresse'),
-                        _col('Commandes'),
-                        _col('Total dépensé'),
-                        _col('Dernière commande'),
+                        _col('common.name'.tr()),
+                        _col('common.phone'.tr()),
+                        _col('common.address'.tr()),
+                        _col('orders.title'.tr()),
+                        _col('common.total'.tr()),
+                        _col('orders.date'.tr()),
                         _col(''),
                       ],
                       rows: cp.customers.map((c) => DataRow(cells: [
-                        DataCell(Text(c.fullName.isNotEmpty ? c.fullName : 'Inconnu',
+                        DataCell(Text(c.fullName.isNotEmpty ? c.fullName : 'common.no_data'.tr(),
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
                         DataCell(Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +195,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         DataCell(
                           ElevatedButton.icon(
                             icon: const Icon(Icons.visibility, size: 14, color: Colors.white),
-                            label: const Text('Profil', style: TextStyle(fontSize: 12)),
+                            label: Text('profile.title'.tr(), style: TextStyle(fontSize: 12)),
                             onPressed: () => context.go('/customers/${c.id}'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.textPrimary,

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -39,7 +40,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mot de passe modifié avec succès')),
+          SnackBar(content: Text('profile.password_changed'.tr())),
         );
         if (provider.role == 'ADMIN') {
           context.go('/admin');
@@ -48,7 +49,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.error ?? 'Erreur lors du changement de mot de passe')),
+          SnackBar(content: Text(provider.error ?? 'common.operation_failed'.tr())),
         );
       }
     }
@@ -68,10 +69,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 60),
                 const Icon(Icons.lock_reset, size: 60, color: AppColors.primary),
                 const SizedBox(height: 16),
-                Text('Changement de mot de passe', style: AppTypography.heading1.copyWith(color: AppColors.primary)),
+                Text('profile.password_change'.tr(), style: AppTypography.heading1.copyWith(color: AppColors.primary)),
                 const SizedBox(height: 8),
                 Text(
-                  'Vous devez changer votre mot de passe temporaire avant de continuer.',
+                  'profile.enter_current_password'.tr(),
                   textAlign: TextAlign.center,
                   style: AppTypography.body2.copyWith(color: AppColors.textSecondary),
                 ),
@@ -80,21 +81,21 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   controller: _currentPasswordCtrl,
                   obscureText: _obscureCurrent,
                   decoration: InputDecoration(
-                    labelText: 'Mot de passe actuel',
+                    labelText: 'profile.current_password'.tr(),
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(_obscureCurrent ? Icons.visibility_off : Icons.visibility),
                       onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
                     ),
                   ),
-                  validator: (v) => v == null || v.isEmpty ? 'Mot de passe requis' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'auth.password_required'.tr() : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _newPasswordCtrl,
                   obscureText: _obscureNew,
                   decoration: InputDecoration(
-                    labelText: 'Nouveau mot de passe',
+                    labelText: 'profile.new_password'.tr(),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(_obscureNew ? Icons.visibility_off : Icons.visibility),
@@ -102,8 +103,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Nouveau mot de passe requis';
-                    if (v.length < 6) return 'Minimum 6 caractères';
+                    if (v == null || v.isEmpty) return 'auth.password_required'.tr();
+                    if (v.length < 6) return 'profile.password_min_length'.tr();
                     return null;
                   },
                 ),
@@ -112,7 +113,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   controller: _confirmPasswordCtrl,
                   obscureText: _obscureConfirm,
                   decoration: InputDecoration(
-                    labelText: 'Confirmer le mot de passe',
+                    labelText: 'profile.confirm_password'.tr(),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
@@ -120,15 +121,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Confirmation requise';
-                    if (v != _newPasswordCtrl.text) return 'Les mots de passe ne correspondent pas';
+                    if (v == null || v.isEmpty) return 'validation.required'.tr();
+                    if (v != _newPasswordCtrl.text) return 'profile.password_mismatch'.tr();
                     return null;
                   },
                 ),
                 const SizedBox(height: 32),
                 Consumer<AuthProvider>(
                   builder: (_, auth, __) => AppButton(
-                    label: 'Changer le mot de passe',
+                    label: 'profile.password_change'.tr(),
                     loading: auth.loading,
                     onPressed: _changePassword,
                   ),
@@ -136,7 +137,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => context.go('/login'),
-                  child: Text('Me déconnecter', style: AppTypography.body2.copyWith(color: AppColors.danger)),
+                  child: Text('auth.logout'.tr(), style: AppTypography.body2.copyWith(color: AppColors.danger)),
                 ),
               ],
             ),

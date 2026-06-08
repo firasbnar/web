@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/reviews_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/review_card.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class ReviewsScreen extends StatefulWidget {
   const ReviewsScreen({super.key});
@@ -58,16 +60,17 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
 
     if (boutiqueId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Avis')),
-        body: const Center(child: Text('Aucune boutique sélectionnée')),
+        appBar: AppBar(title: Text('reviews.title'.tr())),
+        body: Center(child: Text('common.no_data'.tr())),
       );
     }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackArrow(),
         title: Consumer<ReviewsProvider>(
-          builder: (_, rp, __) => Text('Avis${rp.pendingCount > 0 ? ' (${rp.pendingCount})' : ''}'),
+          builder: (_, rp, __) => Text('${'reviews.title'.tr()}${rp.pendingCount > 0 ? ' (${rp.pendingCount})' : ''}'),
         ),
         centerTitle: true,
       ),
@@ -117,10 +120,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
 
   Widget _buildFilterBar(ReviewsProvider rp) {
     final filters = [
-      ('ALL', 'Tous'),
-      ('PENDING', 'En attente'),
-      ('APPROVED', 'Approuvés'),
-      ('REJECTED', 'Rejetés'),
+      ('ALL', 'common.all'.tr()),
+      ('PENDING', 'reviews.pending'.tr()),
+      ('APPROVED', 'reviews.approved'.tr()),
+      ('REJECTED', 'reviews.rejected'.tr()),
     ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -151,8 +154,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
 
   Widget _buildEmptyState(ReviewsProvider rp) {
     final msg = rp.statusFilter == 'ALL'
-        ? 'Aucun avis pour le moment'
-        : 'Aucun avis ${rp.statusFilter == 'PENDING' ? 'en attente' : rp.statusFilter == 'APPROVED' ? 'approuvé' : 'rejeté'}';
+        ? 'reviews.no_reviews'.tr()
+        : 'reviews.no_reviews'.tr();
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -169,7 +172,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final ok = await rp.approveReview(id);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Avis approuvé' : 'Erreur'),
+        content: Text(ok ? 'reviews.review_approved'.tr() : 'common.error'.tr()),
         backgroundColor: ok ? AppColors.success : AppColors.danger,
       ));
     }
@@ -179,7 +182,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final ok = await rp.rejectReview(id);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Avis rejeté' : 'Erreur'),
+        content: Text(ok ? 'reviews.review_rejected'.tr() : 'common.error'.tr()),
         backgroundColor: ok ? AppColors.success : AppColors.danger,
       ));
     }
@@ -189,11 +192,11 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer cet avis ?'),
-        content: const Text('Cette action est irréversible.'),
+        title: Text('reviews.delete'.tr()),
+        content: Text('common.confirm_delete'.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger), child: const Text('Supprimer')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger), child: Text('common.delete'.tr())),
         ],
       ),
     );
@@ -201,7 +204,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       final ok = await rp.deleteReview(id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ok ? 'Avis supprimé' : 'Erreur'),
+          content: Text(ok ? 'reviews.review_deleted'.tr() : 'common.error'.tr()),
           backgroundColor: ok ? AppColors.success : AppColors.danger,
         ));
       }

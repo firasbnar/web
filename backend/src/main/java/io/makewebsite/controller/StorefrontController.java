@@ -13,6 +13,7 @@ import io.makewebsite.repository.ProductRepository;
 import io.makewebsite.repository.ReviewRepository;
 import io.makewebsite.service.StoreGeneratorService;
 import io.makewebsite.service.TrafficService;
+import io.makewebsite.util.NetworkUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -201,7 +202,7 @@ public class StorefrontController {
 
     private void trackStoreVisit(Boutique boutique, HttpServletRequest request) {
         try {
-            String ip = request.getRemoteAddr();
+            String ip = NetworkUtils.resolveClientIp(request);
             String ua = request.getHeader("User-Agent");
             String referrer = request.getHeader("Referer");
             log.info("=== STORE VISIT === slug={}, boutiqueId={}, ip={}, ua={}, referrer={}",

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_colors.dart';
@@ -19,11 +20,11 @@ class PublicOrderSuccessScreen extends StatelessWidget {
             children: [
               const Icon(Icons.check_circle, size: 80, color: AppColors.success),
               const SizedBox(height: 24),
-              Text('Commande confirmée !', style: AppTypography.heading2),
+              Text('public_store.order_confirmed'.tr(), style: AppTypography.heading2),
               const SizedBox(height: 8),
-              Text('Votre commande a été envoyée avec succès.', style: AppTypography.body1, textAlign: TextAlign.center),
+              Text('public_store.order_success_message'.tr(), style: AppTypography.body1, textAlign: TextAlign.center),
               const SizedBox(height: 4),
-              Text('Référence: $orderId', style: AppTypography.caption),
+              Text('${'public_store.order_number'.tr()}: $orderId', style: AppTypography.caption),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -35,7 +36,7 @@ class PublicOrderSuccessScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                   ),
                   onPressed: () => context.go('/store/$slug'),
-                  child: Text('Retour à la boutique', style: AppTypography.button),
+                  child: Text('public_store.continue_shopping'.tr(), style: AppTypography.button),
                 ),
               ),
             ],

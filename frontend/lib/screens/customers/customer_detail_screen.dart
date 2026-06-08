@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/loading_skeleton.dart';
+import '../../widgets/app_back_button.dart';
 import '../../providers/customers_provider.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
@@ -25,12 +27,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Client')),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: Text('menu.customers'.tr()),
+      ),
       body: Consumer<CustomersProvider>(
         builder: (_, cp, __) {
           if (cp.loading && cp.selectedCustomer == null) return const LoadingSkeleton();
           final c = cp.selectedCustomer;
-          if (c == null) return const Center(child: Text('Client non trouvé'));
+          if (c == null) return Center(child: Text('common.no_data'.tr()));
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -66,11 +71,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 // Stats cards
                 Row(
                   children: [
-                    Expanded(child: _statCard('Commandes', '${c.totalOrders}', Icons.receipt_long, AppColors.primary)),
+                    Expanded(child: _statCard('orders.title'.tr(), '${c.totalOrders}', Icons.receipt_long, AppColors.primary)),
                     const SizedBox(width: 12),
-                    Expanded(child: _statCard('Total dépensé', '${c.totalSpent.toStringAsFixed(3)} TND', Icons.payments, AppColors.success)),
+                    Expanded(child: _statCard('common.total'.tr(), '${c.totalSpent.toStringAsFixed(3)} TND', Icons.payments, AppColors.success)),
                     const SizedBox(width: 12),
-                    Expanded(child: _statCard('Dernière commande', c.lastOrderDate != null ? _formatDate(c.lastOrderDate!) : '-', Icons.calendar_today, AppColors.warning)),
+                    Expanded(child: _statCard('orders.date'.tr(), c.lastOrderDate != null ? _formatDate(c.lastOrderDate!) : '-', Icons.calendar_today, AppColors.warning)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -87,7 +92,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Adresse', style: AppTypography.heading4),
+                        Text('common.address'.tr(), style: AppTypography.heading4),
                         const SizedBox(height: 8),
                         if (c.address != null) Text(c.address!, style: AppTypography.body2),
                         if (c.city != null || c.governorate != null)
@@ -111,12 +116,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Contact', style: AppTypography.heading4),
+                      Text('common.phone'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       if (c.email != null) _contactRow(Icons.email_outlined, c.email!),
                       if (c.phone != null) _contactRow(Icons.phone_outlined, c.phone!),
                       if (c.email == null && c.phone == null)
-                        Text('Aucune information de contact', style: AppTypography.caption),
+                        Text('common.no_data'.tr(), style: AppTypography.caption),
                     ],
                   ),
                 ),
@@ -134,7 +139,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Notes', style: AppTypography.heading4),
+                        Text('checkout.notes'.tr(), style: AppTypography.heading4),
                         const SizedBox(height: 8),
                         Text(c.notes!, style: AppTypography.body2),
                       ],

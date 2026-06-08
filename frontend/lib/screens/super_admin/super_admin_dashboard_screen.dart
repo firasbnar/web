@@ -1,11 +1,13 @@
 import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class SuperAdminDashboardScreen extends StatefulWidget {
   const SuperAdminDashboardScreen({super.key});
@@ -138,16 +140,16 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
     final reason = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Geler la boutique'),
+        title: Text('super_admin.suspend_store'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Voulez-vous geler "$name" ?'),
+            Text('${'common.confirm_action'.tr()} "$name" ?'),
             const SizedBox(height: 12),
             TextField(
               controller: reasonCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Raison (optionnelle)',
+              decoration: InputDecoration(
+                labelText: 'common.note'.tr(),
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
@@ -155,11 +157,11 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(ctx, reasonCtrl.text),
-            child: const Text('Geler'),
+            child: Text('super_admin.suspend_store'.tr()),
           ),
         ],
       ),
@@ -169,13 +171,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/stores/$id/freeze', data: {'reason': reason});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Boutique gelée'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('super_admin.suspend_store'.tr()), backgroundColor: AppColors.success));
       }
       _loadStores(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -184,14 +186,14 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Dégeler la boutique'),
-        content: Text('Voulez-vous dégeler "$name" ?'),
+        title: Text('super_admin.activate_store'.tr()),
+        content: Text('common.confirm_action'.tr()),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Dégeler'),
+            child: Text('super_admin.activate_store'.tr()),
           ),
         ],
       ),
@@ -201,13 +203,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/stores/$id/unfreeze');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Boutique dégelée'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('super_admin.activate_store'.tr()), backgroundColor: AppColors.success));
       }
       _loadStores(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -217,13 +219,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/users/$userId/role', data: {'role': newRole});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rôle mis à jour'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success));
       }
       _loadUsers(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -233,13 +235,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/users/$userId/verify-email');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email vérifié'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success));
       }
       _loadUsers(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -249,27 +251,27 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
     final reason = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Suspendre l\'utilisateur'),
+        title: Text('admin.suspend'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Voulez-vous suspendre "$name" ?'),
+            Text('${'common.confirm_action'.tr()} "$name" ?'),
             const SizedBox(height: 12),
             TextField(
               controller: reasonCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Raison',
+              decoration: InputDecoration(
+                labelText: 'common.note'.tr(),
                 border: OutlineInputBorder(),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('common.cancel'.tr())),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(ctx, reasonCtrl.text),
-            child: const Text('Suspendre'),
+            child: Text('admin.suspend'.tr()),
           ),
         ],
       ),
@@ -279,13 +281,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/users/$userId/suspend', data: {'reason': reason});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Utilisateur suspendu'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('admin.suspend'.tr()), backgroundColor: AppColors.success));
       }
       _loadUsers(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -295,13 +297,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/users/$userId/activate');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Utilisateur activé'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('admin.activate'.tr()), backgroundColor: AppColors.success));
       }
       _loadUsers(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -311,13 +313,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       await _api.put('/super-admin/subscriptions/$subId/override', data: {'status': status});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Statut mis à jour'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success));
       }
       _loadSubscriptions(refresh: true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('errors.unknown'.tr()), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -334,19 +336,20 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
     return Scaffold(
       drawer: _drawer(),
       appBar: AppBar(
-        title: const Text('Super Admin'),
+        leading: const AppBackArrow(),
+        title: Text('super_admin.title'.tr()),
         bottom: TabBar(
           controller: _tabCtrl,
           isScrollable: true,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard), text: 'Aperçu'),
-            Tab(icon: Icon(Icons.store), text: 'Boutiques'),
-            Tab(icon: Icon(Icons.people), text: 'Utilisateurs'),
-            Tab(icon: Icon(Icons.card_membership), text: 'Abonnements'),
-            Tab(icon: Icon(Icons.history), text: 'Audit'),
+          tabs: [
+            Tab(icon: Icon(Icons.dashboard), text: 'super_admin.dashboard'.tr()),
+            Tab(icon: Icon(Icons.store), text: 'super_admin.stores'.tr()),
+            Tab(icon: Icon(Icons.people), text: 'super_admin.users'.tr()),
+            Tab(icon: Icon(Icons.card_membership), text: 'subscription.title'.tr()),
+            Tab(icon: Icon(Icons.history), text: 'super_admin.audit'.tr()),
           ],
         ),
       ),
@@ -368,7 +371,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const DrawerHeader(
+          DrawerHeader(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF2710BF), Color(0xFF6C4FFF)],
@@ -378,47 +381,47 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 24,
                   backgroundColor: Colors.white24,
                   child: Icon(Icons.shield, color: Colors.white, size: 28),
                 ),
-                SizedBox(height: 12),
-                Text('Super Admin', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('Panneau de contrôle', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 12),
+                Text('super_admin.title'.tr(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('super_admin.dashboard'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
               ],
             ),
           ),
           ListTile(
             leading: const Icon(Icons.dashboard),
-            title: const Text('Dashboard'),
+            title: Text('super_admin.dashboard'.tr()),
             selected: true,
             onTap: () => Navigator.pop(context),
           ),
           ListTile(
             leading: const Icon(Icons.store),
-            title: const Text('Boutiques'),
+            title: Text('super_admin.stores'.tr()),
             onTap: () { Navigator.pop(context); _tabCtrl.animateTo(1); },
           ),
           ListTile(
             leading: const Icon(Icons.people),
-            title: const Text('Utilisateurs'),
+            title: Text('super_admin.users'.tr()),
             onTap: () { Navigator.pop(context); _tabCtrl.animateTo(2); },
           ),
           ListTile(
             leading: const Icon(Icons.card_membership),
-            title: const Text('Abonnements'),
+            title: Text('subscription.title'.tr()),
             onTap: () { Navigator.pop(context); _tabCtrl.animateTo(3); },
           ),
           ListTile(
             leading: const Icon(Icons.history),
-            title: const Text('Audit'),
+            title: Text('super_admin.audit'.tr()),
             onTap: () { Navigator.pop(context); _tabCtrl.animateTo(4); },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.danger),
-            title: const Text('Déconnexion', style: TextStyle(color: AppColors.danger)),
+            title: Text('auth.logout'.tr(), style: TextStyle(color: AppColors.danger)),
             onTap: () { Navigator.pop(context); _logout(); },
           ),
         ],
@@ -439,7 +442,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionTitle('Vue d\'ensemble'),
+            _sectionTitle('super_admin.dashboard'.tr()),
             const SizedBox(height: 12),
             GridView.count(
               crossAxisCount: 2,
@@ -449,15 +452,15 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
               crossAxisSpacing: 12,
               childAspectRatio: 1.5,
               children: [
-                _metricCard('Utilisateurs', '${o?['totalUsers'] ?? 0}', Icons.people, const Color(0xFF2710BF)),
-                _metricCard('Propriétaires', '${o?['totalOwners'] ?? 0}', Icons.person_outline, Colors.indigo),
-                _metricCard('Boutiques', '${o?['totalBoutiques'] ?? 0}', Icons.store, Colors.amber.shade700),
-                _metricCard('Produits', '${o?['totalProducts'] ?? 0}', Icons.inventory_2, Colors.cyan),
-                _metricCard('Commandes', '${o?['totalOrders'] ?? 0}', Icons.receipt_long, AppColors.success),
-                _metricCard('Revenu total', '${o?['totalRevenue'] ?? 0} TND', Icons.trending_up, Colors.pink),
-                _metricCard('Abonnements', '${o?['totalSubscriptions'] ?? 0}', Icons.card_membership, Colors.purple),
-                _metricCard('Actifs', '${o?['activeSubscriptions'] ?? 0}', Icons.check_circle, AppColors.success),
-                _metricCard('Boutiques gelées', '${o?['frozenStores'] ?? 0}', Icons.ac_unit, Colors.lightBlue),
+                _metricCard('super_admin.active_users'.tr(), '${o?['totalUsers'] ?? 0}', Icons.people, const Color(0xFF2710BF)),
+                _metricCard('admin.users'.tr(), '${o?['totalOwners'] ?? 0}', Icons.person_outline, Colors.indigo),
+                _metricCard('super_admin.active_stores'.tr(), '${o?['totalBoutiques'] ?? 0}', Icons.store, Colors.amber.shade700),
+                _metricCard('dashboard.total_products'.tr(), '${o?['totalProducts'] ?? 0}', Icons.inventory_2, Colors.cyan),
+                _metricCard('dashboard.total_orders'.tr(), '${o?['totalOrders'] ?? 0}', Icons.receipt_long, AppColors.success),
+                _metricCard('super_admin.total_revenue'.tr(), '${o?['totalRevenue'] ?? 0} TND', Icons.trending_up, Colors.pink),
+                _metricCard('admin.active_subscriptions'.tr(), '${o?['totalSubscriptions'] ?? 0}', Icons.card_membership, Colors.purple),
+                _metricCard('subscription.active'.tr(), '${o?['activeSubscriptions'] ?? 0}', Icons.check_circle, AppColors.success),
+                _metricCard('super_admin.suspend_store'.tr(), '${o?['frozenStores'] ?? 0}', Icons.ac_unit, Colors.lightBlue),
               ],
             ),
           ],
@@ -563,7 +566,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                             color: AppColors.success.withAlpha(25),
                             borderRadius: BorderRadius.circular(100),
                           ),
-                          child: const Text('PUBLIÉ', style: TextStyle(fontSize: 9, color: AppColors.success, fontWeight: FontWeight.w600)),
+                          child: Text('dashboard.publish'.tr(), style: TextStyle(fontSize: 9, color: AppColors.success, fontWeight: FontWeight.w600)),
                         ),
                     ],
                   ),
@@ -584,9 +587,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                   padding: const EdgeInsets.only(top: 8, left: 52),
                   child: Row(children: [
                     if (isFrozen)
-                      _actionChip(Icons.ac_unit, 'Dégeler', AppColors.success, () => _unfreezeStore(s['id'], s['name']))
+                      _actionChip(Icons.ac_unit, 'super_admin.activate_store'.tr(), AppColors.success, () => _unfreezeStore(s['id'], s['name']))
                     else
-                      _actionChip(Icons.ac_unit, 'Geler', Colors.lightBlue, () => _freezeStore(s['id'], s['name'])),
+                      _actionChip(Icons.ac_unit, 'super_admin.suspend_store'.tr(), Colors.lightBlue, () => _freezeStore(s['id'], s['name'])),
                   ]),
                 ),
               ],
@@ -697,13 +700,13 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(color: Colors.orange.withAlpha(30), borderRadius: BorderRadius.circular(100)),
-                      child: const Text('NON VÉRIFIÉ', style: TextStyle(fontSize: 9, color: Colors.orange, fontWeight: FontWeight.w600)),
+                      child: Text('auth.verify_email'.tr(), style: TextStyle(fontSize: 9, color: Colors.orange, fontWeight: FontWeight.w600)),
                     ),
                   if (isSuspended)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.danger.withAlpha(30), borderRadius: BorderRadius.circular(100)),
-                      child: const Text('SUSPENDU', style: TextStyle(fontSize: 9, color: AppColors.danger, fontWeight: FontWeight.w600)),
+                      child: Text('admin.suspend'.tr(), style: TextStyle(fontSize: 9, color: AppColors.danger, fontWeight: FontWeight.w600)),
                     ),
                 ]),
                 const SizedBox(height: 8),
@@ -722,11 +725,11 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                   ),
                   const Spacer(),
                   if (!emailVerified)
-                    _smallActionBtn('Vérifier', AppColors.success, () => _verifyUserEmail(u['id'])),
+                    _smallActionBtn('auth.verify_email'.tr(), AppColors.success, () => _verifyUserEmail(u['id'])),
                   if (isSuspended)
-                    _smallActionBtn('Activer', AppColors.success, () => _activateUser(u['id']))
+                    _smallActionBtn('admin.activate'.tr(), AppColors.success, () => _activateUser(u['id']))
                   else
-                    _smallActionBtn('Suspendre', AppColors.danger, () => _suspendUser(u['id'], u['fullName'])),
+                    _smallActionBtn('admin.suspend'.tr(), AppColors.danger, () => _suspendUser(u['id'], u['fullName'])),
                 ]),
               ],
             ),
@@ -790,7 +793,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
                         Text(s['planName'] ?? 'N/A', style: AppTypography.body2.copyWith(fontWeight: FontWeight.w600)),
                         Text('${s['userName'] ?? ""} — ${s['userEmail'] ?? ""}', style: AppTypography.caption),
                         if (s['expiresAt'] != null)
-                          Text('Expire: ${s['expiresAt']}', style: AppTypography.caption),
+                          Text('${'subscription.expires'.tr()}: ${s['expiresAt']}', style: AppTypography.caption),
                       ],
                     ),
                   ),
@@ -916,11 +919,11 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen>
         children: [
           const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
           const SizedBox(height: 12),
-          const Text('Impossible de charger les données'),
+          Text('common.no_data'.tr()),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.refresh),
-            label: const Text('Réessayer'),
+            label: Text('common.retry'.tr()),
             onPressed: onRetry,
           ),
         ],

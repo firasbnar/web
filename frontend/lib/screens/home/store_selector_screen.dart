@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/boutique_provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class StoreSelectorScreen extends StatefulWidget {
   const StoreSelectorScreen({super.key});
@@ -32,13 +34,14 @@ class _StoreSelectorScreenState extends State<StoreSelectorScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Mes boutiques'),
+        leading: const AppBackArrow(),
+        title: Text('store_selector.my_stores'.tr()),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/create-store'),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Créer une boutique', style: TextStyle(color: Colors.white)),
+        label: Text('store_selector.create_store'.tr(), style: const TextStyle(color: Colors.white)),
       ),
       body: Consumer<BoutiqueProvider>(
         builder: (_, bp, __) {
@@ -50,9 +53,9 @@ class _StoreSelectorScreenState extends State<StoreSelectorScreen> {
                 children: [
                   Icon(Icons.store_outlined, size: 64, color: AppColors.textHint.withAlpha(100)),
                   const SizedBox(height: 16),
-                  Text('Aucune boutique', style: AppTypography.heading3),
+                  Text('store_selector.no_stores'.tr(), style: AppTypography.heading3),
                   const SizedBox(height: 8),
-                  Text('Créez votre première boutique', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
+                  Text('store_selector.create_first_store'.tr(), style: AppTypography.body2.copyWith(color: AppColors.textHint)),
                 ],
               ),
             );
@@ -110,7 +113,7 @@ class _StoreSelectorScreenState extends State<StoreSelectorScreen> {
                             color: AppColors.primary.withAlpha(30),
                             borderRadius: BorderRadius.circular(100),
                           ),
-                          child: const Text('Actif', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                          child: Text('common.active'.tr(), style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
                         ),
                       const SizedBox(width: 8),
                       const Icon(Icons.chevron_right, color: AppColors.textHint),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/team_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../models/team_member.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class TeamScreen extends StatefulWidget {
   const TeamScreen({super.key});
@@ -42,13 +44,14 @@ class _TeamScreenState extends State<TeamScreen> {
         builder: (_, p, __) => Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
-            title: const Text('Gestion d\'Équipe'),
+            leading: const AppBackArrow(),
+            title: Text('team.title'.tr()),
             backgroundColor: Colors.white,
             elevation: 0,
             actions: [
               IconButton(
                 icon: const Icon(Icons.add),
-                tooltip: 'Inviter un membre',
+                tooltip: 'team.invite_member'.tr(),
                 onPressed: () => _showInviteDialog(p),
               ),
             ],
@@ -73,7 +76,7 @@ class _TeamScreenState extends State<TeamScreen> {
             Text(p.error!, style: const TextStyle(color: AppColors.danger)),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: () {
                 final bid = context.read<BoutiqueProvider>().activeBoutique?.id;
                 if (bid != null) p.loadMembers(bid);
@@ -133,14 +136,14 @@ class _TeamScreenState extends State<TeamScreen> {
                   child: const Icon(Icons.people, color: Colors.white, size: 28),
                 ),
                 const SizedBox(width: 16),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Gestion d\'Équipe',
-                          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                      Text('Gérez les membres de votre boutique',
-                          style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      Text('team.title'.tr(),
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                      Text('team.no_members'.tr(),
+                          style: const TextStyle(color: Colors.white70, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -149,11 +152,11 @@ class _TeamScreenState extends State<TeamScreen> {
             const SizedBox(height: 20),
             Row(
               children: [
-                _statBadge(Icons.people_outline, '${p.totalMembers ?? 0}', 'Total'),
+                _statBadge(Icons.people_outline, '${p.totalMembers ?? 0}', 'common.total'.tr()),
                 const SizedBox(width: 12),
-                _statBadge(Icons.check_circle_outline, '${p.activeMembers ?? 0}', 'Actifs'),
+                _statBadge(Icons.check_circle_outline, '${p.activeMembers ?? 0}', 'common.active'.tr()),
                 const SizedBox(width: 12),
-                _statBadge(Icons.hourglass_empty, '${p.pendingInvitations ?? 0}', 'En attente'),
+                _statBadge(Icons.hourglass_empty, '${p.pendingInvitations ?? 0}', 'team.pending'.tr()),
               ],
             ),
             if (p.roleDistribution != null && p.roleDistribution!.isNotEmpty)
@@ -212,7 +215,7 @@ class _TeamScreenState extends State<TeamScreen> {
           children: [
             TextField(
               decoration: InputDecoration(
-                hintText: 'Rechercher un membre...',
+                hintText: 'team.search_members'.tr(),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
@@ -231,17 +234,17 @@ class _TeamScreenState extends State<TeamScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _filterChip('Tous', p.roleFilter == null, () => p.setRoleFilter(null)),
-                  _filterChip('Admin', p.roleFilter == 'ADMIN', () => p.setRoleFilter('ADMIN')),
-                  _filterChip('Manager', p.roleFilter == 'MANAGER', () => p.setRoleFilter('MANAGER')),
-                  _filterChip('Staff', p.roleFilter == 'STAFF', () => p.setRoleFilter('STAFF')),
+                  _filterChip('common.all'.tr(), p.roleFilter == null, () => p.setRoleFilter(null)),
+                  _filterChip('team.admin'.tr(), p.roleFilter == 'ADMIN', () => p.setRoleFilter('ADMIN')),
+                  _filterChip('team.manager'.tr(), p.roleFilter == 'MANAGER', () => p.setRoleFilter('MANAGER')),
+                  _filterChip('team.staff'.tr(), p.roleFilter == 'STAFF', () => p.setRoleFilter('STAFF')),
                   _filterChip('Caissier', p.roleFilter == 'CAISSIER', () => p.setRoleFilter('CAISSIER')),
                   const SizedBox(width: 8),
                   Container(width: 1, height: 20, color: AppColors.border),
                   const SizedBox(width: 8),
-                  _filterChip('Actif', p.statusFilter == 'ACTIVE', () => p.setStatusFilter('ACTIVE')),
-                  _filterChip('En attente', p.statusFilter == 'PENDING', () => p.setStatusFilter('PENDING')),
-                  _filterChip('Désactivé', p.statusFilter == 'DEACTIVATED', () => p.setStatusFilter('DEACTIVATED')),
+                  _filterChip('common.active'.tr(), p.statusFilter == 'ACTIVE', () => p.setStatusFilter('ACTIVE')),
+                  _filterChip('team.pending'.tr(), p.statusFilter == 'PENDING', () => p.setStatusFilter('PENDING')),
+                  _filterChip('common.disabled'.tr(), p.statusFilter == 'DEACTIVATED', () => p.setStatusFilter('DEACTIVATED')),
                 ],
               ),
             ),
@@ -323,7 +326,7 @@ class _TeamScreenState extends State<TeamScreen> {
                                 color: Colors.orange.withAlpha(30),
                                 borderRadius: BorderRadius.circular(100),
                               ),
-                              child: Text('En attente',
+                              child: Text('team.pending'.tr(),
                                   style: TextStyle(fontSize: 9, color: Colors.orange.shade700)),
                             ),
                           ),
@@ -336,8 +339,8 @@ class _TeamScreenState extends State<TeamScreen> {
                                 color: AppColors.danger.withAlpha(30),
                                 borderRadius: BorderRadius.circular(100),
                               ),
-                              child: const Text('Désactivé',
-                                  style: TextStyle(fontSize: 9, color: AppColors.danger)),
+                              child: Text('common.disabled'.tr(),
+                                  style: const TextStyle(fontSize: 9, color: AppColors.danger)),
                             ),
                           ),
                       ],
@@ -357,13 +360,13 @@ class _TeamScreenState extends State<TeamScreen> {
                   padding: EdgeInsets.zero,
                   onSelected: (v) => _handleAction(v, member, p),
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'permissions', child: Text('Permissions', style: TextStyle(fontSize: 13))),
-                    const PopupMenuItem(value: 'edit_role', child: Text('Changer le rôle', style: TextStyle(fontSize: 13))),
+                    PopupMenuItem(value: 'permissions', child: Text('team.permissions'.tr(), style: const TextStyle(fontSize: 13))),
+                    PopupMenuItem(value: 'edit_role', child: Text('team.role'.tr(), style: const TextStyle(fontSize: 13))),
                     if (member.isActive)
-                      const PopupMenuItem(value: 'deactivate', child: Text('Désactiver', style: TextStyle(fontSize: 13, color: Colors.orange)))
+                      PopupMenuItem(value: 'deactivate', child: Text('common.disabled'.tr(), style: const TextStyle(fontSize: 13, color: Colors.orange)))
                     else
-                      const PopupMenuItem(value: 'activate', child: Text('Activer', style: TextStyle(fontSize: 13, color: AppColors.success))),
-                    const PopupMenuItem(value: 'remove', child: Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.danger))),
+                      PopupMenuItem(value: 'activate', child: Text('common.enabled'.tr(), style: const TextStyle(fontSize: 13, color: AppColors.success))),
+                    PopupMenuItem(value: 'remove', child: Text('common.delete'.tr(), style: const TextStyle(fontSize: 13, color: AppColors.danger))),
                   ],
                 ),
             ],
@@ -384,13 +387,13 @@ class _TeamScreenState extends State<TeamScreen> {
         _showEditRoleDialog(member, p, bid);
         break;
       case 'deactivate':
-        _confirmAndExecute('Désactiver ce membre ?', () => p.toggleStatus(member.id, bid, false));
+        _confirmAndExecute('common.confirm_action'.tr(), () => p.toggleStatus(member.id, bid, false));
         break;
       case 'activate':
-        _confirmAndExecute('Activer ce membre ?', () => p.toggleStatus(member.id, bid, true));
+        _confirmAndExecute('common.confirm_action'.tr(), () => p.toggleStatus(member.id, bid, true));
         break;
       case 'remove':
-        _confirmAndExecute('Supprimer ce membre ? Cette action est irréversible.', () => p.removeMember(member.id, bid));
+        _confirmAndExecute('team.remove_confirm'.tr(), () => p.removeMember(member.id, bid));
         break;
     }
   }
@@ -399,13 +402,13 @@ class _TeamScreenState extends State<TeamScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer'),
+        title: Text('common.confirm'.tr()),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmer', style: TextStyle(color: AppColors.danger)),
+            child: Text('common.confirm'.tr(), style: const TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -414,7 +417,7 @@ class _TeamScreenState extends State<TeamScreen> {
     final err = await action();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(err ?? 'Opération réussie'),
+        content: Text(err ?? 'common.operation_success'.tr()),
         backgroundColor: err != null ? AppColors.danger : AppColors.success,
       ));
     }
@@ -429,20 +432,20 @@ class _TeamScreenState extends State<TeamScreen> {
           Icon(hasFilters ? Icons.search_off : Icons.people_outline, size: 56, color: AppColors.border),
           const SizedBox(height: 12),
           Text(
-            hasFilters ? 'Aucun résultat' : 'Aucun membre dans l\'équipe',
+            hasFilters ? 'common.no_results'.tr() : 'team.no_members'.tr(),
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
           ),
           if (hasFilters) ...[
             const SizedBox(height: 8),
             TextButton(
               onPressed: p.clearFilters,
-              child: const Text('Effacer les filtres'),
+              child: Text('common.clear'.tr()),
             ),
           ] else ...[
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.add),
-              label: const Text('Inviter un membre'),
+              label: Text('team.invite_member'.tr()),
               onPressed: () => _showInviteDialog(p),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -481,24 +484,24 @@ class _TeamScreenState extends State<TeamScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Inviter un membre', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text('team.invite_member'.tr(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text('Ils recevront un email avec un lien d\'invitation',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              Text('team.invite_member'.tr(),
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 20),
               TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nom complet *',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: InputDecoration(
+                  labelText: '${'common.name'.tr()} *',
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emailCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Email *',
+                decoration: InputDecoration(
+                  labelText: '${'common.email'.tr()} *',
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
@@ -507,16 +510,16 @@ class _TeamScreenState extends State<TeamScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: selectedRole,
-                decoration: const InputDecoration(
-                  labelText: 'Rôle',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: InputDecoration(
+                  labelText: 'team.role'.tr(),
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'ADMIN', child: Text('Administrateur')),
-                  DropdownMenuItem(value: 'MANAGER', child: Text('Manager')),
-                  DropdownMenuItem(value: 'STAFF', child: Text('Staff')),
-                  DropdownMenuItem(value: 'CAISSIER', child: Text('Caissier')),
+                items: [
+                  DropdownMenuItem(value: 'ADMIN', child: Text('team.admin'.tr())),
+                  DropdownMenuItem(value: 'MANAGER', child: Text('team.manager'.tr())),
+                  DropdownMenuItem(value: 'STAFF', child: Text('team.staff'.tr())),
+                  const DropdownMenuItem(value: 'CAISSIER', child: Text('Caissier')),
                 ],
                 onChanged: (v) => setSheetState(() => selectedRole = v ?? 'STAFF'),
               ),
@@ -538,8 +541,8 @@ class _TeamScreenState extends State<TeamScreen> {
                         ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
                           content: Text(err), backgroundColor: AppColors.danger));
                       } else {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                          content: Text('Invitation envoyée'), backgroundColor: AppColors.success));
+                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                          content: Text('team.invite_sent'.tr()), backgroundColor: AppColors.success));
                         Navigator.pop(ctx);
                       }
                     }
@@ -550,7 +553,7 @@ class _TeamScreenState extends State<TeamScreen> {
                   ),
                   child: saving
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Envoyer l\'invitation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      : Text('team.invite'.tr(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -602,7 +605,7 @@ class _TeamScreenState extends State<TeamScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Changer le rôle de ${member.displayName}',
+              Text('${'team.role'.tr()} ${member.displayName}',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
               ...['ADMIN', 'MANAGER', 'STAFF', 'CAISSIER'].map((r) => RadioListTile<String>(
@@ -623,7 +626,7 @@ class _TeamScreenState extends State<TeamScreen> {
                     if (ctx.mounted) {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(err ?? 'Rôle mis à jour'),
+                        content: Text(err ?? 'common.operation_success'.tr()),
                         backgroundColor: err != null ? AppColors.danger : AppColors.success,
                       ));
                     }
@@ -632,7 +635,7 @@ class _TeamScreenState extends State<TeamScreen> {
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Enregistrer', style: TextStyle(color: Colors.white)),
+                  child: Text('common.save'.tr(), style: const TextStyle(color: Colors.white)),
                 ),
               ),
             ],
@@ -687,13 +690,13 @@ class _TeamScreenState extends State<TeamScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _detailRow('Rôle', member.roleLabel),
-            _detailRow('Statut', member.statusLabel),
-            if (member.joinedAt != null) _detailRow('A rejoint le', _formatDate(member.joinedAt!)),
-            if (member.lastActivityAt != null) _detailRow('Dernière activité', _formatDate(member.lastActivityAt!)),
+            _detailRow('team.role'.tr(), member.roleLabel),
+            _detailRow('common.status'.tr(), member.statusLabel),
+            if (member.joinedAt != null) _detailRow('common.date'.tr(), _formatDate(member.joinedAt!)),
+            if (member.lastActivityAt != null) _detailRow('common.info'.tr(), _formatDate(member.lastActivityAt!)),
             if (member.permissions.isNotEmpty) ...[
               const SizedBox(height: 12),
-              const Text('Permissions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text('team.permissions'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 8),
               ...member.permissions.map((p) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -735,20 +738,20 @@ class _TeamScreenState extends State<TeamScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Permissions — ${member.displayName}',
+            Text('${'team.permissions'.tr()} — ${member.displayName}',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text('Rôle: ${member.roleLabel}',
+            Text('${'team.role'.tr()}: ${member.roleLabel}',
                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 16),
-            Text('Permissions — ${member.displayName}',
+            Text('${'team.permissions'.tr()} — ${member.displayName}',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text('Rôle: ${member.roleLabel}',
+            Text('${'team.role'.tr()}: ${member.roleLabel}',
                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             const SizedBox(height: 16),
             if (member.permissions.isEmpty)
-              const Text('Aucune permission définie', style: TextStyle(color: AppColors.textSecondary))
+              Text('common.no_data'.tr(), style: const TextStyle(color: AppColors.textSecondary))
             else
               ...member.permissions.map((p) => Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -814,9 +817,9 @@ class _TeamScreenState extends State<TeamScreen> {
 
   String _roleLabel(String role) {
     switch (role) {
-      case 'ADMIN': return 'Administrateur';
-      case 'MANAGER': return 'Manager';
-      case 'STAFF': return 'Staff';
+      case 'ADMIN': return 'team.admin'.tr();
+      case 'MANAGER': return 'team.manager'.tr();
+      case 'STAFF': return 'team.staff'.tr();
       case 'CAISSIER': return 'Caissier';
       default: return role;
     }

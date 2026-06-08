@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../services/csv_export_service.dart';
 import '../../theme/app_colors.dart';
@@ -13,6 +14,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../providers/orders_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -22,7 +24,7 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   final _scrollController = ScrollController();
-  final List<String> _tabs = ['Tous', 'En attente', 'Confirmé', 'Expédié', 'Livré', 'Annulé'];
+  final List<String> _tabs = ['orders.filter_all', 'orders.status_pending', 'orders.status_processing', 'orders.status_shipped', 'orders.status_delivered', 'orders.status_cancelled'];
   final List<String> _tabValues = ['ALL', 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
   int _selectedTab = 0;
   DateTime? _startDate;
@@ -90,7 +92,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Commandes'),
+        leading: const AppBackArrow(),
+        title: Text('orders.title'.tr()),
         actions: [
           if (_startDate != null)
             IconButton(
@@ -125,13 +128,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 CsvExportService.download(csv, 'commandes.csv');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Export terminé'), backgroundColor: AppColors.success),
+                    SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
+                    SnackBar(content: Text('${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
                   );
                 }
               }
@@ -164,7 +167,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       borderRadius: BorderRadius.circular(100),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: Text(_tabs[i], style: TextStyle(
+                    child: Text(_tabs[i].tr(), style: TextStyle(
                       color: _selectedTab == i ? Colors.white : AppColors.textPrimary,
                       fontSize: 13, fontWeight: FontWeight.w500,
                     )),
@@ -185,10 +188,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 });
                 }
                 if (op.orders.isEmpty) {
-                  return const EmptyState(
+                  return EmptyState(
                   icon: Icons.receipt_long_outlined,
-                  title: 'Aucune commande',
-                  subtitle: 'Les commandes apparaîtront ici',
+                  title: 'orders.no_orders'.tr(),
+                  subtitle: 'orders.no_orders'.tr(),
                 );
                 }
                 return ListView.builder(

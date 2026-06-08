@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../providers/boutique_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class DeliveryCompanyScreen extends StatefulWidget {
   const DeliveryCompanyScreen({super.key});
@@ -105,11 +107,11 @@ class _DeliveryCompanyScreenState extends State<DeliveryCompanyScreen> {
         }),
       ]);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Configuration sauvegardée'), backgroundColor: AppColors.success));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${'common.error'.tr()}: $e'), backgroundColor: AppColors.danger));
       }
     }
     setState(() => _saving = false);
@@ -118,7 +120,7 @@ class _DeliveryCompanyScreenState extends State<DeliveryCompanyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Livraison')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('delivery.title'.tr())),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -149,7 +151,7 @@ class _DeliveryCompanyScreenState extends State<DeliveryCompanyScreen> {
               _configField('Token', _adeexTokenCtrl, secret: true),
             ]),
             const SizedBox(height: 24),
-            AppButton(label: 'Enregistrer', onPressed: _saving ? null : _save, loading: _saving),
+            AppButton(label: 'common.save'.tr(), onPressed: _saving ? null : _save, loading: _saving),
             const SizedBox(height: 40),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -37,28 +38,28 @@ class MainScaffold extends StatelessWidget {
     final isOwner = role == 'OWNER';
 
     final List<_MenuItem> allItems = [
-      const _MenuItem(Icons.people_outline, 'Clients', '/customers'),
-      const _MenuItem(Icons.point_of_sale, 'POS', '/pos'),
-      const _MenuItem(Icons.local_offer_outlined, 'Codes promo', '/coupons'),
-      const _MenuItem(Icons.smart_toy_outlined, 'Assistant IA', '/ai-assistant'),
-      const _MenuItem(Icons.storefront_outlined, 'Explorer', '/explore'),
-      const _MenuItem(Icons.payments_outlined, 'Paiements', '/boutique-settings'),
-      const _MenuItem(Icons.store_outlined, 'Paramètres boutique', '/boutique-settings'),
-      const _MenuItem(Icons.message_outlined, 'Messages', '/messages'),
-      _MenuItem(Icons.group_outlined, 'Équipe', '/team', visible: isAdmin || isOwner),
-      const _MenuItem(Icons.palette_outlined, 'Theme', '/boutique/theme'),
-      const _MenuItem(Icons.layers_outlined, 'Template', '/boutique/template'),
-      const _MenuItem(Icons.local_shipping_outlined, 'Livraison', '/delivery'),
-      const _MenuItem(Icons.telegram, 'Telegram', '/telegram'),
-      _MenuItem(Icons.admin_panel_settings_outlined, 'POS Admin', '/pos/admin', visible: isAdmin),
-      _MenuItem(Icons.card_membership_outlined, 'Abonnement', '/plans', visible: isAdmin || isOwner),
-      const _MenuItem(Icons.notifications_outlined, 'Notifications', '/notifications'),
-      _MenuItem(Icons.history_outlined, "Journal d'activité", '/admin/activities', visible: isAdmin),
-      _MenuItem(Icons.admin_panel_settings_outlined, 'Administration', '/admin', visible: isAdmin),
-      _MenuItem(Icons.shield_outlined, 'Super Admin', '/super-admin', visible: isSuperAdmin),
-      _MenuItem(Icons.travel_explore_outlined, 'Trafic', '/traffic', visible: isAdmin || isOwner),
-      const _MenuItem(Icons.receipt_long_outlined, 'Mes commandes', '/order-history'),
-      const _MenuItem(Icons.person_outline, 'Profil', '/profile'),
+      const _MenuItem(Icons.people_outline, 'menu.customers', '/customers'),
+      const _MenuItem(Icons.point_of_sale, 'menu.pos', '/pos'),
+      const _MenuItem(Icons.local_offer_outlined, 'menu.coupons', '/coupons'),
+      const _MenuItem(Icons.smart_toy_outlined, 'menu.ai_assistant', '/ai-assistant'),
+      const _MenuItem(Icons.storefront_outlined, 'menu.explore', '/explore'),
+      const _MenuItem(Icons.payments_outlined, 'menu.payments', '/boutique-settings'),
+      const _MenuItem(Icons.store_outlined, 'menu.store_settings', '/boutique-settings'),
+      const _MenuItem(Icons.message_outlined, 'menu.messages', '/messages'),
+      _MenuItem(Icons.group_outlined, 'menu.team', '/team', visible: isAdmin || isOwner),
+      const _MenuItem(Icons.palette_outlined, 'menu.theme', '/boutique/theme'),
+      const _MenuItem(Icons.layers_outlined, 'menu.template', '/boutique/template'),
+      const _MenuItem(Icons.local_shipping_outlined, 'menu.delivery', '/delivery'),
+      const _MenuItem(Icons.telegram, 'menu.telegram', '/telegram'),
+      _MenuItem(Icons.admin_panel_settings_outlined, 'menu.pos_admin', '/pos/admin', visible: isAdmin),
+      _MenuItem(Icons.card_membership_outlined, 'menu.subscription', '/plans', visible: isAdmin || isOwner),
+      const _MenuItem(Icons.notifications_outlined, 'menu.notifications', '/notifications'),
+      _MenuItem(Icons.history_outlined, "menu.activity_log", '/admin/activities', visible: isAdmin),
+      _MenuItem(Icons.admin_panel_settings_outlined, 'menu.administration', '/admin', visible: isAdmin),
+      _MenuItem(Icons.shield_outlined, 'menu.super_admin', '/super-admin', visible: isSuperAdmin),
+      _MenuItem(Icons.travel_explore_outlined, 'menu.traffic', '/traffic', visible: isAdmin || isOwner),
+      const _MenuItem(Icons.receipt_long_outlined, 'menu.my_orders', '/order-history'),
+      const _MenuItem(Icons.person_outline, 'menu.profile', '/profile'),
     ];
 
     final items = allItems.where((item) => item.visible).toList();
@@ -76,12 +77,12 @@ class MainScaffold extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Plus', style: AppTypography.heading3),
+                  Text('nav.more'.tr(), style: AppTypography.heading3),
                   const SizedBox(height: 16),
-                  ...items.map((item) => _menuItem(ctx, item.icon, item.label, item.route)),
+                  ...items.map((item) => _menuItem(ctx, item.icon, item.labelKey, item.route)),
                   Consumer<ReviewsProvider>(
                     builder: (_, rp, __) => _menuItem(
-                      ctx, Icons.star_outline, 'Avis', '/reviews',
+                      ctx, Icons.star_outline, 'menu.reviews', '/reviews',
                       badge: rp.pendingCount,
                     ),
                   ),
@@ -93,7 +94,7 @@ class MainScaffold extends StatelessWidget {
     );
   }
 
-  Widget _menuItem(BuildContext context, IconData icon, String label, String route, {int badge = 0}) {
+  Widget _menuItem(BuildContext context, IconData icon, String labelKey, String route, {int badge = 0}) {
     return ListTile(
       leading: Stack(
         clipBehavior: Clip.none,
@@ -110,7 +111,7 @@ class MainScaffold extends StatelessWidget {
             ),
         ],
       ),
-      title: Text(label, style: AppTypography.body2),
+      title: Text(labelKey.tr(), style: AppTypography.body2),
       onTap: () { Navigator.pop(context); context.go(route); },
     );
   }
@@ -143,12 +144,12 @@ class MainScaffold extends StatelessWidget {
             unselectedLabelStyle: const TextStyle(fontSize: 12),
             elevation: 0,
             backgroundColor: Colors.white,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Accueil'),
-              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), activeIcon: Icon(Icons.inventory_2), label: 'Produits'),
-              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Commandes'),
-              BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'Analytics'),
-              BottomNavigationBarItem(icon: Icon(Icons.more_horiz), activeIcon: Icon(Icons.more_horiz), label: 'Plus'),
+            items: [
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'nav.home'.tr()),
+              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), activeIcon: Icon(Icons.inventory_2), label: 'nav.products'.tr()),
+              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'nav.orders'.tr()),
+              BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'nav.analytics'.tr()),
+              BottomNavigationBarItem(icon: Icon(Icons.more_horiz), activeIcon: Icon(Icons.more_horiz), label: 'nav.more'.tr()),
             ],
           ),
         ),
@@ -159,8 +160,8 @@ class MainScaffold extends StatelessWidget {
 
 class _MenuItem {
   final IconData icon;
-  final String label;
+  final String labelKey;
   final String route;
   final bool visible;
-  const _MenuItem(this.icon, this.label, this.route, {this.visible = true});
+  const _MenuItem(this.icon, this.labelKey, this.route, {this.visible = true});
 }

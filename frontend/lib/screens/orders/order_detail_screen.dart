@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/loading_skeleton.dart';
+import '../../widgets/app_back_button.dart';
 import '../../providers/orders_provider.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -45,13 +47,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Consumer<OrdersProvider>(
-          builder: (_, op, __) => Text(op.selectedOrder?.orderNumber ?? 'Détail commande'),
+          builder: (_, op, __) => Text(op.selectedOrder?.orderNumber ?? 'orders.order_details'.tr()),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () => Share.share('Commande ${context.read<OrdersProvider>().selectedOrder?.orderNumber ?? ""}'),
+            onPressed: () => Share.share('${'orders.order_details'.tr()} ${context.read<OrdersProvider>().selectedOrder?.orderNumber ?? ""}'),
           ),
         ],
       ),
@@ -59,7 +62,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         builder: (_, op, __) {
           if (op.loading && op.selectedOrder == null) return const LoadingSkeleton();
           final order = op.selectedOrder;
-          if (order == null) return const Center(child: Text('Commande non trouvée'));
+          if (order == null) return Center(child: Text('orders.no_orders'.tr()));
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -77,9 +80,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Client', style: AppTypography.heading4),
+                      Text('orders.customer'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
-                      Text(order.customerName ?? 'Client inconnu', style: AppTypography.body1),
+                      Text(order.customerName ?? 'orders.customer'.tr(), style: AppTypography.body1),
                       Text(order.paymentMethod ?? "", style: AppTypography.caption),
                     ],
                   ),
@@ -96,7 +99,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Articles', style: AppTypography.heading4),
+                      Text('orders.order_items'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       ...order.items.map((item) => Padding(
                         padding: const EdgeInsets.only(bottom: 8),
@@ -110,10 +113,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                       )),
                       const Divider(),
-                      _summaryRow('Sous-total', '${order.subtotal.toStringAsFixed(2)} TND'),
-                      _summaryRow('Livraison', '${order.shippingFee.toStringAsFixed(2)} TND'),
-                      if (order.discount > 0) _summaryRow('Remise', '-${order.discount.toStringAsFixed(2)} TND'),
-                      _summaryRow('Total', '${order.total.toStringAsFixed(2)} TND', bold: true),
+                      _summaryRow('orders.subtotal'.tr(), '${order.subtotal.toStringAsFixed(2)} TND'),
+                      _summaryRow('orders.shipping'.tr(), '${order.shippingFee.toStringAsFixed(2)} TND'),
+                      if (order.discount > 0) _summaryRow('orders.discount'.tr(), '-${order.discount.toStringAsFixed(2)} TND'),
+                      _summaryRow('orders.total'.tr(), '${order.total.toStringAsFixed(2)} TND', bold: true),
                     ],
                   ),
                 ),
@@ -129,7 +132,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Statut', style: AppTypography.heading4),
+                      Text('orders.order_status'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -152,7 +155,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                       if (_selectedStatus.isNotEmpty && _selectedStatus != order.status) ...[
                         const SizedBox(height: 8),
-                        AppButton(label: 'Confirmer', onPressed: () {
+                        AppButton(label: 'common.save'.tr(), onPressed: () {
                           op.updateStatus(widget.orderId, _selectedStatus);
                         }),
                       ],
@@ -171,7 +174,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Paiement', style: AppTypography.heading4),
+                      Text('orders.payment'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -179,7 +182,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           StatusChip(status: order.paymentStatus ?? 'UNPAID'),
                         ],
                       ),
-                      if (order.paymentRef != null) Text('Ref: ${order.paymentRef}', style: AppTypography.caption),
+                      if (order.paymentRef != null) Text('orders.payment_ref'.tr() + ': ${order.paymentRef}', style: AppTypography.caption),
                     ],
                   ),
                 ),
@@ -195,21 +198,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Livraison', style: AppTypography.heading4),
+                      Text('delivery.delivery_company'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         initialValue: _deliveryOptions.contains(order.deliveryCompany) ? order.deliveryCompany : null,
-                        decoration: const InputDecoration(labelText: 'Transporteur'),
+                        decoration: InputDecoration(labelText: 'delivery.delivery_company'.tr()),
                         items: _deliveryOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                         onChanged: (v) {},
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _trackingCtrl..text = order.trackingNumber ?? '',
-                        decoration: const InputDecoration(labelText: 'Numéro de suivi'),
+                        decoration: InputDecoration(labelText: 'orders.tracking_number'.tr()),
                       ),
                       const SizedBox(height: 8),
-                      AppButton(label: 'Mettre à jour', onPressed: () {
+                      AppButton(label: 'common.save'.tr(), onPressed: () {
                         op.updateTracking(widget.orderId, order.deliveryCompany ?? '', _trackingCtrl.text);
                       }),
                     ],
@@ -227,12 +230,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Facture', style: AppTypography.heading4),
+                      Text('orders.invoice'.tr(), style: AppTypography.heading4),
                       const SizedBox(height: 8),
                       if (order.invoiceNumber != null) ...[
-                        Text('N° ${order.invoiceNumber}', style: AppTypography.body2),
+                        Text('${'orders.invoice'.tr()} N° ${order.invoiceNumber}', style: AppTypography.body2),
                         if (order.invoiceCreatedAt != null)
-                          Text('Générée le ${order.invoiceCreatedAt}', style: AppTypography.caption),
+                          Text('${'orders.invoice'.tr()} ${order.invoiceCreatedAt}', style: AppTypography.caption),
                         const SizedBox(height: 8),
                       ],
                       Row(
@@ -240,7 +243,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           if (order.invoiceNumber == null)
                             Expanded(
                               child: AppButton(
-                                label: 'Générer la facture',
+                                label: 'orders.generate_invoice'.tr(),
                                 onPressed: () async {
                                   await op.generateInvoice(widget.orderId);
                                   await op.loadOrder(widget.orderId);
@@ -250,7 +253,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: AppButton(
-                              label: order.invoiceNumber != null ? 'Imprimer' : 'Aperçu',
+                              label: order.invoiceNumber != null ? 'orders.print_invoice'.tr() : 'orders.download_invoice'.tr(),
                               outlined: order.invoiceNumber != null,
                               onPressed: order.invoiceNumber != null && order.boutiqueId != null
                                   ? () => launchUrl(Uri.parse(op.invoicePrintUrl(order.boutiqueId!, widget.orderId)), mode: LaunchMode.externalApplication)
@@ -275,7 +278,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Notes', style: AppTypography.heading4),
+                        Text('orders.notes'.tr(), style: AppTypography.heading4),
                         const SizedBox(height: 8),
                         Text(order.notes!, style: AppTypography.body2),
                       ],

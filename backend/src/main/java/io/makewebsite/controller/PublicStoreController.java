@@ -2,6 +2,8 @@ package io.makewebsite.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.makewebsite.dto.request.ValidateCouponRequest;
+import io.makewebsite.dto.response.CouponValidationResponse;
 import io.makewebsite.dto.response.OrderResponse;
 import io.makewebsite.dto.response.PublicCategoryResponse;
 import io.makewebsite.dto.response.PublicProductResponse;
@@ -11,6 +13,7 @@ import io.makewebsite.exception.StoreFrozenException;
 import io.makewebsite.repository.*;
 import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.*;
+import io.makewebsite.util.NetworkUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +63,7 @@ public class PublicStoreController {
     private final InvoicePdfService invoicePdfService;
     private final EmailService emailService;
     private final ReviewService reviewService;
+    private final CouponService couponService;
     private final ObjectMapper objectMapper;
     private final TrafficRepository trafficRepository;
     private final io.makewebsite.service.GeoLocationService geoLocationService;
@@ -417,7 +421,21 @@ public class PublicStoreController {
         }
 
         BigDecimal shipping = BigDecimal.valueOf(b.getDeliveryFees() != null ? b.getDeliveryFees() : 7.0);
-        BigDecimal total = subtotal.add(shipping);
+        BigDecimal discount = BigDecimal.ZERO;
+        String couponCode = (String) body.get("couponCode");
+        if (couponCode != null && !couponCode.isBlank()) {
+            ValidateCouponRequest validateReq = ValidateCouponRequest.builder()
+                    .boutiqueId(b.getId())
+                    .code(couponCode)
+                    .orderAmount(subtotal)
+                    .build();
+            CouponValidationResponse validation = couponService.validateCoupon(validateReq);
+            if (!validation.getValid()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", validation.getMessage()));
+            }
+            discount = validation.getDiscountAmount();
+        }
+        BigDecimal total = subtotal.add(shipping).subtract(discount);
         String orderNum = "PUB-" + System.currentTimeMillis() % 1000000;
 
         // Create or update customer
@@ -438,6 +456,8 @@ public class PublicStoreController {
                 .status("PENDING")
                 .subtotal(subtotal)
                 .shippingFee(shipping)
+                .discount(discount)
+                .couponCode(couponCode)
                 .total(total)
                 .paymentMethod(paymentMethod)
                 .paymentStatus("UNPAID")
@@ -516,7 +536,7 @@ public class PublicStoreController {
                     .customerId(customer.getId())
                     .customerName(fullName).customerPhone(phone).customerEmail(email)
                     .orderNumber(orderNum).status("PENDING")
-                    .subtotal(subtotal).shippingFee(shipping).total(total)
+                    .subtotal(subtotal).shippingFee(shipping).discount(discount).couponCode(couponCode).total(total)
                     .paymentMethod(paymentMethod).paymentStatus("UNPAID")
                     .shippingAddress(billingAddress + ", " + city).city(city)
                     .notes(notes)
@@ -534,6 +554,9 @@ public class PublicStoreController {
         response.put("success", true);
         response.put("orderId", order.getId().toString());
         response.put("orderNumber", orderNum);
+        response.put("subtotal", subtotal);
+        response.put("shipping", shipping);
+        response.put("discount", discount);
         response.put("total", total);
         response.put("customerName", fullName);
         response.put("address", billingAddress);
@@ -595,6 +618,39 @@ public class PublicStoreController {
         return ResponseEntity.ok(Map.of("available", available));
     }
 
+    @PostMapping("/stores/{slug}/coupons/validate")
+    public ResponseEntity<Map<String, Object>> validateCoupon(
+            @PathVariable String slug,
+            @RequestBody Map<String, Object> body) {
+        Boutique b = boutiqueRepository.findBySlug(slug).orElse(null);
+        if (b == null) return ResponseEntity.badRequest().body(Map.of("valid", false, "message", "Boutique introuvable"));
+
+        String code = (String) body.get("code");
+        BigDecimal subtotal = body.get("subtotal") != null
+                ? BigDecimal.valueOf(((Number) body.get("subtotal")).doubleValue())
+                : BigDecimal.ZERO;
+
+        if (code == null || code.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("valid", false, "message", "Code promo requis"));
+        }
+
+        ValidateCouponRequest validateReq = ValidateCouponRequest.builder()
+                .boutiqueId(b.getId())
+                .code(code)
+                .orderAmount(subtotal)
+                .build();
+
+        CouponValidationResponse validation = couponService.validateCouponOnly(validateReq);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("valid", validation.getValid());
+        response.put("discountAmount", validation.getDiscountAmount());
+        response.put("finalTotal", validation.getFinalAmount());
+        response.put("message", validation.getMessage());
+
+        return ResponseEntity.ok(response);
+    }
+
     private PublicProductResponse toPublicProductResponse(Product p) {
         String stockStatus;
         if (p.getStock() == null || p.getStock() <= 0) stockStatus = "OUT_OF_STOCK";
@@ -636,17 +692,22 @@ public class PublicStoreController {
         log.info("Visit received for slug={} boutiqueId={} lat={} lng={} visitorId={}",
                 slug, b.getId(), lat, lng, visitorId);
 
+        // Resolve real client IP from headers (X-Forwarded-For, X-Real-IP, etc.)
+        String clientIp = NetworkUtils.resolveClientIp(request);
+
+        log.info("recordStoreVisit: slug={} boutiqueId={} clientIp={}", slug, b.getId(), clientIp);
+
         // Always resolve country/city from IP geolocation (needed for top countries/cities analytics)
         // Browser-provided lat/lng takes precedence for map coordinates
-        String country = null;
-        String city = null;
-        String ipHash = hashIp(request.getRemoteAddr());
+        String country = "Inconnu";
+        String city = "Inconnu";
+        String ipHash = hashIp(clientIp);
         try {
-            var geo = geoLocationService.locate(request.getRemoteAddr());
+            var geo = geoLocationService.locate(clientIp);
             if (geo.isPresent()) {
                 var g = geo.get();
-                country = g.country();
-                city = g.city();
+                country = g.country() != null ? g.country() : "Inconnu";
+                city = g.city() != null ? g.city() : "Inconnu";
                 if (lat == null) lat = g.latitude();
                 if (lng == null) lng = g.longitude();
                 log.info("IP geolocation: country={} city={} browserLat={} browserLng={} geoLat={} geoLng={}",
@@ -656,7 +717,10 @@ public class PublicStoreController {
             log.warn("IP geolocation failed for slug={}: {}", slug, e.getMessage());
         }
 
-        boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), request.getRemoteAddr(), ua, visitorId, referrer, lat, lng);
+        log.info("recordStoreVisit final: slug={} boutiqueId={} ip={} country={} city={}",
+                slug, b.getId(), clientIp, country, city);
+
+        boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), clientIp, ua, visitorId, referrer, lat, lng);
 
         // Create/update a Visitor record so map data shows this visit
         try {
@@ -729,8 +793,9 @@ public class PublicStoreController {
     }
 
     private void trackStoreVisit(Boutique boutique, HttpServletRequest request) {
+        String clientIp = NetworkUtils.resolveClientIp(request);
         boutiqueVisitService.recordVisit(boutique.getId(), boutique.getSlug(),
-                request.getRemoteAddr(), request.getHeader("User-Agent"), null,
+                clientIp, request.getHeader("User-Agent"), null,
                 request.getHeader("Referer"), null, null);
     }
 

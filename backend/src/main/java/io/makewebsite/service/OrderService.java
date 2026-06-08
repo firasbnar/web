@@ -41,6 +41,7 @@ public class OrderService {
     private final StoreStatusGuard storeStatusGuard;
     private final InvoicePdfService invoicePdfService;
     private final EmailService emailService;
+    private final CouponService couponService;
 
     @Transactional(readOnly = true)
     public Page<OrderResponse> getOrders(UUID boutiqueId, String status, String search,
@@ -186,7 +187,22 @@ public class OrderService {
         }
 
         BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.ZERO;
-        BigDecimal discount = request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO;
+        BigDecimal discount = BigDecimal.ZERO;
+        String couponCode = request.getCouponCode();
+        if (couponCode != null && !couponCode.isBlank()) {
+            ValidateCouponRequest validateReq = ValidateCouponRequest.builder()
+                    .boutiqueId(request.getBoutiqueId())
+                    .code(couponCode)
+                    .orderAmount(subtotal)
+                    .build();
+            CouponValidationResponse validation = couponService.validateCoupon(validateReq);
+            if (!validation.getValid()) {
+                throw new RuntimeException(validation.getMessage());
+            }
+            discount = validation.getDiscountAmount();
+        } else {
+            discount = request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO;
+        }
         BigDecimal total = subtotal.add(shippingFee).subtract(discount);
 
         Order order = Order.builder()
@@ -198,6 +214,7 @@ public class OrderService {
                 .subtotal(subtotal)
                 .shippingFee(shippingFee)
                 .discount(discount)
+                .couponCode(couponCode)
                 .total(total)
                 .paymentMethod(request.getPaymentMethod())
                 .paymentStatus("UNPAID")
@@ -371,7 +388,7 @@ public class OrderService {
                 .customerEmail(o.getCustomer() != null ? o.getCustomer().getEmail() : o.getCustomerEmail())
                 .orderNumber(o.getOrderNumber()).status(o.getStatus())
                 .subtotal(o.getSubtotal()).shippingFee(o.getShippingFee())
-                .discount(o.getDiscount()).total(o.getTotal())
+                .discount(o.getDiscount()).couponCode(o.getCouponCode()).total(o.getTotal())
                 .paymentMethod(o.getPaymentMethod()).paymentStatus(o.getPaymentStatus())
                 .paymentRef(o.getPaymentRef()).shippingAddress(o.getShippingAddress())
                 .city(o.getCity())

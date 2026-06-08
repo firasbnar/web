@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/app_back_arrow.dart';
 import '../../widgets/app_button.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ProductManagerScreen extends StatefulWidget {
   final String? productId;
@@ -40,26 +42,26 @@ class _ProductManagerScreenState extends State<ProductManagerScreen> {
     final orderCtrl = TextEditingController(text: existing?['sortOrder']?.toString() ?? '');
 
     final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: Text(existing != null ? 'Modifier la variante' : 'Ajouter une variante'),
+      title: Text(existing != null ? 'products.edit_product'.tr() : 'products.add_variant'.tr()),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nom *', hintText: 'Taille M, Couleur Rouge...', border: OutlineInputBorder())),
+            TextField(controller: nameCtrl, decoration: InputDecoration(labelText: 'products.product_name'.tr(), hintText: 'products.product_name'.tr(), border: const OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Prix (optionnel)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            TextField(controller: priceCtrl, decoration: InputDecoration(labelText: 'products.price'.tr(), border: const OutlineInputBorder()), keyboardType: TextInputType.number),
             const SizedBox(height: 12),
-            TextField(controller: stockCtrl, decoration: const InputDecoration(labelText: 'Stock (optionnel)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            TextField(controller: stockCtrl, decoration: InputDecoration(labelText: 'products.stock'.tr(), border: const OutlineInputBorder()), keyboardType: TextInputType.number),
             const SizedBox(height: 12),
-            TextField(controller: skuCtrl, decoration: const InputDecoration(labelText: 'SKU (optionnel)', border: OutlineInputBorder())),
+            TextField(controller: skuCtrl, decoration: InputDecoration(labelText: 'products.sku'.tr(), border: const OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: orderCtrl, decoration: const InputDecoration(labelText: 'Ordre', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+            TextField(controller: orderCtrl, decoration: InputDecoration(labelText: 'Ordre'.tr(), border: const OutlineInputBorder()), keyboardType: TextInputType.number),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-        AppButton(label: 'Enregistrer', onPressed: () async {
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
+        AppButton(label: 'common.save'.tr(), onPressed: () async {
           if (nameCtrl.text.trim().isEmpty) return;
           final data = <String, dynamic>{
             'name': nameCtrl.text.trim(),
@@ -76,7 +78,7 @@ class _ProductManagerScreenState extends State<ProductManagerScreen> {
             }
             Navigator.pop(ctx, true);
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${'common.error'.tr()}: $e'), backgroundColor: AppColors.danger));
           }
         }),
       ],
@@ -86,16 +88,16 @@ class _ProductManagerScreenState extends State<ProductManagerScreen> {
 
   Future<void> _deleteVariant(String id) async {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Confirmer'),
-      content: const Text('Supprimer cette variante ?'),
+      title: Text('common.confirm_delete'.tr()),
+      content: Text('products.delete_confirm'.tr()),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer', style: TextStyle(color: AppColors.danger))),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('common.delete'.tr(), style: const TextStyle(color: AppColors.danger))),
       ],
     ));
     if (ok == true) {
       try { await _api.delete('/products/${widget.productId}/variants/$id'); _loadVariants(); }
-      catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger)); }
+      catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${'common.error'.tr()}: $e'), backgroundColor: AppColors.danger)); }
     }
   }
 
@@ -103,18 +105,19 @@ class _ProductManagerScreenState extends State<ProductManagerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gestion des variantes'),
+        leading: const AppBackArrow(),
+        title: Text('products.variant_manager'.tr()),
         actions: [
           if (widget.productId != null)
             IconButton(icon: const Icon(Icons.add), onPressed: () => _showVariantDialog()),
         ],
       ),
       body: widget.productId == null
-          ? const Center(child: Text('Sélectionnez un produit depuis la liste des produits'))
+          ? Center(child: Text('products.all_products'.tr()))
           : _loading
               ? const Center(child: CircularProgressIndicator())
               : _variants.isEmpty
-                  ? const Center(child: Text('Aucune variante'))
+                  ? Center(child: Text('products.no_products'.tr()))
                   : ReorderableListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _variants.length,

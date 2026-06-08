@@ -10,6 +10,7 @@ import io.makewebsite.repository.TrafficRepository;
 import io.makewebsite.repository.TrafficSessionRepository;
 import io.makewebsite.service.GeoLocationService.GeoData;
 import io.makewebsite.util.CsvUtil;
+import io.makewebsite.util.NetworkUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -107,6 +108,11 @@ public class TrafficService {
                         .count((Long) r[2])
                         .build())
                 .collect(Collectors.toList());
+
+        log.info("Analytics overview for storeId={}: totalVisits={}, topCountries={}, topCities={}",
+                boutiqueId,
+                sessionRepository.countByBoutiqueId(boutiqueId),
+                topCountries.size(), topCities.size());
 
         List<DeviceBreakdownResponse> deviceBreakdown = trafficRepository.countByBoutiqueIdGroupByDeviceType(boutiqueId).stream()
                 .map(r -> DeviceBreakdownResponse.builder()
@@ -241,20 +247,24 @@ public class TrafficService {
             return Map.of("tracked", false, "error", "boutiqueId required");
         }
 
-        String ipHash = hashIp(req.getIpAddress());
+        String clientIp = req.getIpAddress();
 
-        GeoData geo = req.getIpAddress() != null
-                ? geoLocationService.locate(req.getIpAddress()).orElse(null)
+        String ipHash = hashIp(clientIp);
+
+        GeoData geo = clientIp != null
+                ? geoLocationService.locate(clientIp).orElse(null)
                 : null;
 
-        String country = geo != null ? geo.country() : null;
-        String city = geo != null ? geo.city() : null;
+        String country = geo != null ? geo.country() : "Inconnu";
+        String city = geo != null ? geo.city() : "Inconnu";
         String region = geo != null ? geo.region() : null;
         Double latitude = geo != null ? geo.latitude() : null;
         Double longitude = geo != null ? geo.longitude() : null;
 
-        log.info("Geo lookup for ip={}: country={}, city={}, lat={}, lon={}",
-                req.getIpAddress(), country, city, latitude, longitude);
+        log.info("Geo lookup for ip={}: country={} city={}", clientIp, country, city);
+
+        log.info("TrackVisit: storeId={} ip={} country={} city={}",
+                req.getBoutiqueId(), clientIp, country, city);
 
         // Create StoreView record
         StoreView view = StoreView.builder()
@@ -269,6 +279,8 @@ public class TrafficService {
                 .viewedAt(LocalDateTime.now())
                 .build();
         storeViewRepository.save(view);
+        log.info("StoreView saved: id={} boutiqueId={} country={} city={}",
+                view.getId(), req.getBoutiqueId(), country, city);
 
         // Manage session-based visit tracking
         if (req.getSessionId() != null) {

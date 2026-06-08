@@ -62,6 +62,10 @@ public class Order {
     @Column(precision = 10, scale = 2)
     private BigDecimal discount = BigDecimal.ZERO;
 
+    @Size(max = 50)
+    @Column(name = "coupon_code")
+    private String couponCode;
+
     @NotNull
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;

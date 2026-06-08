@@ -1,7 +1,6 @@
 package io.makewebsite.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,19 +29,24 @@ public class Conversation {
     @JoinColumn(name = "boutique_id", nullable = false)
     private Boutique boutique;
 
-    @NotNull
     @Size(max = 150)
     @Column(name = "customer_name", nullable = false)
     private String customerName;
 
-    @NotNull
     @Size(max = 150)
-    @Column(name = "customer_email", nullable = false)
+    @Column(name = "customer_email")
     private String customerEmail;
 
     @Size(max = 20)
     @Column(name = "customer_phone")
     private String customerPhone;
+
+    @Column(name = "guest_token", unique = true)
+    private String guestToken;
+
+    @Builder.Default
+    @Column(name = "status", nullable = false)
+    private String status = "OPEN";
 
     @Column(name = "last_message_at", nullable = false)
     private LocalDateTime lastMessageAt;

@@ -20,6 +20,18 @@ public class WebSocketService {
         messagingTemplate.convertAndSend("/topic/messages/" + boutiqueId, conversation);
     }
 
+    public void sendNewConversationToMerchant(UUID storeId, Object payload) {
+        messagingTemplate.convertAndSend("/topic/stores/" + storeId + "/conversations", payload);
+    }
+
+    public void sendMerchantReplyToVisitor(UUID conversationId, Object payload) {
+        messagingTemplate.convertAndSend("/topic/public/conversations/" + conversationId, payload);
+    }
+
+    public void sendMessageToConversation(UUID conversationId, Object payload) {
+        messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, payload);
+    }
+
     public void sendVisitorUpdate(UUID boutiqueId, TrafficStatsResponse stats) {
         messagingTemplate.convertAndSend("/topic/traffic/" + boutiqueId + "/stats", stats);
     }

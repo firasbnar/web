@@ -84,8 +84,7 @@ class MessagesProvider extends ChangeNotifier {
         'content': content,
       });
       final msg = Message.fromJson(res['data'] as Map<String, dynamic>);
-      _messages.add(msg);
-      notifyListeners();
+      _addOrUpdateMessage(msg);
       return true;
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
@@ -126,11 +125,43 @@ class MessagesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addMessageFromSocket(Message message) {
-    final idx = _messages.indexWhere((m) => m.id == message.id);
-    if (idx < 0) {
-      _messages.add(message);
-      notifyListeners();
+  void refreshConversation(String conversationId) {
+    final idx = _conversations.indexWhere((c) => c.id == conversationId);
+    if (idx >= 0) {
+      final old = _conversations[idx];
+      _conversations[idx] = Conversation(
+        id: old.id,
+        boutiqueId: old.boutiqueId,
+        customerName: old.customerName,
+        customerEmail: old.customerEmail,
+        customerPhone: old.customerPhone,
+        lastMessageAt: old.lastMessageAt,
+        lastMessagePreview: old.lastMessagePreview,
+        unreadCount: old.unreadCount + 1,
+        createdAt: old.createdAt,
+      );
     }
+    notifyListeners();
+  }
+
+  void addMessageFromSocket(Message message) {
+    if (message.id.isNotEmpty && _messages.any((m) => m.id == message.id)) {
+      return;
+    }
+    _messages.add(message);
+    notifyListeners();
+  }
+
+  void _addOrUpdateMessage(Message message) {
+    if (message.id.isNotEmpty) {
+      final idx = _messages.indexWhere((m) => m.id == message.id);
+      if (idx >= 0) {
+        _messages[idx] = message;
+        notifyListeners();
+        return;
+      }
+    }
+    _messages.add(message);
+    notifyListeners();
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
@@ -29,8 +30,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   String? _validate(String v) {
-    if (v.trim().isEmpty) return 'Email requis';
-    if (!v.trim().contains('@')) return 'Email invalide';
+    if (v.trim().isEmpty) return 'auth.email_required'.tr();
+    if (!v.trim().contains('@')) return 'auth.email_invalid'.tr();
     return null;
   }
 
@@ -55,7 +56,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } on TimeoutException {
       developer.log('[ForgotPassword] TimeoutException');
       setState(() {
-        _error = 'La connexion a pris trop de temps. Vérifiez votre réseau.';
+        _error = 'errors.timeout'.tr();
         _loading = false;
       });
     } on DioException catch (e) {
@@ -68,22 +69,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       String msg;
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        msg = 'La connexion a pris trop de temps. Vérifiez votre réseau.';
+        msg = 'errors.timeout'.tr();
       } else if (e.type == DioExceptionType.connectionError) {
-        msg = 'Impossible de contacter le serveur. '
-            'Vérifiez que le serveur est en ligne.';
+        msg = 'errors.server_unreachable'.tr();
       } else if (e.response?.statusCode == 400) {
-        msg = 'Données invalides. Vérifiez votre saisie.';
+        msg = 'errors.bad_request'.tr();
       } else if (e.response?.statusCode != null &&
           e.response!.statusCode! >= 500) {
-        msg = 'Erreur serveur. Veuillez réessayer plus tard.';
+        msg = 'errors.server_error'.tr();
       } else {
         msg = ApiClient.extractErrorMessage(e);
       }
       setState(() { _error = msg; _loading = false; });
     } catch (e, stack) {
       developer.log('[ForgotPassword] Unexpected error: $e\n$stack');
-      setState(() { _error = 'Erreur inattendue. Veuillez réessayer.'; _loading = false; });
+      setState(() { _error = 'errors.unknown'.tr(); _loading = false; });
     }
   }
 
@@ -92,7 +92,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Mot de passe oublié'),
+        title: Text('auth.forgot_password_title'.tr()),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -105,12 +105,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               Icon(Icons.lock_reset, size: 56, color: AppColors.primary.withAlpha(180)),
               const SizedBox(height: 20),
-              Text('Réinitialisation', style: AppTypography.heading1),
+              Text('auth.reset_password'.tr(), style: AppTypography.heading1),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Entrez votre adresse email pour recevoir un lien de réinitialisation.',
+                  'auth.forgot_password_hint'.tr(),
                   style: AppTypography.body2.copyWith(color: AppColors.textSecondary),
                   textAlign: TextAlign.center,
                 ),
@@ -119,7 +119,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               if (!_sent) ...[
                 AppTextField(
                   controller: _emailCtrl,
-                  label: 'Email',
+                  label: 'auth.email'.tr(),
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   onSubmitted: (_) => _submit(),
@@ -139,7 +139,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ],
                 const SizedBox(height: 24),
                 AppButton(
-                  label: 'Envoyer le lien',
+                  label: 'common.submit'.tr(),
                   loading: _loading,
                   onPressed: _submit,
                   icon: Icons.send,
@@ -159,7 +159,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       const Icon(Icons.check_circle_outline, size: 48, color: AppColors.success),
                       const SizedBox(height: 12),
                       Text(
-                        'Si cet email existe, un lien de réinitialisation a été envoyé.',
+                        'auth.forgot_password_sent'.tr(),
                         style: AppTypography.body1.copyWith(color: AppColors.textPrimary),
                         textAlign: TextAlign.center,
                       ),
@@ -174,7 +174,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   style: TextButton.styleFrom(
                     minimumSize: const Size(160, 44),
                   ),
-                  child: const Text('Retour à la connexion'),
+                  child: Text('common.back'.tr()),
                 ),
               ),
             ],

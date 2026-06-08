@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -81,12 +83,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       _loadUsers(refresh: true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rôle mis à jour'), backgroundColor: AppColors.success));
+          SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.danger));
+          SnackBar(content: Text('${'errors.unknown'.tr()}: $e'), backgroundColor: AppColors.danger));
       }
     }
   }
@@ -103,7 +105,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
+            DrawerHeader(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF4040C8), Color(0xFF8B2FC9)],
@@ -119,20 +121,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 28),
                   ),
                   SizedBox(height: 12),
-                  Text('Super Admin', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('Panneau d\'administration', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text('super_admin.title'.tr(), style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('admin.title'.tr(), style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),
             ListTile(
               leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard'),
+              title: Text('super_admin.dashboard'.tr()),
               selected: true,
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
               leading: const Icon(Icons.people),
-              title: const Text('Owners'),
+              title: Text('admin.users'.tr()),
               onTap: () {
                 Navigator.pop(context);
                 _tabCtrl.animateTo(1);
@@ -140,7 +142,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ),
             ListTile(
               leading: const Icon(Icons.store),
-              title: const Text('Boutiques'),
+              title: Text('admin.boutiques'.tr()),
               onTap: () {
                 Navigator.pop(context);
                 _tabCtrl.animateTo(2);
@@ -149,7 +151,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: AppColors.danger),
-              title: const Text('Déconnexion', style: TextStyle(color: AppColors.danger)),
+              title: Text('auth.logout'.tr(), style: TextStyle(color: AppColors.danger)),
               onTap: () {
                 Navigator.pop(context);
                 _logout();
@@ -159,16 +161,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         ),
       ),
       appBar: AppBar(
-        title: const Text('Administration'),
+        leading: const AppBackArrow(),
+        title: Text('admin.title'.tr()),
         bottom: TabBar(
           controller: _tabCtrl,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard), text: 'Aperçu'),
-            Tab(icon: Icon(Icons.people), text: 'Utilisateurs'),
-            Tab(icon: Icon(Icons.store), text: 'Boutiques'),
+          tabs: [
+            Tab(icon: Icon(Icons.dashboard), text: 'dashboard.title'.tr()),
+            Tab(icon: Icon(Icons.people), text: 'admin.users'.tr()),
+            Tab(icon: Icon(Icons.store), text: 'admin.boutiques'.tr()),
           ],
         ),
       ),
@@ -193,12 +196,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: [
-        _metricCard('Utilisateurs', '${o?['totalUsers'] ?? 0}', Icons.people, AppColors.primary),
-        _metricCard('Boutiques', '${o?['totalBoutiques'] ?? 0}', Icons.store, Colors.amber),
-        _metricCard('Produits', '${o?['totalProducts'] ?? 0}', Icons.inventory_2, Colors.cyan),
-        _metricCard('Commandes', '${o?['totalOrders'] ?? 0}', Icons.receipt_long, AppColors.success),
-        _metricCard('Revenu total', '${(o?['totalRevenue'] ?? 0).toString()} TND', Icons.trending_up, Colors.pink),
-        _metricCard('Abonnements', '${o?['totalSubscriptions'] ?? 0}', Icons.card_membership, Colors.purple),
+        _metricCard('admin.total_users'.tr(), '${o?['totalUsers'] ?? 0}', Icons.people, AppColors.primary),
+        _metricCard('admin.total_stores'.tr(), '${o?['totalBoutiques'] ?? 0}', Icons.store, Colors.amber),
+        _metricCard('dashboard.total_products'.tr(), '${o?['totalProducts'] ?? 0}', Icons.inventory_2, Colors.cyan),
+        _metricCard('dashboard.total_orders'.tr(), '${o?['totalOrders'] ?? 0}', Icons.receipt_long, AppColors.success),
+        _metricCard('super_admin.total_revenue'.tr(), '${(o?['totalRevenue'] ?? 0).toString()} TND', Icons.trending_up, Colors.pink),
+        _metricCard('admin.active_subscriptions'.tr(), '${o?['totalSubscriptions'] ?? 0}', Icons.card_membership, Colors.purple),
       ],
     );
   }
@@ -232,11 +235,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           children: [
             const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
             const SizedBox(height: 12),
-            const Text('Impossible de charger les utilisateurs'),
+            Text('admin.no_results'.tr()),
             const SizedBox(height: 8),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: () { _usersError = false; setState(() {}); _loadUsers(refresh: true); },
             ),
           ],
@@ -289,7 +292,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           color: AppColors.danger.withAlpha(30),
                           borderRadius: BorderRadius.circular(100),
                         ),
-                        child: const Text('SUSPENDU', style: TextStyle(fontSize: 10, color: AppColors.danger)),
+                        child: Text('admin.suspend'.tr(), style: TextStyle(fontSize: 10, color: AppColors.danger)),
                       ),
                     const SizedBox(width: 8),
                     DropdownButton<String>(
@@ -316,11 +319,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           children: [
             const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
             const SizedBox(height: 12),
-            const Text('Impossible de charger les boutiques'),
+            Text('admin.no_results'.tr()),
             const SizedBox(height: 8),
             TextButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Réessayer'),
+              label: Text('common.retry'.tr()),
               onPressed: () { _boutiquesError = false; setState(() {}); _loadBoutiques(refresh: true); },
             ),
           ],

@@ -10,6 +10,8 @@ import '../../core/api_client.dart';
 import '../../providers/products_provider.dart';
 import '../../providers/boutique_provider.dart';
 import '../../models/product.dart';
+import '../../widgets/app_back_button.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class ProductFormData {
   final TextEditingController nameCtrl = TextEditingController();
@@ -83,7 +85,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur: ${ApiClient.extractErrorMessage(e)}'),
+            content: Text('${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'),
             backgroundColor: AppColors.danger));
       }
     } finally {
@@ -101,7 +103,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
     if (boutiqueId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aucune boutique sélectionnée')));
+            SnackBar(content: Text('common.error'.tr())));
       }
       setState(() => _saving = false);
       return;
@@ -131,7 +133,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
     setState(() => _saving = false);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('$successCount produit(s) créé(s)'),
+        content: Text('$successCount ${'products.product_created'.tr()}'),
         backgroundColor: AppColors.success));
     if (successCount > 0) {
       if (!context.mounted) return;
@@ -145,11 +147,8 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Ajout en Masse de Produits'),
+        leading: const AppBackButton(),
+        title: Text('products.bulk_add'.tr()),
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: PreferredSize(
@@ -182,7 +181,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
           children: [
             OutlinedButton.icon(
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('+ Ajouter un Autre Produit'),
+              label: Text('products.add_product'.tr()),
               onPressed: _addAnotherProduct,
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textPrimary,
@@ -193,7 +192,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.close, size: 16),
-              label: const Text('Annuler'),
+              label: Text('common.cancel'.tr()),
               onPressed: () => context.pop(),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textPrimary,
@@ -210,7 +209,7 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.save, size: 16),
-              label: const Text('Enregistrer Tous les Produits'),
+              label: Text('common.save'.tr()),
               onPressed: _saving ? null : _saveAllProducts,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -259,7 +258,7 @@ class _ProductCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Text('Produit #${index + 1}',
+                Text('products.variant_manager'.tr(args: [(index + 1).toString()]),
                     style: AppTypography.heading3
                         .copyWith(color: AppColors.primary)),
                 const Spacer(),
@@ -282,11 +281,11 @@ class _ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _label('Nom du Produit *'),
+                _label('products.product_name'.tr()),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: data.nameCtrl,
-                  decoration: _decoration(hint: 'T-shirts ...'),
+                  decoration: _decoration(hint: 'products.product_name'.tr()),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -296,17 +295,17 @@ class _ProductCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _label('Catégorie *'),
+                            _label('products.category'.tr()),
                             const SizedBox(height: 6),
                             InputDecorator(
                               decoration: _decoration(
-                                  hint: 'Choisir une catégorie'),
+                                  hint: 'products.select_category'.tr()),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
                                   value: data.categoryId,
                                   isExpanded: true,
                                   isDense: true,
-                                  hint: const Text('Choisir une catégorie',
+                                  hint: Text('products.select_category'.tr(),
                                       style: TextStyle(
                                           color: Color(0xFF9B97B8),
                                           fontSize: 13)),
@@ -330,13 +329,13 @@ class _ProductCard extends StatelessWidget {
                         child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('Prix *'),
+                        _label('products.price'.tr()),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: data.priceCtrl,
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
-                          decoration: _decoration(hint: '12'),
+                          decoration: _decoration(hint: 'products.price'.tr()),
                         ),
                       ],
                     )),
@@ -345,12 +344,12 @@ class _ProductCard extends StatelessWidget {
                         child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('Ancien Prix'),
+                        _label('products.compare_price'.tr()),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: data.comparePriceCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: _decoration(hint: '15'),
+                          decoration: _decoration(hint: 'products.compare_price'.tr()),
                         ),
                       ],
                     )),
@@ -363,12 +362,12 @@ class _ProductCard extends StatelessWidget {
                         child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('Quantité'),
+                        _label('products.stock'.tr()),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: data.qtyCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: _decoration(hint: '0'),
+                          decoration: _decoration(hint: 'products.stock'.tr()),
                         ),
                       ],
                     )),
@@ -377,11 +376,11 @@ class _ProductCard extends StatelessWidget {
                         child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('Couleurs'),
+                        _label('products.colors'.tr()),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: data.colorsCtrl,
-                          decoration: _decoration(hint: 'Rouge, Bleu, Vert'),
+                          decoration: _decoration(hint: 'products.colors'.tr()),
                         ),
                       ],
                     )),
@@ -390,26 +389,26 @@ class _ProductCard extends StatelessWidget {
                         child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('Tailles'),
+                        _label('products.sizes'.tr()),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: data.sizesCtrl,
-                          decoration: _decoration(hint: 'S, M, L, XL'),
+                          decoration: _decoration(hint: 'products.sizes'.tr()),
                         ),
                       ],
                     )),
                   ],
                 ),
                 const SizedBox(height: 12),
-                _label('Description du Produit'),
+                _label('products.product_description'.tr()),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: data.descriptionCtrl,
                   maxLines: 3,
-                  decoration: _decoration(hint: 'Description...'),
+                  decoration: _decoration(hint: 'products.product_description'.tr()),
                 ),
                 const SizedBox(height: 12),
-                _label('Images du Produit (Sélectionnez plusieurs images)'),
+                _label('products.images'.tr()),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
@@ -417,12 +416,12 @@ class _ProductCard extends StatelessWidget {
                   children: [
                     OutlinedButton(
                       onPressed: onPickImages,
-                      child: const Text('Sélect. fichiers'),
+                      child: Text('common.upload'.tr()),
                     ),
                     Text(
                       data.imageUrls.isEmpty
-                          ? 'Aucun fichier choisi'
-                          : '${data.imageUrls.length} image(s)',
+                          ? 'products.no_products'.tr()
+                          : '${data.imageUrls.length} ${'products.images'.tr()}',
                       style: AppTypography.caption,
                     ),
                   ],
@@ -433,8 +432,8 @@ class _ProductCard extends StatelessWidget {
                     child: LinearProgressIndicator(),
                   ),
                 const SizedBox(height: 4),
-                const Text(
-                    'Vous pouvez sélectionner plusieurs images à la fois',
+                Text(
+                    'products.images'.tr(),
                     style: TextStyle(fontSize: 11, color: AppColors.textHint)),
               ],
             ),

@@ -5,6 +5,7 @@ import io.makewebsite.service.AuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.LazyInitializationException;
 import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,6 +32,16 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    private final MessageSource messageSource;
+
+    public GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
+
+    private String msg(String code, Object... args) {
+        return messageSource.getMessage(code, args, code, LocaleContextHolder.getLocale());
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException e) {
@@ -56,14 +68,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException e) {
         log.warn("Access denied: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(msg("error.access_denied")));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException e) {
         log.warn("Bad credentials: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Email ou mot de passe incorrect"));
+                .body(ApiResponse.error(msg("error.bad_credentials")));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -72,49 +84,49 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage).collect(Collectors.toList());
         log.warn("Validation error: {}", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Erreur de validation", errors));
+                .body(ApiResponse.error(msg("error.validation"), errors));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingParam(MissingServletRequestParameterException e) {
         log.warn("Missing parameter: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Paramètre requis manquant: " + e.getParameterName()));
+                .body(ApiResponse.error(msg("error.missing_param", e.getParameterName())));
     }
 
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingPart(MissingServletRequestPartException e) {
         log.warn("Missing part: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Partie requise manquante: " + e.getRequestPartName()));
+                .body(ApiResponse.error(msg("error.missing_part", e.getRequestPartName())));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         log.warn("Type mismatch: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Format de paramètre invalide pour: " + e.getName()));
+                .body(ApiResponse.error(msg("error.type_mismatch", e.getName())));
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodValidation(HandlerMethodValidationException e) {
         log.warn("Method validation: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Erreur de validation de la requête"));
+                .body(ApiResponse.error(msg("error.request_validation")));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleMessageNotReadable(HttpMessageNotReadableException e) {
         log.warn("Message not readable: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Corps de la requête invalide"));
+                .body(ApiResponse.error(msg("error.invalid_body")));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException e) {
         log.warn("Max upload size exceeded: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(ApiResponse.error("Fichier trop volumineux (max 10MB)"));
+                .body(ApiResponse.error(msg("error.file_too_large")));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -128,7 +140,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNullPointer(NullPointerException e) {
         log.error("NullPointerException: {}", e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Erreur : une valeur est manquante (" + e.getMessage() + ")"));
+                .body(ApiResponse.error(msg("error.null_pointer", e.getMessage())));
     }
 
     @ExceptionHandler(LazyInitializationException.class)
@@ -188,7 +200,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNoHandler(NoHandlerFoundException e) {
         log.warn("No handler found: {} {}", e.getHttpMethod(), e.getRequestURL());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error("Endpoint non trouvé: " + e.getRequestURL()));
+                .body(ApiResponse.error(msg("error.endpoint_not_found", e.getRequestURL())));
     }
 
     @ExceptionHandler(RuntimeException.class)

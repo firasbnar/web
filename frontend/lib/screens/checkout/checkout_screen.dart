@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
 import '../../providers/cart_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../widgets/app_back_arrow.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String boutiqueId;
@@ -107,7 +109,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final code = _couponCtrl.text.trim();
     if (code.isEmpty) return;
     if (!_isValidUuid(widget.boutiqueId)) {
-      setState(() { _couponMsg = 'Identifiant boutique invalide'; _couponLoading = false; });
+      setState(() { _couponMsg = 'common.error'.tr(); _couponLoading = false; });
       return;
     }
     setState(() { _couponLoading = true; _couponMsg = null; _discount = 0; });
@@ -120,9 +122,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final data = res['data'];
       if (data['valid'] == true) {
         _discount = (data['discountAmount'] as num).toDouble();
-        _couponMsg = 'Code promo appliqué: -${_discount.toStringAsFixed(3)} TND';
+        _couponMsg = '${'cart.coupon_applied'.tr()}: -${_discount.toStringAsFixed(3)} TND';
       } else {
-        _couponMsg = data['message'] ?? 'Code promo invalide';
+        _couponMsg = data['message'] ?? 'cart.coupon_invalid'.tr();
       }
     } catch (e) {
       _couponMsg = ApiClient.extractErrorMessage(e);
@@ -135,8 +137,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (cart.items.isEmpty) return;
     if (!_isValidUuid(widget.boutiqueId)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Configuration boutique invalide. Veuillez réessayer.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('common.error'.tr()),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -144,8 +146,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     if (cart.items.any((i) => i.productId == null || i.productName == null || i.productName!.isEmpty)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Certains articles du panier sont incomplets.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('cart.empty'.tr()),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -218,41 +220,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<Step> _buildSteps() {
     return [
       Step(
-        title: const Text('Identité'),
+        title: Text('checkout.shipping_info'.tr()),
         isActive: _currentStep >= 0,
         state: _currentStep > 0 ? StepState.complete : StepState.indexed,
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Vos informations', style: AppTypography.body2),
+            Text('checkout.shipping_info'.tr(), style: AppTypography.body2),
             const SizedBox(height: 12),
-            TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nom complet *', border: OutlineInputBorder())),
+            TextField(controller: _nameCtrl, decoration: InputDecoration(labelText: '${'checkout.full_name'.tr()} *', border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()), keyboardType: TextInputType.emailAddress),
+            TextField(controller: _emailCtrl, decoration: InputDecoration(labelText: 'checkout.email'.tr(), border: OutlineInputBorder()), keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 12),
-            TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Téléphone', border: OutlineInputBorder()), keyboardType: TextInputType.phone),
+            TextField(controller: _phoneCtrl, decoration: InputDecoration(labelText: 'checkout.phone'.tr(), border: OutlineInputBorder()), keyboardType: TextInputType.phone),
           ],
         ),
       ),
       Step(
-        title: const Text('Adresse'),
+        title: Text('common.address'.tr()),
         isActive: _currentStep >= 1,
         state: _currentStep > 1 ? StepState.complete : StepState.indexed,
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Adresse de livraison', style: AppTypography.body2),
+            Text('checkout.shipping_info'.tr(), style: AppTypography.body2),
             const SizedBox(height: 12),
-            TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Adresse', border: OutlineInputBorder()), maxLines: 2),
+            TextField(controller: _addressCtrl, decoration: InputDecoration(labelText: 'checkout.address'.tr(), border: OutlineInputBorder()), maxLines: 2),
             const SizedBox(height: 12),
-            TextField(controller: _cityCtrl, decoration: const InputDecoration(labelText: 'Ville', border: OutlineInputBorder())),
+            TextField(controller: _cityCtrl, decoration: InputDecoration(labelText: 'checkout.city'.tr(), border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: _govCtrl, decoration: const InputDecoration(labelText: 'Gouvernorat', border: OutlineInputBorder())),
+            TextField(controller: _govCtrl, decoration: InputDecoration(labelText: 'checkout.governorate'.tr(), border: OutlineInputBorder())),
           ],
         ),
       ),
       Step(
-        title: const Text('Livraison'),
+        title: Text('delivery.title'.tr()),
         isActive: _currentStep >= 2,
         state: _currentStep > 2 ? StepState.complete : StepState.indexed,
         content: _loadingStore
@@ -266,49 +268,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   if (_enabledProviders(_store ?? {}).isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Text('Aucun transporteur disponible', style: AppTypography.body2.copyWith(color: AppColors.textHint)),
+                      child: Text('common.no_data'.tr(), style: AppTypography.body2.copyWith(color: AppColors.textHint)),
                     ),
                 ],
               ),
       ),
       Step(
-        title: const Text('Paiement'),
+        title: Text('checkout.payment_method'.tr()),
         isActive: _currentStep >= 3,
         state: _currentStep > 3 ? StepState.complete : StepState.indexed,
         content: Column(
           children: [
-            _paymentOption('cod', 'Paiement à la livraison', Icons.money),
+            _paymentOption('cod', 'checkout.cash_on_delivery'.tr(), Icons.money),
             const SizedBox(height: 8),
-            _paymentOption('stripe', 'Carte bancaire (Stripe)', Icons.credit_card),
+            _paymentOption('stripe', 'checkout.card_payment'.tr(), Icons.credit_card),
           ],
         ),
       ),
       Step(
-        title: const Text('Récapitulatif'),
+        title: Text('checkout.order_summary'.tr()),
         isActive: _currentStep >= 4,
         state: _currentStep > 4 ? StepState.complete : StepState.indexed,
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _summaryRow('Sous-total', _subtotal),
-            _summaryRow('Livraison', _shippingFee),
-            if (_discount > 0) _summaryRow('Remise', -_discount),
+            _summaryRow('cart.subtotal'.tr(), _subtotal),
+            _summaryRow('cart.shipping'.tr(), _shippingFee),
+            if (_discount > 0) _summaryRow('cart.discount'.tr(), -_discount),
             const Divider(),
-            _summaryRow('Total', _total, bold: true),
+            _summaryRow('cart.grand_total'.tr(), _total, bold: true),
             const SizedBox(height: 16),
             const Divider(),
-            Text('Code promo', style: AppTypography.body2),
+            Text('cart.coupon_code'.tr(), style: AppTypography.body2),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _couponCtrl,
-                    decoration: const InputDecoration(hintText: 'Entrez un code', border: OutlineInputBorder()),
+                    decoration: InputDecoration(hintText: 'cart.coupon_code'.tr(), border: OutlineInputBorder()),
                   ),
                 ),
                 const SizedBox(width: 8),
-                AppButton(label: 'Appliquer', onPressed: _couponLoading ? null : _applyCoupon, fullWidth: false),
+                AppButton(label: 'cart.apply_coupon'.tr(), onPressed: _couponLoading ? null : _applyCoupon, fullWidth: false),
               ],
             ),
             if (_couponLoading) const Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()),
@@ -319,14 +321,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(labelText: 'Notes (optionnel)', border: OutlineInputBorder(), alignLabelWithHint: true),
+              decoration: InputDecoration(labelText: 'checkout.notes'.tr(), border: OutlineInputBorder(), alignLabelWithHint: true),
               maxLines: 3,
             ),
           ],
         ),
       ),
       Step(
-        title: const Text('Confirmation'),
+        title: Text('checkout.confirm_order'.tr()),
         isActive: _currentStep >= 5,
         state: _currentStep > 5 ? StepState.complete : StepState.indexed,
         content: _success
@@ -334,27 +336,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   const Icon(Icons.check_circle, size: 80, color: AppColors.success),
                   const SizedBox(height: 16),
-                  Text('Commande confirmée !', style: AppTypography.heading2),
+                  Text('checkout.order_placed'.tr(), style: AppTypography.heading2),
                   const SizedBox(height: 8),
-                  Text('Numéro de commande: $_orderNumber', style: AppTypography.body2),
+                  Text('${'checkout.order_number'.tr()}: $_orderNumber', style: AppTypography.body2),
                   const SizedBox(height: 24),
-                  AppButton(label: 'Retour à la boutique', onPressed: () {
+                  AppButton(label: 'checkout.continue_shopping'.tr(), onPressed: () {
                     if (mounted) context.go('/catalog/${widget.boutiqueId}');
                   }),
                 ],
               )
             : Column(
                 children: [
-                  Text('Vérifiez votre commande avant de confirmer', style: AppTypography.body2),
+                  Text('common.confirm_action'.tr(), style: AppTypography.body2),
                   const SizedBox(height: 16),
-                  _summaryRow('Sous-total', _subtotal),
-                  _summaryRow('Livraison', _shippingFee),
-                  if (_discount > 0) _summaryRow('Remise', -_discount),
+                  _summaryRow('cart.subtotal'.tr(), _subtotal),
+                  _summaryRow('cart.shipping'.tr(), _shippingFee),
+                  if (_discount > 0) _summaryRow('cart.discount'.tr(), -_discount),
                   const Divider(),
-                  _summaryRow('Total', _total, bold: true),
+                  _summaryRow('cart.grand_total'.tr(), _total, bold: true),
                   const SizedBox(height: 24),
                   AppButton(
-                    label: _placing ? 'Traitement...' : 'Confirmer la commande',
+                    label: _placing ? 'checkout.processing_payment'.tr() : 'checkout.confirm_order'.tr(),
                     onPressed: _placing ? null : _placeOrder,
                     loading: _placing,
                   ),
@@ -373,11 +375,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             const Icon(Icons.check_circle, size: 80, color: AppColors.success),
             const SizedBox(height: 16),
-            Text('Commande confirmée !', style: AppTypography.heading2),
+            Text('checkout.order_placed'.tr(), style: AppTypography.heading2),
             const SizedBox(height: 8),
-            Text('Numéro de commande: $_orderNumber', style: AppTypography.body2),
+            Text('${'checkout.order_number'.tr()}: $_orderNumber', style: AppTypography.body2),
             const SizedBox(height: 24),
-            AppButton(label: 'Retour à la boutique', onPressed: () {
+            AppButton(label: 'checkout.continue_shopping'.tr(), onPressed: () {
               if (mounted) context.go('/catalog/${widget.boutiqueId}');
             }),
           ],
@@ -451,14 +453,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Commande')),
+      appBar: AppBar(leading: const AppBackArrow(), title: Text('checkout.title'.tr())),
       body: Consumer<CartProvider>(
         builder: (_, cart, __) {
           if (_success) {
             return _buildSuccessView();
           }
           if (cart.items.isEmpty) {
-            return const Center(child: Text('Votre panier est vide'));
+            return Center(child: Text('cart.empty'.tr()));
           }
           // Clamp to prevent Stepper assertion crash
           final steps = _buildSteps();
@@ -483,12 +485,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Row(
                     children: [
                       if (_currentStep < 5)
-                        AppButton(label: 'Continuer', onPressed: details.onStepContinue, fullWidth: false)
+                        AppButton(label: 'common.next'.tr(), onPressed: details.onStepContinue, fullWidth: false)
                       else
-                        AppButton(label: 'Confirmer', onPressed: details.onStepContinue, loading: _placing, fullWidth: false),
+                        AppButton(label: 'checkout.confirm_order'.tr(), onPressed: details.onStepContinue, loading: _placing, fullWidth: false),
                       if (_currentStep > 0) ...[
                         const SizedBox(width: 12),
-                        TextButton(onPressed: details.onStepCancel, child: const Text('Retour')),
+                        TextButton(onPressed: details.onStepCancel, child: Text('common.back'.tr())),
                       ],
                     ],
                   ),

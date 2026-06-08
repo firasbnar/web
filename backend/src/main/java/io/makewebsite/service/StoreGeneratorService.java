@@ -7,6 +7,8 @@ import io.makewebsite.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +31,7 @@ public class StoreGeneratorService {
     private final StoreSliderRepository sliderRepository;
     private final StoreLanguageRepository languageRepository;
     private final BoutiqueCountryRepository countryRepository;
+    private final SpringTemplateEngine templateEngine;
 
     private static final String STORE_FILES_DIR = "store-files";
     private static final String DEFAULT_PRODUCT_IMAGE = "/images/default-product.png";
@@ -64,9 +67,14 @@ public class StoreGeneratorService {
     public void regenerate(UUID boutiqueId) {
         Boutique b = boutiqueRepository.findById(boutiqueId)
                 .orElseThrow(() -> new RuntimeException("Boutique not found: " + boutiqueId));
-        List<Product> products = productRepository.findPublicProductsWithCategory(boutiqueId);
-        List<Category> categories = categoryRepository.findByBoutiqueIdOrderBySortOrderAsc(boutiqueId);
-        String html = generateHtml(b, products, categories);
+        StoreData storeData = loadStoreData(b.getSlug());
+        Context ctx = new Context();
+        ctx.setVariable("store", storeData);
+        ctx.setVariable("detailProduct", null);
+        ctx.setVariable("reviews", List.of());
+        ctx.setVariable("reviewsCount", 0);
+        ctx.setVariable("averageRating", 0);
+        String html = templateEngine.process("public-store", ctx);
         b.setGeneratedHtml(html);
         boutiqueRepository.save(b);
         saveHtmlFile(b.getSlug(), html);

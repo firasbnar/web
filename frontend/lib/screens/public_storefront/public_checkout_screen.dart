@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -71,7 +72,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
 
   Future<void> _placeOrder() async {
     if (_nameCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().isEmpty || _addressCtrl.text.trim().isEmpty || _cityCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires'), backgroundColor: AppColors.danger));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('checkout.required_fields'.tr()), backgroundColor: AppColors.danger));
       return;
     }
     setState(() => _placing = true);
@@ -120,7 +121,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Erreur lors de la commande'), backgroundColor: AppColors.danger));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'checkout.order_error'.tr()), backgroundColor: AppColors.danger));
         }
       }
     } catch (e) {
@@ -143,46 +144,46 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
 
     if (_loadingStore) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Commande'), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())),
+        appBar: AppBar(title: Text('public_store.checkout'.tr()), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Commande'), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())),
+      appBar: AppBar(title: Text('public_store.checkout'.tr()), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())),
       body: _placing
-          ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Traitement de la commande...')]))
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const CircularProgressIndicator(), const SizedBox(height: 16), Text('checkout.processing'.tr())]))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Vos informations', style: AppTypography.heading3),
+                  Text('checkout.your_info'.tr(), style: AppTypography.heading3),
                   const SizedBox(height: 16),
-                  TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nom complet *', border: OutlineInputBorder())),
+                  TextField(controller: _nameCtrl, decoration: InputDecoration(labelText: 'public_store.full_name'.tr(), border: const OutlineInputBorder())),
                   const SizedBox(height: 12),
-                  TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Téléphone *', border: OutlineInputBorder()), keyboardType: TextInputType.phone),
+                  TextField(controller: _phoneCtrl, decoration: InputDecoration(labelText: 'public_store.phone'.tr(), border: const OutlineInputBorder()), keyboardType: TextInputType.phone),
                   const SizedBox(height: 12),
-                  TextField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email (optionnel)', border: OutlineInputBorder()), keyboardType: TextInputType.emailAddress),
+                  TextField(controller: _emailCtrl, decoration: InputDecoration(labelText: 'public_store.email'.tr(), border: const OutlineInputBorder()), keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 12),
-                  TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Adresse de livraison *', border: OutlineInputBorder())),
+                  TextField(controller: _addressCtrl, decoration: InputDecoration(labelText: 'public_store.address'.tr(), border: const OutlineInputBorder())),
                   const SizedBox(height: 12),
-                  TextField(controller: _cityCtrl, decoration: const InputDecoration(labelText: 'Ville *', border: OutlineInputBorder())),
+                  TextField(controller: _cityCtrl, decoration: InputDecoration(labelText: 'public_store.city'.tr(), border: const OutlineInputBorder())),
                   const SizedBox(height: 12),
-                  TextField(controller: _notesCtrl, decoration: const InputDecoration(labelText: 'Notes (optionnel)', border: OutlineInputBorder()), maxLines: 3),
+                  TextField(controller: _notesCtrl, decoration: InputDecoration(labelText: 'checkout.notes'.tr(), border: const OutlineInputBorder()), maxLines: 3),
                   if (providers.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    Text('Transporteur', style: AppTypography.heading3),
+                    Text('checkout.delivery'.tr(), style: AppTypography.heading3),
                     const SizedBox(height: 12),
                     ...providers.map((p) => _deliveryOption(p['value'] as String, p['label'] as String, p['icon'] as IconData)),
                   ],
                   const SizedBox(height: 24),
-                  Text('Mode de paiement', style: AppTypography.heading3),
+                  Text('public_store.payment_method'.tr(), style: AppTypography.heading3),
                   const SizedBox(height: 12),
-                  _paymentOption('cod', 'Paiement à la livraison', Icons.money),
-                  _paymentOption('stripe', 'Carte bancaire (Stripe)', Icons.credit_card),
+                  _paymentOption('cod', 'public_store.cash_on_delivery'.tr(), Icons.money),
+                  _paymentOption('stripe', 'public_store.card_payment'.tr(), Icons.credit_card),
                   const SizedBox(height: 24),
-                  Text('Récapitulatif', style: AppTypography.heading3),
+                  Text('checkout.summary'.tr(), style: AppTypography.heading3),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -202,7 +203,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Sous-total', style: AppTypography.body2),
+                            Text('public_store.subtotal'.tr(), style: AppTypography.body2),
                             Text('DT ${subtotal.toStringAsFixed(2)}', style: AppTypography.body2),
                           ],
                         ),
@@ -210,7 +211,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Livraison', style: AppTypography.body2),
+                            Text('public_store.shipping'.tr(), style: AppTypography.body2),
                             Text('DT ${shipping.toStringAsFixed(2)}', style: AppTypography.body2),
                           ],
                         ),
@@ -218,7 +219,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Total', style: AppTypography.heading3),
+                            Text('public_store.total'.tr(), style: AppTypography.heading3),
                             Text('DT ${total.toStringAsFixed(2)}', style: AppTypography.heading3.copyWith(color: AppColors.primary)),
                           ],
                         ),
@@ -236,7 +237,7 @@ class _PublicCheckoutScreenState extends State<PublicCheckoutScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       ),
                       onPressed: _placing ? null : _placeOrder,
-                      child: Text(_placing ? 'Traitement...' : 'Confirmer la commande', style: AppTypography.button),
+                      child: Text(_placing ? 'checkout.processing'.tr() : 'public_store.place_order'.tr(), style: AppTypography.button),
                     ),
                   ),
                   const SizedBox(height: 32),
