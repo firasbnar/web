@@ -56,11 +56,7 @@ import '../screens/team/team_screen.dart';
 import '../screens/messages/messages_screen.dart';
 import '../screens/messages/conversation_screen.dart';
 import '../screens/boutique/telegram_settings_screen.dart';
-import '../screens/public_storefront/public_storefront_screen.dart';
-import '../screens/public_storefront/public_product_detail_screen.dart';
-import '../screens/public_storefront/public_cart_screen.dart';
-import '../screens/public_storefront/public_checkout_screen.dart';
-import '../screens/public_storefront/public_order_success_screen.dart';
+
 import '../models/conversation.dart';
 import '../widgets/main_scaffold.dart';
 
@@ -81,7 +77,7 @@ GoRouter createRouter(AuthProvider auth) {
       // Public store routes — no auth required, never redirect to splash/landing/login
       // This check must come BEFORE the auth init check so the route resolves immediately
       // even while auth state is still being restored from storage.
-      if (path.startsWith('/store/') || path.startsWith('/public-store/')) return null;
+      if (path.startsWith('/store/')) return null;
 
       // --- AUTH INIT CHECK — show splash until auth state is restored from storage ---
       if (!auth.isInitialized) {
@@ -222,11 +218,7 @@ GoRouter createRouter(AuthProvider auth) {
         ),
       ),
       GoRoute(path: '/super-admin', builder: (_, __) => const SuperAdminDashboardScreen()),
-      GoRoute(path: '/store/:slug', builder: (_, state) => PublicStorefrontScreen(slug: state.pathParameters['slug']!)),
-      GoRoute(path: '/store/:slug/product/:productId', builder: (_, state) => PublicProductDetailScreen(slug: state.pathParameters['slug']!, productId: state.pathParameters['productId']!)),
-      GoRoute(path: '/store/:slug/cart', builder: (_, state) => PublicCartScreen(slug: state.pathParameters['slug']!)),
-      GoRoute(path: '/store/:slug/checkout', builder: (_, state) => PublicCheckoutScreen(slug: state.pathParameters['slug']!)),
-      GoRoute(path: '/store/:slug/order-success/:orderId', builder: (_, state) => PublicOrderSuccessScreen(slug: state.pathParameters['slug']!, orderId: state.pathParameters['orderId']!)),
+
       ShellRoute(
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
@@ -320,7 +312,7 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/stores', redirect: (_, __) => '/store-selector'),
       GoRoute(path: '/explore', builder: (_, __) => const StoresBrowserScreen()),
       GoRoute(path: '/create-store', builder: (_, __) => const CreateStoreScreen()),
-      GoRoute(path: '/public-store/:slug', builder: (_, state) => PublicStorefrontScreen(slug: state.pathParameters['slug']!)),
+
     ],
   );
 }
