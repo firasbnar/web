@@ -43,4 +43,7 @@ public interface TrafficSessionRepository extends JpaRepository<TrafficSession, 
     List<TrafficSession> findByBoutiqueIdAndLastActivityAtBefore(UUID boutiqueId, LocalDateTime cutoff);
 
     List<TrafficSession> findByBoutiqueIdAndCreatedAtBetween(UUID boutiqueId, LocalDateTime from, LocalDateTime to);
+
+    @Query("SELECT s FROM TrafficSession s WHERE s.country = 'Inconnu' OR s.city = 'Inconnu'")
+    List<TrafficSession> findAllWithInconnuLocation();
 }

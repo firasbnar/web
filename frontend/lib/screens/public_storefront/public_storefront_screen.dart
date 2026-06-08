@@ -30,6 +30,7 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> with Wi
   String _searchQuery = '';
   String? _selectedCategoryId;
   Timer? _refreshTimer;
+  bool _visitTracked = false;
 
   @override
   void initState() {
@@ -85,6 +86,8 @@ class _PublicStorefrontScreenState extends State<PublicStorefrontScreen> with Wi
   }
 
   void _requestGeolocation() {
+    if (_visitTracked) return;
+    _visitTracked = true;
     WebUtils.requestGeolocation(
       onSuccess: (lat, lng) {
         print('[Geo] Geolocation granted: lat=$lat lng=$lng');

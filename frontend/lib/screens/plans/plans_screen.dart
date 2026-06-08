@@ -1,10 +1,13 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../core/api_client.dart';
+import '../../core/storage.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/boutique_provider.dart';
 
@@ -14,16 +17,36 @@ class PlansScreen extends StatefulWidget {
   State<PlansScreen> createState() => _PlansScreenState();
 }
 
-class _PlansScreenState extends State<PlansScreen> {
+class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
   final ApiClient _api = ApiClient();
   List<dynamic> _plans = [];
   Map<String, dynamic>? _subscription;
   bool _loading = true;
+  bool _isOpeningCheckout = false;
+  int? _processingPlanId;
+  bool _handlingPendingStripeReturn = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handlePendingStripeReturnIfNeeded(trigger: 'init');
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _handlePendingStripeReturnIfNeeded(trigger: 'resume');
+    }
   }
 
   Future<void> _loadData() async {
@@ -44,28 +67,143 @@ class _PlansScreenState extends State<PlansScreen> {
     }
   }
 
-  Future<void> _subscribe(int planId) async {
+  Future<void> _startStripeCheckout(int planId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (_isOpeningCheckout) {
+      developer.log('[PLANS] Already opening checkout, skipping duplicate');
+      return;
+    }
+    developer.log('[PLANS] Manual checkout tap for planId=$planId');
+    developer.log('[PLANS] Starting Stripe checkout for planId=$planId');
+    setState(() {
+      _isOpeningCheckout = true;
+      _processingPlanId = planId;
+    });
     try {
-      await _api.post('/subscriptions/subscribe', data: {'planId': planId, 'paymentMethod': 'BANK'});
+      final response = await _api.post(
+        '/subscriptions/checkout-session',
+        data: {'planId': planId, 'paymentMethod': 'STRIPE'},
+      );
+      final sessionUrl = response['data']?['sessionUrl']?.toString();
+      final sessionId = response['data']?['sessionId']?.toString();
+      if (sessionUrl == null || sessionUrl.isEmpty) {
+        throw Exception('subscription.checkout_url_missing'.tr());
+      }
+      if (sessionId != null && sessionId.isNotEmpty) {
+        await AppStorage.savePendingStripeSessionId(sessionId);
+      }
+
+      developer.log('[PLANS] Opening Stripe session URL for planId=$planId');
+      final launched = await launchUrl(
+        Uri.parse(sessionUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await AppStorage.clearPendingStripeSessionId();
+        throw Exception('subscription.unable_to_open_checkout'.tr());
+      }
+
       if (mounted) {
-        context.read<AuthProvider>().setSubscriptionActive(true);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('subscription.plan_changed'.tr())));
-        final bp = context.read<BoutiqueProvider>();
-        await bp.loadBoutiques();
-        if (mounted) {
-          if (bp.boutiques.isEmpty) {
-            context.go('/create-store');
-          } else {
-            if (bp.boutiques.length == 1) {
-              context.go('/home');
-            } else {
-              context.go('/store-selector');
-            }
-          }
-        }
+        messenger.showSnackBar(
+          SnackBar(content: Text('subscription.redirecting_to_checkout'.tr())),
+        );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${'common.error'.tr()}: $e')));
+      await AppStorage.clearPendingStripeSessionId();
+      if (mounted) {
+        final message = e is Exception
+            ? e.toString().replaceFirst('Exception: ', '')
+            : '${'common.error'.tr()}: $e';
+        messenger.showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isOpeningCheckout = false;
+          _processingPlanId = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _handlePendingStripeReturnIfNeeded({required String trigger}) async {
+    if (_handlingPendingStripeReturn || !mounted) {
+      return;
+    }
+
+    final router = GoRouter.of(context);
+    final auth = context.read<AuthProvider>();
+    final boutiques = context.read<BoutiqueProvider>();
+    final sessionId = await AppStorage.getPendingStripeSessionId();
+    if (sessionId == null || sessionId.isEmpty) {
+      return;
+    }
+
+    _handlingPendingStripeReturn = true;
+    try {
+      developer.log('[StripeReturn] fallback trigger=$trigger');
+      developer.log('[StripeReturn] sessionId=$sessionId');
+
+      final tokenLoaded = await auth.reloadSessionFromStorage(notify: false);
+      developer.log('[StripeReturn] token loaded=$tokenLoaded');
+
+      final tokenRefreshed =
+          await _api.ensureFreshToken(logPrefix: '[StripeReturn]');
+      developer.log('[StripeReturn] token refreshed=$tokenRefreshed');
+
+      String checkoutStatus = 'UNKNOWN';
+      try {
+        final checkoutRes = await _api.get(
+          '/subscriptions/checkout-status',
+          queryParameters: {'sessionId': sessionId},
+        );
+        final data = checkoutRes['data'] as Map<String, dynamic>? ?? {};
+        checkoutStatus =
+            data['subscriptionStatus']?.toString() ?? checkoutStatus;
+      } catch (e) {
+        developer.log('[StripeReturn] checkout-status fallback error: $e');
+      }
+      developer.log('[StripeReturn] checkout status=$checkoutStatus');
+
+      String subscriptionStatus = 'UNKNOWN';
+      try {
+        final mineRes = await _api.get('/subscriptions/mine');
+        subscriptionStatus =
+            mineRes['data']?['status']?.toString() ?? subscriptionStatus;
+      } catch (e) {
+        developer.log('[StripeReturn] /subscriptions/mine fallback error: $e');
+      }
+      developer.log('[StripeReturn] subscription status=$subscriptionStatus');
+
+      if (checkoutStatus == 'ACTIVE' || subscriptionStatus == 'ACTIVE') {
+        auth.setSubscriptionActive(true);
+        await auth.hasActiveSubscription();
+        await boutiques.loadBoutiques();
+
+        if (!mounted) return;
+
+        String destination;
+        if (boutiques.boutiques.isEmpty) {
+          destination = '/create-store';
+        } else if (boutiques.boutiques.length == 1) {
+          destination = '/home';
+        } else {
+          destination = '/store-selector';
+        }
+
+        developer.log('[StripeReturn] navigation target=$destination');
+        await AppStorage.clearPendingStripeSessionId();
+        router.go(destination);
+        return;
+      }
+
+      if (checkoutStatus == 'PAYMENT_FAILED') {
+        await AppStorage.clearPendingStripeSessionId();
+      }
+    } finally {
+      _handlingPendingStripeReturn = false;
     }
   }
 
@@ -143,6 +281,7 @@ class _PlansScreenState extends State<PlansScreen> {
 
   Widget _planCard(dynamic plan) {
     final isCurrentPlan = _subscription != null && _subscription!['planId'] == plan['id'];
+    final isProcessing = _processingPlanId == plan['id'];
     final name = plan['name'] ?? '';
     final price = (plan['priceDt'] ?? 0).toDouble();
     final days = plan['durationDays'] ?? 0;
@@ -201,14 +340,25 @@ class _PlansScreenState extends State<PlansScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: isCurrentPlan ? null : () => _subscribe(plan['id']),
+              onPressed: (isCurrentPlan || _isOpeningCheckout || _processingPlanId != null)
+                  ? null
+                  : () => _startStripeCheckout(plan['id']),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isCurrentPlan ? AppColors.surfaceAlt : AppColors.primary,
                 foregroundColor: isCurrentPlan ? AppColors.textHint : Colors.white,
                 side: isCurrentPlan ? const BorderSide(color: AppColors.border) : null,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
               ),
-              child: Text(isCurrentPlan ? 'plans.current_plan'.tr() : 'plans.select'.tr()),
+              child: isProcessing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(isCurrentPlan ? 'plans.current_plan'.tr() : 'plans.select'.tr()),
             ),
           ),
         ],

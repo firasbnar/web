@@ -117,6 +117,7 @@
     "administration": "Administration",
     "super_admin": "Super Admin",
     "traffic": "Trafic",
+    "analytics": "Analytiques",
     "my_orders": "Mes commandes",
     "profile": "Profil",
     "reviews": "Avis",
@@ -268,8 +269,7 @@
     "print_invoice": "Imprimer facture",
     "my_orders": "Mes commandes",
     "order_placed": "Commande passée",
-    "estimated_delivery": "Livraison estimée",
-    "unknown_customer": "Client inconnu"
+    "estimated_delivery": "Livraison estimée"
   },
   "auth": {
     "login": "Se connecter",
@@ -630,7 +630,19 @@
     "subscribe_now": "S'abonner",
     "learn_more": "En savoir plus",
     "most_popular": "Le plus populaire",
-    "save_with_yearly": "Économisez avec l'annuel"
+    "save_with_yearly": "Économisez avec l'annuel",
+    "redirecting_to_checkout": "Ouverture de Stripe Checkout...",
+    "checkout_success": "Abonnement activé",
+    "checkout_failed": "Le paiement a échoué. Votre abonnement reste inactif.",
+    "checkout_cancelled": "Paiement annulé. Votre abonnement reste inactif.",
+    "checkout_status_title": "Statut du paiement",
+    "processing_payment": "Vérification du paiement...",
+    "waiting_for_webhook": "Paiement reçu. En attente de confirmation du webhook Stripe...",
+    "webhook_still_pending": "Le paiement Stripe est encore en attente de confirmation. Réessayez dans quelques secondes.",
+    "return_missing_session": "Le lien de retour Stripe ne contient pas l'identifiant de session.",
+    "login_required_after_payment": "Vous devez être connecté pour rafraîchir l'abonnement après paiement.",
+    "checkout_url_missing": "Le backend n'a pas renvoyé d'URL Stripe Checkout.",
+    "unable_to_open_checkout": "Impossible d'ouvrir Stripe Checkout sur cet appareil."
   },
   "analytics": {
     "title": "Analytiques",
@@ -662,6 +674,10 @@
   },
   "traffic": {
     "title": "Trafic",
+    "inject": "Injecter",
+    "test_injected": "Trafic de test injecté",
+    "top_cities": "Top Villes",
+    "cities": "Villes",
     "overview": "Aperçu",
     "visitors": "Visiteurs",
     "page_views": "Pages vues",
@@ -700,9 +716,9 @@
     "order_update": "Mise à jour commande",
     "system": "Système",
     "just_now": "À l'instant",
-    "minutes_ago": "Il y a {minutes} min",
-    "hours_ago": "Il y a {hours} h",
-    "days_ago": "Il y a {days} j",
+    "minutes_ago": "Il y a {0} min",
+    "hours_ago": "Il y a {0} h",
+    "days_ago": "Il y a {0} j",
     "view_order": "Voir commande",
     "view_message": "Voir message",
     "empty_title": "Tout est à jour !",
@@ -856,8 +872,8 @@
     "search_products": "Rechercher des produits...",
     "add_to_cart": "Ajouter au panier",
     "out_of_stock": "Rupture de stock",
-    "in_stock": "En stock",
-    "low_stock": "Stock faible",
+    "in_stock": "En stock ({0})",
+    "low_stock": "Stock faible ({0})",
     "sale": "Promo",
     "promo": "Promo",
     "category": "Catégorie",
@@ -973,8 +989,8 @@
     "search": "Rechercher des boutiques...",
     "no_stores": "Aucune boutique trouvée",
     "visit_store": "Visiter",
-    "products_count": "{count} produits",
-    "orders_count": "{count} commandes",
+    "products_count": "{0} produits",
+    "orders_count": "{0} commandes",
     "rating": "Note"
   },
   "wishlist": {
@@ -996,10 +1012,10 @@
     "monthly": "/mois",
     "yearly": "/an",
     "features": "Fonctionnalités",
-    "products_limit": "{count} produits",
-    "orders_limit": "{count} commandes/mois",
-    "team_members": "{count} membres",
-    "storage": "{size} stockage",
+    "products_limit": "{0} produits",
+    "orders_limit": "{0} commandes/mois",
+    "team_members": "{0} membres",
+    "storage": "{0} stockage",
     "start_trial": "Essai gratuit",
     "upgrade": "Passer à",
     "downgrade": "Descendre à",
@@ -1011,10 +1027,10 @@
     "required": "Ce champ est requis",
     "email": "Email invalide",
     "phone": "Numéro de téléphone invalide",
-    "min_length": "Minimum {count} caractères",
-    "max_length": "Maximum {count} caractères",
-    "min_value": "Valeur minimum : {value}",
-    "max_value": "Valeur maximum : {value}",
+    "min_length": "Minimum {0} caractères",
+    "max_length": "Maximum {0} caractères",
+    "min_value": "Valeur minimum : {0}",
+    "max_value": "Valeur maximum : {0}",
     "positive_number": "Veuillez entrer un nombre positif",
     "url": "URL invalide",
     "numeric": "Veuillez entrer un nombre",
@@ -1027,11 +1043,11 @@
     "tomorrow": "Demain",
     "now": "Maintenant",
     "just_now": "À l'instant",
-    "minutes_ago": "Il y a {minutes} min",
-    "hours_ago": "Il y a {hours} h",
-    "days_ago": "Il y a {days} j",
-    "weeks_ago": "Il y a {weeks} sem",
-    "months_ago": "Il y a {months} mois",
+    "minutes_ago": "Il y a {0} min",
+    "hours_ago": "Il y a {0} h",
+    "days_ago": "Il y a {0} j",
+    "weeks_ago": "Il y a {0} sem",
+    "months_ago": "Il y a {0} mois",
     "date_format": "dd/MM/yyyy",
     "time_format": "HH:mm",
     "january": "Janvier",
@@ -1086,12 +1102,7 @@
     "no_stores": "Aucune boutique",
     "create_first_store": "Créez votre première boutique"
   },
-  "landing": {
-    "copyright": "© 2026 MakeWebsite. Tous droits réservés."
-  },
-  "splash": {
-    "subtitle": "Votre boutique en ligne"
-  },
+
   "telegram": {
     "title": "Telegram",
     "connected": "Connecté",
@@ -1114,6 +1125,13 @@
     "notif_out_of_stock_title": "Rupture de stock",
     "notif_messages_title": "Nouveaux messages",
     "notif_payments_title": "Notifications de paiement",
-    "notif_status_title": "Changements de statut"
+    "notif_status_title": "Changements de statut",
+    "notif_new_orders_desc": "Recevez une notification quand une nouvelle commande est passée",
+    "notif_status_desc": "Recevez une notification quand le statut d'une commande change",
+    "notif_low_stock_desc": "Recevez une notification quand un produit a un stock faible",
+    "notif_out_of_stock_desc": "Recevez une notification quand un produit est en rupture de stock",
+    "notif_new_reviews_desc": "Recevez une notification quand un nouvel avis est publié",
+    "notif_payments_desc": "Recevez une notification quand un paiement est effectué",
+    "notif_messages_desc": "Recevez une notification quand un client vous envoie un message"
   }
 }

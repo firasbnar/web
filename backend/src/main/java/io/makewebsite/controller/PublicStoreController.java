@@ -720,6 +720,11 @@ public class PublicStoreController {
         log.info("recordStoreVisit final: slug={} boutiqueId={} ip={} country={} city={}",
                 slug, b.getId(), clientIp, country, city);
 
+        // Normalize coordinates for known cities before saving
+        double[] resolved = io.makewebsite.service.GeoLocationService.resolveCityCoords(city, lat, lng);
+        lat = resolved[0];
+        lng = resolved[1];
+
         boutiqueVisitService.recordVisit(b.getId(), b.getSlug(), clientIp, ua, visitorId, referrer, lat, lng);
 
         // Create/update a Visitor record so map data shows this visit

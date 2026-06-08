@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   flutter_localizations:
     sdk: flutter
   easy_localization: ^3.0.7
@@ -37,6 +39,7 @@ dependencies:
   flutter_quill: ^11.5.0
   device_info_plus: ^12.4.0
   package_info_plus: ^9.0.1
+  app_links: ^6.4.0
   url_launcher: ^6.2.4
   uuid: ^4.4.0
   web: ^1.0.0

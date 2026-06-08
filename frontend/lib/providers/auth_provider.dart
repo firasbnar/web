@@ -204,7 +204,51 @@ class AuthProvider extends ChangeNotifier {
       _subscriptionActive = false;
       await AppStorage.saveSubscriptionActive(false);
       return false;
+    } finally {
+      notifyListeners();
     }
+  }
+
+  Future<bool> reloadSessionFromStorage({bool notify = true}) async {
+    _api.onSessionExpired = _onSessionExpired;
+    final tokenLoaded = await _api.reloadAuthorizationHeaderFromStorage();
+
+    if (!tokenLoaded) {
+      _user = null;
+      _isAuthenticated = false;
+      _role = null;
+      _subscriptionActive = false;
+      if (notify) {
+        notifyListeners();
+      }
+      return false;
+    }
+
+    final uid = await _api.storage.getUserId();
+    final userDataStr = await _api.storage.getUserData();
+
+    if (userDataStr != null && userDataStr.isNotEmpty) {
+      try {
+        final userMap = jsonDecode(userDataStr) as Map<String, dynamic>;
+        _user = User.fromJson(userMap);
+      } catch (e) {
+        developer.log('[AUTH] Failed to restore user data from storage: $e');
+        if (uid != null && uid.isNotEmpty) {
+          _user = User(id: uid, fullName: '', email: '');
+        }
+      }
+    } else if (uid != null && uid.isNotEmpty) {
+      _user = User(id: uid, fullName: '', email: '');
+    }
+
+    _role = await _api.storage.getUserRole();
+    _isAuthenticated = true;
+    _subscriptionActive = await AppStorage.getSubscriptionActive();
+
+    if (notify) {
+      notifyListeners();
+    }
+    return true;
   }
 
   Future<bool> deleteAccount() async {
@@ -248,32 +292,21 @@ class AuthProvider extends ChangeNotifier {
     developer.log('[AUTH INIT] === START ===');
     _api.onSessionExpired = _onSessionExpired;
     try {
-      final token = await _api.storage.getAccessToken();
-      developer.log('[AUTH INIT] Access token found: ${token != null && token.isNotEmpty}');
+      final tokenLoaded = await reloadSessionFromStorage(notify: false);
+      developer.log('[AUTH INIT] Access token found: $tokenLoaded');
 
-      if (token != null && token.isNotEmpty) {
-        _isAuthenticated = true;
-        final uid = await _api.storage.getUserId();
-        final userDataStr = await _api.storage.getUserData();
-
-        if (userDataStr != null) {
+      if (tokenLoaded) {
+        developer.log('[AUTH INIT] User data restored: id=${_user?.id} email=${_user?.email}');
+        if (_role == 'SUPER_ADMIN') {
+          _subscriptionActive = true;
+        } else {
           try {
-            final userMap = jsonDecode(userDataStr) as Map<String, dynamic>;
-            _user = User.fromJson(userMap);
-            developer.log('[AUTH INIT] User data restored: id=${_user!.id} email=${_user!.email}');
-          } catch (e) {
-            developer.log('[AUTH INIT] Failed to parse user data: $e');
-            if (uid != null) {
-              _user = User(id: uid, fullName: '', email: '');
-            }
+            await hasActiveSubscription();
+          } catch (_) {
+            _subscriptionActive = false;
           }
-        } else if (uid != null) {
-          _user = User(id: uid, fullName: '', email: '');
         }
-
-        _role = await _api.storage.getUserRole();
-        _subscriptionActive = await AppStorage.getSubscriptionActive();
-        developer.log('[AUTH INIT] State restored: isAuthenticated=true role=$_role userId=$uid subActive=$_subscriptionActive');
+        developer.log('[AUTH INIT] State restored: isAuthenticated=true role=$_role userId=${_user?.id} subActive=$_subscriptionActive');
       } else {
         _isAuthenticated = false;
         developer.log('[AUTH INIT] No valid token, user not authenticated');

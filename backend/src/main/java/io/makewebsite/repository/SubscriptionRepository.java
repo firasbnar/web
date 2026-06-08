@@ -20,6 +20,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
     List<Subscription> findByUserId(UUID userId);
 
+    List<Subscription> findByUserIdAndStatusIn(UUID userId, List<String> statuses);
+
     long countByStatus(String status);
 
     List<Subscription> findByStatusIn(List<String> statuses);

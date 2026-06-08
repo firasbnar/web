@@ -31,7 +31,8 @@ public class NetworkUtils {
     public static boolean isPrivateIp(String ip) {
         if (ip == null) return false;
         if (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("127.")
-                || "::1".equals(ip) || "localhost".equalsIgnoreCase(ip)) {
+                || "::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)
+                || "localhost".equalsIgnoreCase(ip)) {
             return true;
         }
         if (ip.startsWith("172.") && ip.length() > 5) {
@@ -44,6 +45,10 @@ public class NetworkUtils {
             } catch (Exception e) {
                 return false;
             }
+        }
+        // Catch any other IPv6 loopback forms (e.g. 0000:...:0001)
+        if (ip.contains(":") && ip.endsWith(":1") && ip.startsWith("0")) {
+            return true;
         }
         return false;
     }

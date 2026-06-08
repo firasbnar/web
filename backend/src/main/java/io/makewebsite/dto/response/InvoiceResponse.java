@@ -38,9 +38,11 @@ public class InvoiceResponse {
     private BigDecimal amount;
     private String currency;
     private String status;
+    private String planName;
     private String paymentMethod;
     private String paymentRef;
     private String paymentStatus;
+    private LocalDateTime paidAt;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
 }

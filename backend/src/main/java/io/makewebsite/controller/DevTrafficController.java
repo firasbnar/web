@@ -6,6 +6,7 @@ import io.makewebsite.entity.Visitor;
 import io.makewebsite.repository.BoutiqueRepository;
 import io.makewebsite.repository.StoreViewRepository;
 import io.makewebsite.repository.TrafficRepository;
+import io.makewebsite.service.GeoLocationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -68,7 +69,7 @@ public class DevTrafficController {
         List<LocationPreset> presets = List.of(
             new LocationPreset("Tunisie", "Tunis", "Tunis, Tunisia", 36.8065, 10.1815),
             new LocationPreset("Tunisie", "Sousse", "Sousse, Tunisia", 35.8256, 10.63699),
-            new LocationPreset("Tunisie", "Sfax", "Sfax, Tunisia", 34.7400, 10.7600),
+            new LocationPreset("Tunisie", "Sfax", "Sfax, Tunisia", 34.7406, 10.7603),
             new LocationPreset("France", "Paris", "Paris, France", 48.8566, 2.3522),
             new LocationPreset("Émirats Arabes Unis", "Dubai", "Dubai, UAE", 25.2048, 55.2708)
         );
@@ -80,10 +81,11 @@ public class DevTrafficController {
         LocalDateTime now = LocalDateTime.now();
 
         for (int i = 0; i < count; i++) {
-            // Pick location (cycle through presets)
+            // Pick location (cycle through presets) with small random offset
             LocationPreset loc = presets.get(i % presets.size());
-            double visitLat = loc.lat + (Math.random() - 0.5) * 0.02;
-            double visitLng = loc.lng + (Math.random() - 0.5) * 0.02;
+            double[] coords = GeoLocationService.resolveCityCoords(loc.city, loc.lat, loc.lng);
+            double visitLat = coords[0] + (Math.random() - 0.5) * 0.02;
+            double visitLng = coords[1] + (Math.random() - 0.5) * 0.02;
             String visitCountry = loc.country;
             String visitCity = loc.city;
             String visitAddress = loc.address;

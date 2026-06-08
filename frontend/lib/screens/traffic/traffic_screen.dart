@@ -86,7 +86,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Test traffic injecté'.tr()), behavior: SnackBarBehavior.floating),
+          SnackBar(content: Text('traffic.test_injected'.tr()), behavior: SnackBarBehavior.floating),
         );
         _load();
       }
@@ -152,7 +152,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
               margin: const EdgeInsets.only(right: 4),
               child: TextButton.icon(
                 icon: const Icon(Icons.science, size: 16),
-                label: Text('Inject'.tr()),
+                label: Text('traffic.inject'.tr()),
                 onPressed: _injectDevTraffic,
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.orange.shade700,
@@ -166,7 +166,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
             margin: const EdgeInsets.only(right: 12),
             child: TextButton.icon(
               icon: const Icon(Icons.open_in_new, size: 16),
-              label: Text('menu.analytics'.tr()),
+                label: Text('nav.analytics'.tr()),
               onPressed: _openAnalytics,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary,
@@ -365,7 +365,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
             children: [
               Expanded(child: _geoCard('traffic.countries'.tr(), Icons.flag_outlined, _topCountries, isCountry: true)),
               const SizedBox(width: 16),
-              Expanded(child: _geoCard('Top Cities'.tr(), Icons.location_city_outlined, _topCities, isCountry: false)),
+              Expanded(child: _geoCard('traffic.top_cities'.tr(), Icons.location_city_outlined, _topCities, isCountry: false)),
             ],
           );
         }
@@ -373,7 +373,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
           children: [
             _geoCard('traffic.countries'.tr(), Icons.flag_outlined, _topCountries, isCountry: true),
             const SizedBox(height: 16),
-            _geoCard('Top Cities'.tr(), Icons.location_city_outlined, _topCities, isCountry: false),
+            _geoCard('traffic.top_cities'.tr(), Icons.location_city_outlined, _topCities, isCountry: false),
           ],
         );
       },
@@ -407,7 +407,7 @@ class _TrafficScreenState extends State<TrafficScreen> {
               const SizedBox(width: 10),
               Text(title, style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const Spacer(),
-              Text('${data.length} ${isCountry ? 'traffic.countries'.tr() : 'Cities'.tr()}',
+              Text('${data.length} ${isCountry ? 'traffic.countries'.tr() : 'traffic.cities'.tr()}',
                   style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),

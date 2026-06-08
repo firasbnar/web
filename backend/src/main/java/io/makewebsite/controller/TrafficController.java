@@ -145,4 +145,15 @@ public class TrafficController {
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.ok(trafficService.getSessions(boutiqueId, page, size)));
     }
+
+    /**
+     * Temporary admin endpoint: updates all existing traffic records where
+     * country/city = "Inconnu" to "Tunisie"/"Sousse" (development fallback).
+     */
+    @PostMapping("/fix-inconnu")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> fixInconnuLocations() {
+        Map<String, Object> result = trafficService.fixInconnuLocations();
+        log.info("fixInconnuLocations result: {}", result);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -9,6 +11,7 @@ class ApiClient {
   late final Dio _dio;
   final AppStorage _storage = AppStorage();
   AppStorage get storage => _storage;
+  Future<bool>? _refreshFuture;
 
   /// Called when token refresh fails and session is expired.
   /// Set by AuthProvider to clear auth state globally.
@@ -78,12 +81,16 @@ class ApiClient {
       onRequest: (options, handler) async {
         try {
           final token = await _storage.getAccessToken();
-          if (token != null) {
+          if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
+          } else {
+            options.headers.remove('Authorization');
           }
           final locale = await _storage.getLocaleCode();
           if (locale != null && locale.isNotEmpty) {
             options.headers['Accept-Language'] = locale;
+          } else {
+            options.headers.remove('Accept-Language');
           }
           if (options.data != null &&
               options.data is! FormData &&
@@ -185,22 +192,15 @@ class ApiClient {
           if (path.startsWith('/auth/') || path.startsWith('/register') || path.startsWith('/login')) {
             return handler.next(error);
           }
-          final refreshToken = await _storage.getRefreshToken();
-          if (refreshToken != null) {
-            try {
-              final response = await Dio(BaseOptions(baseUrl: baseUrl))
-                  .post('/auth/refresh', data: {'refreshToken': refreshToken});
-              final newAccess = response.data['data']['accessToken'];
-              final newRefresh = response.data['data']['refreshToken'];
-              await _storage.saveTokens(newAccess, newRefresh);
-              error.requestOptions.headers['Authorization'] =
-                  'Bearer $newAccess';
-              final retryResponse = await _dio.fetch(error.requestOptions);
-              return handler.resolve(retryResponse);
-            } catch (_) {
-              await _storage.clearTokens();
-              onSessionExpired?.call();
+          final refreshed = await refreshAccessToken(logPrefix: '[API]');
+          if (refreshed) {
+            final reloaded = await reloadAuthorizationHeaderFromStorage();
+            if (reloaded) {
+              final newAccess = await _storage.getAccessToken();
+              error.requestOptions.headers['Authorization'] = 'Bearer $newAccess';
             }
+            final retryResponse = await _dio.fetch(error.requestOptions);
+            return handler.resolve(retryResponse);
           } else {
             onSessionExpired?.call();
           }
@@ -211,6 +211,100 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
+
+  Future<bool> reloadAuthorizationHeaderFromStorage() async {
+    final token = await _storage.getAccessToken();
+    if (token != null && token.isNotEmpty) {
+      _dio.options.headers['Authorization'] = 'Bearer $token';
+      return true;
+    }
+    _dio.options.headers.remove('Authorization');
+    return false;
+  }
+
+  Future<void> reloadDefaultHeadersFromStorage() async {
+    await reloadAuthorizationHeaderFromStorage();
+    final locale = await _storage.getLocaleCode();
+    if (locale != null && locale.isNotEmpty) {
+      _dio.options.headers['Accept-Language'] = locale;
+    } else {
+      _dio.options.headers.remove('Accept-Language');
+    }
+  }
+
+  Future<bool> ensureFreshToken({String logPrefix = '[API]'}) async {
+    await reloadDefaultHeadersFromStorage();
+    final accessToken = await _storage.getAccessToken();
+    final refreshToken = await _storage.getRefreshToken();
+    final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
+
+    if (!hasRefreshToken) {
+      // ignore: avoid_print
+      print('$logPrefix refresh token unavailable');
+      return false;
+    }
+
+    if (hasAccessToken && !_isJwtExpired(accessToken)) {
+      // ignore: avoid_print
+      print('$logPrefix access token still valid');
+      return false;
+    }
+
+    return refreshAccessToken(logPrefix: logPrefix);
+  }
+
+  Future<bool> refreshAccessToken({String logPrefix = '[API]'}) async {
+    if (_refreshFuture != null) {
+      return _refreshFuture!;
+    }
+
+    final completer = _refreshAccessTokenInternal(logPrefix: logPrefix);
+    _refreshFuture = completer;
+    try {
+      return await completer;
+    } finally {
+      _refreshFuture = null;
+    }
+  }
+
+  Future<bool> _refreshAccessTokenInternal({String logPrefix = '[API]'}) async {
+    final refreshToken = await _storage.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      // ignore: avoid_print
+      print('$logPrefix refresh token missing');
+      return false;
+    }
+
+    try {
+      // ignore: avoid_print
+      print('$logPrefix refreshing access token');
+      final response = await Dio(BaseOptions(baseUrl: baseUrl)).post(
+        '/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+      final data = response.data['data'] as Map<String, dynamic>? ?? {};
+      final newAccess = data['accessToken']?.toString();
+      final newRefresh = data['refreshToken']?.toString();
+      if (newAccess == null ||
+          newAccess.isEmpty ||
+          newRefresh == null ||
+          newRefresh.isEmpty) {
+        throw Exception('Refresh response missing tokens');
+      }
+      await _storage.saveTokens(newAccess, newRefresh);
+      await reloadDefaultHeadersFromStorage();
+      // ignore: avoid_print
+      print('$logPrefix refresh succeeded');
+      return true;
+    } catch (e) {
+      // ignore: avoid_print
+      print('$logPrefix refresh failed: $e');
+      await _storage.clearTokens();
+      onSessionExpired?.call();
+      return false;
+    }
+  }
 
   // ---------- Helper: safe header logging (hide tokens) ----------
 
@@ -230,6 +324,21 @@ class ApiClient {
   String _truncate(String s, int maxLen) {
     if (s.length <= maxLen) return s;
     return '${s.substring(0, maxLen)}... (${s.length - maxLen} more chars)';
+  }
+
+  bool _isJwtExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final payloadMap = jsonDecode(payload) as Map<String, dynamic>;
+      final exp = payloadMap['exp'];
+      if (exp is! num) return true;
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000, isUtc: true);
+      return DateTime.now().toUtc().isAfter(expiresAt.subtract(const Duration(seconds: 30)));
+    } catch (_) {
+      return true;
+    }
   }
 
   // ---------- Public convenience methods ----------

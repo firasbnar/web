@@ -10,7 +10,6 @@ import io.makewebsite.repository.TrafficRepository;
 import io.makewebsite.repository.TrafficSessionRepository;
 import io.makewebsite.service.GeoLocationService.GeoData;
 import io.makewebsite.util.CsvUtil;
-import io.makewebsite.util.NetworkUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -251,6 +250,17 @@ public class TrafficService {
 
         String ipHash = hashIp(clientIp);
 
+        // Dedup: skip if an identical visit was recorded within the last 3 seconds
+        if (req.getUserAgent() != null && ipHash != null && req.getPage() != null && req.getBoutiqueId() != null) {
+            LocalDateTime since = LocalDateTime.now().minusSeconds(3);
+            List<StoreView> recent = storeViewRepository.findRecentDuplicates(
+                    req.getBoutiqueId(), req.getPage(), ipHash, req.getUserAgent(), since);
+            if (!recent.isEmpty()) {
+                log.debug("Duplicate visit detected for boutiqueId={} page={} ipHash={} — skipping", req.getBoutiqueId(), req.getPage(), ipHash);
+                return Map.of("tracked", false, "note", "duplicate_skipped");
+            }
+        }
+
         GeoData geo = clientIp != null
                 ? geoLocationService.locate(clientIp).orElse(null)
                 : null;
@@ -265,6 +275,11 @@ public class TrafficService {
 
         log.info("TrackVisit: storeId={} ip={} country={} city={}",
                 req.getBoutiqueId(), clientIp, country, city);
+
+        // Normalize coordinates for known cities
+        double[] resolved = GeoLocationService.resolveCityCoords(city, latitude, longitude);
+        latitude = resolved[0];
+        longitude = resolved[1];
 
         // Create StoreView record
         StoreView view = StoreView.builder()
@@ -426,32 +441,31 @@ public class TrafficService {
     }
 
     public List<Map<String, Object>> getMapData(UUID boutiqueId) {
-        List<Visitor> visitors = trafficRepository.findActiveVisitorsByBoutiqueId(boutiqueId);
-        // Aggregate by country+city and count visits
-        Map<String, Map<String, Object>> aggregated = new java.util.LinkedHashMap<>();
-        for (Visitor v : visitors) {
-            if (v.getLatitude() == null || v.getLongitude() == null) continue;
-            String key = (v.getCountry() != null ? v.getCountry() : "Inconnu") + "|" + (v.getCity() != null ? v.getCity() : "Inconnu");
-            if (aggregated.containsKey(key)) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> existing = aggregated.get(key);
-                existing.put("visits", ((Number) existing.get("visits")).intValue() + 1);
-            } else {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("country", v.getCountry() != null ? v.getCountry() : "Inconnu");
-                m.put("city", v.getCity() != null ? v.getCity() : "Inconnu");
-                m.put("latitude", v.getLatitude());
-                m.put("longitude", v.getLongitude());
-                m.put("address", v.getCity() != null && v.getCountry() != null ? v.getCity() + ", " + v.getCountry() : null);
-                m.put("browser", v.getBrowser());
-                m.put("deviceType", v.getDeviceType());
-                m.put("operatingSystem", v.getOperatingSystem());
-                m.put("visits", 1);
-                aggregated.put(key, m);
-            }
+        // Use the same aggregation query as the Top Cities endpoint on StoreView table
+        // so map counts and top-cities counts are always consistent.
+        List<Object[]> rows = storeViewRepository.countByBoutiqueIdGroupByCity(boutiqueId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object[] row : rows) {
+            String city = (String) row[0];
+            String country = (String) row[1];
+            long visits = ((Number) row[2]).longValue();
+            // Skip Inconnu entries – they have no meaningful location to pin on the map
+            if (city == null || "Inconnu".equals(city)) continue;
+            // Resolve canonical coordinates for known cities
+            double[] coords = GeoLocationService.resolveCityCoords(city, null, null);
+            // Skip if we couldn't resolve coordinates (unknown city)
+            if (coords[0] == 0.0 && coords[1] == 0.0) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("country", country);
+            m.put("city", city);
+            m.put("latitude", coords[0]);
+            m.put("longitude", coords[1]);
+            m.put("address", city + ", " + country);
+            m.put("visits", visits);
+            result.add(m);
         }
-        log.info("Map data for {}: {} aggregated points from {} visitors", boutiqueId, aggregated.size(), visitors.size());
-        return new java.util.ArrayList<>(aggregated.values());
+        log.info("Map data for {}: {} aggregated points (total rows: {})", boutiqueId, result.size(), rows.size());
+        return result;
     }
 
     public String exportCsv(UUID boutiqueId) {
@@ -471,6 +485,53 @@ public class TrafficService {
             sb.append(v.getViewedAt()).append("\n");
         }
         return sb.toString();
+    }
+
+    @Transactional
+    public Map<String, Object> fixInconnuLocations() {
+        int storeViewsFixed = 0;
+        int visitorsFixed = 0;
+        int trafficSessionsFixed = 0;
+
+        // Fix StoreView records
+        List<StoreView> views = storeViewRepository.findAllWithInconnuLocation();
+        for (StoreView v : views) {
+            boolean changed = false;
+            if ("Inconnu".equals(v.getCountry())) { v.setCountry("Tunisie"); changed = true; }
+            if ("Inconnu".equals(v.getCity())) { v.setCity("Sousse"); changed = true; }
+            if (v.getAddress() == null) { v.setAddress("Sousse, Tunisie"); changed = true; }
+            if (changed) storeViewRepository.save(v);
+            storeViewsFixed++;
+        }
+
+        // Fix Visitor records
+        List<Visitor> visitors = trafficRepository.findAllWithInconnuLocation();
+        for (Visitor v : visitors) {
+            boolean changed = false;
+            if ("Inconnu".equals(v.getCountry())) { v.setCountry("Tunisie"); changed = true; }
+            if ("Inconnu".equals(v.getCity())) { v.setCity("Sousse"); changed = true; }
+            if (changed) trafficRepository.save(v);
+            visitorsFixed++;
+        }
+
+        // Fix TrafficSession records
+        List<TrafficSession> sessions = sessionRepository.findAllWithInconnuLocation();
+        for (TrafficSession s : sessions) {
+            boolean changed = false;
+            if ("Inconnu".equals(s.getCountry())) { s.setCountry("Tunisie"); changed = true; }
+            if ("Inconnu".equals(s.getCity())) { s.setCity("Sousse"); changed = true; }
+            if (changed) sessionRepository.save(s);
+            trafficSessionsFixed++;
+        }
+
+        log.info("Fixed Inconnu locations: storeViews={} visitors={} trafficSessions={}",
+                storeViewsFixed, visitorsFixed, trafficSessionsFixed);
+
+        return Map.of(
+            "storeViewsFixed", storeViewsFixed,
+            "visitorsFixed", visitorsFixed,
+            "trafficSessionsFixed", trafficSessionsFixed
+        );
     }
 
     public void deactivateOldVisitors(int daysInactive) {

@@ -32,6 +32,15 @@ public class EmailService {
     @Value("${app.mail.from-name:MakeWebsite}")
     private String fromName;
 
+    @Async
+    public void sendVerificationEmailAsync(String to, String token) {
+        try {
+            sendVerificationEmail(to, token);
+        } catch (Exception e) {
+            log.error("Async verification email failed for {}", to, e);
+        }
+    }
+
     public void sendVerificationEmail(String to, String token) {
         try {
             InternetAddress from = internetAddress(fromAddress, fromName);

@@ -595,9 +595,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         ordersByStatus!.entries.reduce((a, b) => (a.value as num) > (b.value as num) ? a : b);
     final topTraffic = trafficSources?.entries.isEmpty ?? true ? null :
         trafficSources!.entries.reduce((a, b) => (a.value as num) > (b.value as num) ? a : b);
-    final statusLabels = {'PENDING': 'orders.status_pending'.tr(), 'CONFIRMED': 'Confirmed', 'SHIPPED': 'orders.status_shipped'.tr(), 'DELIVERED': 'orders.status_delivered'.tr(), 'CANCELLED': 'orders.status_cancelled'.tr()};
-    final topStatusLabel = topStatus != null ? (statusLabels[topStatus.key] ?? topStatus.key) : 'common.no_data'.tr();
+    final statusLabels = {'PENDING': 'orders.status_pending'.tr(), 'CONFIRMED': 'orders.status_delivered'.tr(), 'SHIPPED': 'orders.status_shipped'.tr(), 'DELIVERED': 'orders.status_delivered'.tr(), 'CANCELLED': 'orders.status_cancelled'.tr()};
 
+    final topStatusLabel = topStatus != null ? (statusLabels[topStatus.key] ?? topStatus.key) : 'common.no_data'.tr();
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(

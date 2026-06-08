@@ -79,4 +79,7 @@ public interface TrafficRepository extends JpaRepository<Visitor, UUID> {
 
     @Query("SELECT COUNT(v) FROM Visitor v WHERE v.boutiqueId = :boutiqueId AND v.userId IS NULL")
     long countByBoutiqueIdAndUserIdIsNull(@Param("boutiqueId") UUID boutiqueId);
+
+    @Query("SELECT v FROM Visitor v WHERE v.country = 'Inconnu' OR v.city = 'Inconnu'")
+    List<Visitor> findAllWithInconnuLocation();
 }

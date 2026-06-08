@@ -63,16 +63,13 @@ public class AuthService {
             log.debug("User created: id={}, email={}, enabled=false, verificationToken={}",
                     user.getId(), user.getEmail(), verificationToken);
 
-            emailService.sendVerificationEmail(user.getEmail(), verificationToken);
-            log.info("Registration successful for email: {}, verification email sent", request.getEmail());
+            emailService.sendVerificationEmailAsync(user.getEmail(), verificationToken);
+            log.info("Registration successful for email: {}, verification email queued", request.getEmail());
 
             return AuthResponse.builder()
                     .user(buildUserResponse(user))
                     .emailVerificationRequired(true)
                     .build();
-        } catch (EmailService.EmailDeliveryException e) {
-            log.error("Registration email delivery failed for email: {}", request.getEmail(), e);
-            throw e;
         } catch (RuntimeException e) {
             log.error("Registration failed for email: {} — exceptionType={}, message={}", 
                     request.getEmail(), e.getClass().getName(), e.getMessage(), e);
@@ -225,8 +222,8 @@ public class AuthService {
         user.setVerificationToken(newToken);
         user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
-        emailService.sendVerificationEmail(user.getEmail(), newToken);
-        log.info("Verification email resent successfully to user {}", user.getId());
+        emailService.sendVerificationEmailAsync(user.getEmail(), newToken);
+        log.info("Verification email queued successfully for user {}", user.getId());
     }
 
     @Transactional(readOnly = true)

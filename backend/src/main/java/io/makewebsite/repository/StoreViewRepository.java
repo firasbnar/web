@@ -22,6 +22,9 @@ public interface StoreViewRepository extends JpaRepository<StoreView, UUID> {
     Optional<StoreView> findFirstByBoutiqueIdAndVisitorIdAndViewedAtAfter(UUID boutiqueId, String visitorId, LocalDateTime after);
     Optional<StoreView> findFirstByBoutiqueIdAndIpHashAndViewedAtAfter(UUID boutiqueId, String ipHash, LocalDateTime after);
 
+    @Query("SELECT s FROM StoreView s WHERE s.boutiqueId = :boutiqueId AND s.page = :page AND s.ipHash = :ipHash AND s.userAgent = :userAgent AND s.viewedAt >= :since ORDER BY s.viewedAt DESC")
+    List<StoreView> findRecentDuplicates(@Param("boutiqueId") UUID boutiqueId, @Param("page") String page, @Param("ipHash") String ipHash, @Param("userAgent") String userAgent, @Param("since") LocalDateTime since);
+
     @Query("SELECT s.country, COUNT(s) FROM StoreView s WHERE s.boutiqueId = :boutiqueId AND s.country IS NOT NULL GROUP BY s.country ORDER BY COUNT(s) DESC")
     List<Object[]> countByBoutiqueIdGroupByCountry(@Param("boutiqueId") UUID boutiqueId);
 
@@ -29,4 +32,7 @@ public interface StoreViewRepository extends JpaRepository<StoreView, UUID> {
     List<Object[]> countByBoutiqueIdGroupByCity(@Param("boutiqueId") UUID boutiqueId);
 
     List<StoreView> findAllByBoutiqueIdOrderByViewedAtDesc(UUID boutiqueId);
+
+    @Query("SELECT s FROM StoreView s WHERE s.country = 'Inconnu' OR s.city = 'Inconnu'")
+    List<StoreView> findAllWithInconnuLocation();
 }

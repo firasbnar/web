@@ -9,6 +9,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -57,6 +58,28 @@ public class GeoLocationService {
 
     private static final String DEV_COUNTRY = "Tunisie";
     private static final String DEV_CITY = "Sousse";
+    private static final double DEV_LAT = 35.8256;
+    private static final double DEV_LNG = 10.63699;
+
+    /** Known city coordinates for validation and fallback. */
+    private static final Map<String, double[]> KNOWN_CITIES = Map.of(
+        "Sousse", new double[]{35.8256, 10.63699},
+        "Tunis", new double[]{36.8065, 10.1815},
+        "Sfax", new double[]{34.7406, 10.7603},
+        "Paris", new double[]{48.8566, 2.3522},
+        "Dubai", new double[]{25.2048, 55.2708}
+    );
+
+    /**
+     * Returns the canonical coordinates for a known city, or the given
+     * lat/lng if the city is unknown.
+     */
+    public static double[] resolveCityCoords(String city, Double lat, Double lng) {
+        if (city != null && KNOWN_CITIES.containsKey(city)) {
+            return KNOWN_CITIES.get(city).clone();
+        }
+        return new double[]{lat != null ? lat : 0.0, lng != null ? lng : 0.0};
+    }
 
     /**
      * Detects localhost and private network IPs that cannot be geolocated.
@@ -78,7 +101,7 @@ public class GeoLocationService {
         // so assign a default location so the traffic dashboard shows meaningful data.
         if (isLocalIp(ip)) {
             log.debug("Private IP {} detected — assigning development fallback: Tunisie/Sousse", ip);
-            return Optional.of(new GeoData(DEV_COUNTRY, DEV_CITY, null, null, null));
+            return Optional.of(new GeoData(DEV_COUNTRY, DEV_CITY, null, DEV_LAT, DEV_LNG));
         }
         try {
             String json = restTemplate.getForObject("http://ip-api.com/json/" + ip + "?fields=country,city,regionName,lat,lon,status", String.class);

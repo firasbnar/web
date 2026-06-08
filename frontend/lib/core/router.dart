@@ -35,6 +35,7 @@ import '../screens/profile/edit_profile_screen.dart';
 import '../screens/store_catalog/store_catalog_screen.dart';
 import '../screens/product_detail/product_detail_screen.dart';
 import '../screens/subscription/subscription_dashboard_screen.dart';
+import '../screens/subscription/subscription_checkout_return_screen.dart';
 import '../screens/inventory/inventory_screen.dart';
 import '../screens/delivery/delivery_company_screen.dart';
 import '../screens/create_store/create_store_screen.dart';
@@ -116,7 +117,7 @@ GoRouter createRouter(AuthProvider auth) {
       // Public store browsings
       if (path.startsWith('/explore')) return null;
 
-      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store', '/plans', '/create-store', '/store-selector', '/stores'];
+      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store', '/plans', '/create-store', '/store-selector', '/stores', '/subscription/checkout-return'];
       final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
 
       // --- SUPER_ADMIN is platform-level only, no access to owner/merchant routes ---
@@ -156,7 +157,7 @@ GoRouter createRouter(AuthProvider auth) {
 
       // Subscription guard: non-SUPER_ADMIN needs active subscription for protected routes
       // /plans and /create-store are exempt (onboarding flow)
-      if (path.startsWith('/plans') || path.startsWith('/create-store')) return null;
+      if (path.startsWith('/plans') || path.startsWith('/create-store') || path.startsWith('/subscription/checkout-return')) return null;
       final subRequiredPaths = ['/home', '/store-selector', '/products', '/orders', '/customers',
           '/analytics', '/traffic', '/delivery', '/inventory', '/pos', '/subscription',
           '/coupons', '/reviews', '/team', '/messages', '/notifications', '/boutique-settings',
@@ -213,6 +214,13 @@ GoRouter createRouter(AuthProvider auth) {
         },
       ),
       GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
+      GoRoute(
+        path: '/subscription/checkout-return',
+        builder: (_, state) => SubscriptionCheckoutReturnScreen(
+          status: state.uri.queryParameters['status'] ?? 'pending',
+          sessionId: state.uri.queryParameters['sessionId'],
+        ),
+      ),
       GoRoute(path: '/super-admin', builder: (_, __) => const SuperAdminDashboardScreen()),
       GoRoute(path: '/store/:slug', builder: (_, state) => PublicStorefrontScreen(slug: state.pathParameters['slug']!)),
       GoRoute(path: '/store/:slug/product/:productId', builder: (_, state) => PublicProductDetailScreen(slug: state.pathParameters['slug']!, productId: state.pathParameters['productId']!)),

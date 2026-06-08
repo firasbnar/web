@@ -4,6 +4,7 @@ import io.makewebsite.entity.StoreView;
 import io.makewebsite.repository.StoreViewRepository;
 import io.makewebsite.service.GeoLocationService.GeoData;
 import io.makewebsite.service.GeoLocationService.ReverseGeoData;
+import io.makewebsite.util.NetworkUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -52,6 +54,17 @@ public class BoutiqueVisitService {
     public void recordVisit(UUID boutiqueId, String slug, String ipAddress, String userAgent, String visitorId, String referrer, Double latitude, Double longitude) {
         String ipHash = hashIp(ipAddress);
 
+        // Dedup: skip if an identical visit was recorded within the last 3 seconds
+        if (userAgent != null && ipHash != null && boutiqueId != null) {
+            LocalDateTime since = LocalDateTime.now().minusSeconds(3);
+            List<StoreView> recent = storeViewRepository.findRecentDuplicates(
+                    boutiqueId, "/store/" + slug, ipHash, userAgent, since);
+            if (!recent.isEmpty()) {
+                log.debug("Duplicate visit detected for boutiqueId={} slug={} ipHash={} — skipping", boutiqueId, slug, ipHash);
+                return;
+            }
+        }
+
         Double lat = latitude;
         Double lng = longitude;
         String country = null;
@@ -88,9 +101,22 @@ public class BoutiqueVisitService {
             }
         }
 
-        // Final fallback — never leave country/city null
-        if (country == null) country = "Inconnu";
-        if (city == null) city = "Inconnu";
+        // Final fallback — never leave country/city null.
+        // For development IPs that couldn't be geolocated (e.g. null IP), use Tunisie/Sousse.
+        if (country == null) {
+            country = (ipAddress != null && NetworkUtils.isPrivateIp(ipAddress)) ? "Tunisie" : "Inconnu";
+        }
+        if (city == null) {
+            city = (ipAddress != null && NetworkUtils.isPrivateIp(ipAddress)) ? "Sousse" : "Inconnu";
+        }
+        if (address == null && !"Inconnu".equals(country) && !"Inconnu".equals(city)) {
+            address = city + ", " + country;
+        }
+
+        // Normalize coordinates for known cities (fixes wrong/invalid lat/lng)
+        double[] resolved = GeoLocationService.resolveCityCoords(city, lat, lng);
+        lat = resolved[0];
+        lng = resolved[1];
 
         // Browser detection
         String browser = detectBrowser(userAgent);

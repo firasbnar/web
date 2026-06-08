@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/env_config.dart';
 import '../models/traffic_stats.dart';
 import '../theme/app_colors.dart';
 
@@ -90,24 +91,42 @@ class TrafficMapWidget extends StatelessWidget {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: EnvConfig.mapTileUrl,
                 userAgentPackageName: 'io.makewebsite.app',
               ),
               if (withCoords.isNotEmpty)
                 MarkerLayer(
                   markers: withCoords.map((p) => Marker(
                     point: LatLng(p.latitude!, p.longitude!),
-                    width: 36, height: 36,
+                    width: 44, height: 44,
                     child: GestureDetector(
                       onTap: () => _showPopup(context, p),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
-                        ),
-                        padding: const EdgeInsets.all(6),
-                        child: const Icon(Icons.near_me, color: Colors.white, size: 14),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
+                            ),
+                            padding: const EdgeInsets.all(8),
+                            child: const Icon(Icons.near_me, color: Colors.white, size: 16),
+                          ),
+                          if (p.totalVisits > 1)
+                            Positioned(
+                              right: -2, top: -2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text('${p.totalVisits}',
+                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   )).toList(),
@@ -193,21 +212,41 @@ class TrafficMapWidget extends StatelessWidget {
               child: const Icon(Icons.location_on, color: AppColors.primary, size: 16),
             ),
             const SizedBox(width: 10),
-            Text(point.city ?? point.country ?? 'Visiteur',
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+            Expanded(
+              child: Text(point.city ?? point.country ?? 'Visiteur',
+                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (point.country != null) _detailRow('Pays', point.country!),
+            // Visits count highlighted
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.people, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Visites : ${point.totalVisits}',
+                      style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             if (point.city != null) _detailRow('Ville', point.city!),
+            if (point.country != null) _detailRow('Pays', point.country!),
             if (point.address != null) _detailRow('Adresse', point.address!),
             if (point.browser != null) _detailRow('Navigateur', point.browser!),
             if (point.deviceType != null) _detailRow('Appareil', point.deviceType!),
             if (point.operatingSystem != null) _detailRow('OS', point.operatingSystem!),
-            _detailRow('Visites', '${point.totalVisits}'),
             if (point.lastActivityAt != null) _detailRow('Dernière activité', point.lastActivityAt!),
           ],
         ),

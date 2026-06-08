@@ -1,21 +1,26 @@
 package io.makewebsite.controller;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.stripe.Stripe;
 import com.stripe.model.Event;
-import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.Invoice;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.checkout.Session;
 import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.entity.Order;
 import io.makewebsite.repository.OrderRepository;
+import io.makewebsite.service.PlanService;
 import io.makewebsite.service.PaymentService;
 import io.makewebsite.service.TelegramNotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,7 +32,11 @@ public class PaymentWebhookController {
 
     private final OrderRepository orderRepository;
     private final PaymentService paymentService;
+    private final PlanService planService;
     private final TelegramNotificationService telegramNotificationService;
+
+    @Value("${stripe.secret-key}")
+    private String stripeSecretKey;
 
     @PostMapping("/stripe/webhook")
     public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
@@ -59,66 +68,167 @@ public class PaymentWebhookController {
         String eventType = event.getType();
 
         switch (eventType) {
-            case "checkout.session.completed" -> handleCheckoutCompleted(event);
-            case "payment_intent.succeeded" -> handlePaymentIntentSucceeded(event);
-            case "payment_intent.payment_failed" -> handlePaymentIntentFailed(event);
+            case "checkout.session.completed" -> handleCheckoutCompleted(event, payload);
+            case "payment_intent.succeeded" -> handlePaymentIntentSucceeded(event, payload);
+            case "payment_intent.payment_failed" -> handlePaymentIntentFailed(event, payload);
+            case "invoice.payment_succeeded" -> handleInvoicePaymentSucceeded(event, payload);
+            case "invoice.payment_failed" -> handleInvoicePaymentFailed(event, payload);
             default -> log.info("Stripe webhook: unhandled event type={}", eventType);
         }
 
         return ResponseEntity.ok("OK");
     }
 
-    private void handleCheckoutCompleted(Event event) {
-        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-        Session session = (Session) deserializer.getObject().orElse(null);
-        if (session == null) {
-            log.warn("Stripe webhook: failed to deserialize session from checkout.session.completed event");
-            return;
+    private void handleCheckoutCompleted(Event event, String payload) {
+        try {
+            String objectId = getStripeObjectIdFromPayload(payload);
+            Stripe.apiKey = resolveSecretKey();
+            Session session = Session.retrieve(objectId);
+            log.info("checkout.session.completed: objectId={}, sessionId={}, paymentStatus={}, metadata={}",
+                    objectId, session.getId(), session.getPaymentStatus(), session.getMetadata());
+
+            if (isSubscriptionStripeEvent(session.getMetadata())) {
+                if ("paid".equalsIgnoreCase(session.getPaymentStatus())) {
+                    log.info("Activating subscription via checkout.session.completed: sessionId={}", session.getId());
+                    planService.handleStripeCheckoutCompleted(session);
+                } else {
+                    log.warn("Checkout session {} has paymentStatus={}, not activating", session.getId(), session.getPaymentStatus());
+                }
+                return;
+            }
+            String orderNumber = session.getMetadata().get("orderNumber");
+            String paymentRef = session.getId();
+            if (orderNumber == null || orderNumber.isBlank()) {
+                log.warn("Stripe webhook: no orderNumber in session metadata (session={})", session.getId());
+                return;
+            }
+            log.info("Stripe webhook: checkout.session.completed for order {} (session={})", orderNumber, paymentRef);
+            markOrderPaid(orderNumber, paymentRef);
+        } catch (Exception e) {
+            log.error("Failed to handle checkout.session.completed: {}", e.getMessage(), e);
         }
-        String orderNumber = session.getMetadata().get("orderNumber");
-        String paymentRef = session.getId();
-        if (orderNumber == null || orderNumber.isBlank()) {
-            log.warn("Stripe webhook: no orderNumber in session metadata (session={})", session.getId());
-            return;
-        }
-        log.info("Stripe webhook: checkout.session.completed for order {} (session={})", orderNumber, paymentRef);
-        markOrderPaid(orderNumber, paymentRef);
     }
 
-    private void handlePaymentIntentSucceeded(Event event) {
-        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-        PaymentIntent paymentIntent = (PaymentIntent) deserializer.getObject().orElse(null);
-        if (paymentIntent == null) {
-            log.warn("Stripe webhook: failed to deserialize payment_intent from event");
-            return;
+    private void handlePaymentIntentSucceeded(Event event, String payload) {
+        try {
+            String objectId = getStripeObjectIdFromPayload(payload);
+            Stripe.apiKey = resolveSecretKey();
+            PaymentIntent paymentIntent = PaymentIntent.retrieve(objectId);
+            log.info("payment_intent.succeeded: objectId={}, piId={}, status={}, metadata={}",
+                    objectId, paymentIntent.getId(), paymentIntent.getStatus(), paymentIntent.getMetadata());
+
+            if (isSubscriptionStripeEvent(paymentIntent.getMetadata())) {
+                planService.handleStripePaymentSucceeded(
+                        paymentIntent.getMetadata(),
+                        null,
+                        paymentIntent.getId(),
+                        paymentIntent.getCustomer(),
+                        paymentIntent.getInvoice(),
+                        "payment_intent.succeeded"
+                );
+                return;
+            }
+            String orderNumber = paymentIntent.getMetadata().get("orderNumber");
+            String paymentRef = paymentIntent.getId();
+            if (orderNumber == null || orderNumber.isBlank()) {
+                log.warn("Stripe webhook: no orderNumber in payment_intent metadata (pi={})", paymentIntent.getId());
+                return;
+            }
+            log.info("Stripe webhook: payment_intent.succeeded for order {} (pi={})", orderNumber, paymentRef);
+            markOrderPaid(orderNumber, paymentRef);
+        } catch (Exception e) {
+            log.error("Failed to handle payment_intent.succeeded: {}", e.getMessage(), e);
         }
-        String orderNumber = paymentIntent.getMetadata().get("orderNumber");
-        String paymentRef = paymentIntent.getId();
-        if (orderNumber == null || orderNumber.isBlank()) {
-            log.warn("Stripe webhook: no orderNumber in payment_intent metadata (pi={})", paymentIntent.getId());
-            return;
-        }
-        log.info("Stripe webhook: payment_intent.succeeded for order {} (pi={})", orderNumber, paymentRef);
-        markOrderPaid(orderNumber, paymentRef);
     }
 
-    private void handlePaymentIntentFailed(Event event) {
-        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-        PaymentIntent paymentIntent = (PaymentIntent) deserializer.getObject().orElse(null);
-        if (paymentIntent == null) {
-            log.warn("Stripe webhook: failed to deserialize payment_intent from payment_failed event");
-            return;
-        }
-        String orderNumber = paymentIntent.getMetadata().get("orderNumber");
-        log.warn("Stripe webhook: payment_intent.payment_failed for order {}", orderNumber);
-        if (orderNumber == null || orderNumber.isBlank()) return;
+    private void handlePaymentIntentFailed(Event event, String payload) {
+        try {
+            String objectId = getStripeObjectIdFromPayload(payload);
+            Stripe.apiKey = resolveSecretKey();
+            PaymentIntent paymentIntent = PaymentIntent.retrieve(objectId);
+            log.info("payment_intent.payment_failed: objectId={}, piId={}, status={}, metadata={}",
+                    objectId, paymentIntent.getId(), paymentIntent.getStatus(), paymentIntent.getMetadata());
 
-        orderRepository.findByOrderNumber(orderNumber).ifPresent(order -> {
-            order.setPaymentStatus("FAILED");
-            order.setPaymentMethod("STRIPE");
-            orderRepository.save(order);
-            log.info("Stripe webhook: order {} marked FAILED", orderNumber);
-        });
+            if (isSubscriptionStripeEvent(paymentIntent.getMetadata())) {
+                planService.handleStripePaymentFailed(
+                        paymentIntent.getMetadata(),
+                        null,
+                        paymentIntent.getId(),
+                        paymentIntent.getInvoice(),
+                        paymentIntent.getLastPaymentError() != null
+                                ? paymentIntent.getLastPaymentError().getMessage()
+                                : "Paiement Stripe refusé",
+                        "payment_intent.payment_failed"
+                );
+                return;
+            }
+            String orderNumber = paymentIntent.getMetadata().get("orderNumber");
+            log.warn("Stripe webhook: payment_intent.payment_failed for order {}", orderNumber);
+            if (orderNumber == null || orderNumber.isBlank()) return;
+
+            orderRepository.findByOrderNumber(orderNumber).ifPresent(order -> {
+                order.setPaymentStatus("FAILED");
+                order.setPaymentMethod("STRIPE");
+                orderRepository.save(order);
+                log.info("Stripe webhook: order {} marked FAILED", orderNumber);
+            });
+        } catch (Exception e) {
+            log.error("Failed to handle payment_intent.payment_failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private void handleInvoicePaymentSucceeded(Event event, String payload) {
+        try {
+            String objectId = getStripeObjectIdFromPayload(payload);
+            Stripe.apiKey = resolveSecretKey();
+            Invoice stripeInvoice = Invoice.retrieve(objectId);
+            log.info("invoice.payment_succeeded: objectId={}, invoiceId={}, status={}, metadata={}",
+                    objectId, stripeInvoice.getId(), stripeInvoice.getStatus(), stripeInvoice.getMetadata());
+
+            if (!isSubscriptionStripeEvent(stripeInvoice.getMetadata())) {
+                return;
+            }
+            planService.handleStripePaymentSucceeded(
+                    stripeInvoice.getMetadata(),
+                    null,
+                    stripeInvoice.getPaymentIntent(),
+                    stripeInvoice.getCustomer(),
+                    stripeInvoice.getId(),
+                    "invoice.payment_succeeded"
+            );
+        } catch (Exception e) {
+            log.error("Failed to handle invoice.payment_succeeded: {}", e.getMessage(), e);
+        }
+    }
+
+    private void handleInvoicePaymentFailed(Event event, String payload) {
+        try {
+            String objectId = getStripeObjectIdFromPayload(payload);
+            Stripe.apiKey = resolveSecretKey();
+            Invoice stripeInvoice = Invoice.retrieve(objectId);
+            log.info("invoice.payment_failed: objectId={}, invoiceId={}, status={}, metadata={}",
+                    objectId, stripeInvoice.getId(), stripeInvoice.getStatus(), stripeInvoice.getMetadata());
+
+            if (!isSubscriptionStripeEvent(stripeInvoice.getMetadata())) {
+                return;
+            }
+            planService.handleStripePaymentFailed(
+                    stripeInvoice.getMetadata(),
+                    null,
+                    stripeInvoice.getPaymentIntent(),
+                    stripeInvoice.getId(),
+                    stripeInvoice.getLastFinalizationError() != null
+                            ? stripeInvoice.getLastFinalizationError().getMessage()
+                            : "Facture Stripe refusée",
+                    "invoice.payment_failed"
+            );
+        } catch (Exception e) {
+            log.error("Failed to handle invoice.payment_failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private boolean isSubscriptionStripeEvent(Map<String, String> metadata) {
+        return metadata != null && "SUBSCRIPTION".equalsIgnoreCase(metadata.get("billingType"));
     }
 
     private void markOrderPaid(String orderNumber, String paymentRef) {
@@ -135,6 +245,31 @@ public class PaymentWebhookController {
             log.info("Stripe webhook: order {} marked PAID (ref={})", orderNumber, paymentRef);
             telegramNotificationService.notifyPaymentValidated(order, "STRIPE", paymentRef);
         }, () -> log.warn("Stripe webhook: order {} not found in database", orderNumber));
+    }
+
+    private String getStripeObjectIdFromPayload(String payload) {
+        try {
+            JsonObject root = JsonParser.parseString(payload).getAsJsonObject();
+            JsonObject data = root.getAsJsonObject("data");
+            JsonObject object = data.getAsJsonObject("object");
+            if (object == null || object.get("id") == null || object.get("id").isJsonNull()) {
+                throw new IllegalArgumentException("Stripe object id missing from payload");
+            }
+            return object.get("id").getAsString();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Cannot extract Stripe object id from payload", e);
+        }
+    }
+
+    private String resolveSecretKey() {
+        if (stripeSecretKey != null && !stripeSecretKey.isBlank()) {
+            return stripeSecretKey;
+        }
+        String fromEnv = System.getenv("STRIPE_SECRET_KEY");
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv;
+        }
+        throw new RuntimeException("STRIPE_SECRET_KEY not configured");
     }
 
     @PostMapping("/d17/webhook")

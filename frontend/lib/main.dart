@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -27,6 +28,7 @@ import 'providers/public_cart_provider.dart';
 import 'providers/public_wishlist_provider.dart';
 import 'providers/public_messages_provider.dart';
 import 'providers/websocket_provider.dart';
+import 'services/app_link_handler.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
@@ -114,6 +116,7 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
         auth.onLogout = () => bp.clear();
 
         _router ??= createRouter(auth);
+        unawaited(AppLinkHandler.instance.attach(_router!));
 
         return MaterialApp.router(
           title: 'MakeWebsite',

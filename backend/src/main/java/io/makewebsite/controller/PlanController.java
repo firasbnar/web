@@ -1,6 +1,5 @@
 package io.makewebsite.controller;
 
-import io.makewebsite.dto.request.CancelSubscriptionRequest;
 import io.makewebsite.dto.request.SubscribeRequest;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.security.UserPrincipal;
@@ -52,6 +51,25 @@ public class PlanController {
                 planService.subscribe(principal.getUserId(), request)));
     }
 
+    @PostMapping("/subscriptions/checkout-session")
+    public ResponseEntity<ApiResponse<SubscriptionCheckoutResponse>> createStripeCheckoutSession(
+            @Valid @RequestBody SubscribeRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Session Stripe créée",
+                planService.createStripeCheckoutSession(principal.getUserId(), request)
+        ));
+    }
+
+    @GetMapping("/subscriptions/checkout-status")
+    public ResponseEntity<ApiResponse<SubscriptionCheckoutStatusResponse>> getCheckoutStatus(
+            @RequestParam String sessionId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                planService.getCheckoutStatus(principal.getUserId(), sessionId)
+        ));
+    }
+
     @PostMapping("/subscriptions/upgrade")
     public ResponseEntity<ApiResponse<SubscriptionResponse>> upgrade(
             @Valid @RequestBody SubscribeRequest request,
@@ -69,6 +87,12 @@ public class PlanController {
 
     @GetMapping("/invoices")
     public ResponseEntity<ApiResponse<List<InvoiceResponse>>> getInvoices(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(planService.getInvoices(principal.getUserId())));
+    }
+
+    @GetMapping("/subscriptions/invoices")
+    public ResponseEntity<ApiResponse<List<InvoiceResponse>>> getSubscriptionInvoices(
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.ok(planService.getInvoices(principal.getUserId())));
     }

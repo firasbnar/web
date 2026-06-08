@@ -69,6 +69,7 @@ class AppStorage {
   static const _activeBoutiqueKey = 'active_boutique_id';
   static const _userRoleKey = 'user_role';
   static const _subscriptionActiveKey = 'subscription_active';
+  static const _pendingStripeSessionIdKey = 'pending_stripe_session_id';
 
   static Future<void> saveActiveBoutiqueId(String id) async {
     final prefs = await SharedPreferences.getInstance();
@@ -110,6 +111,21 @@ class AppStorage {
     await prefs.remove(_subscriptionActiveKey);
   }
 
+  static Future<void> savePendingStripeSessionId(String sessionId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pendingStripeSessionIdKey, sessionId);
+  }
+
+  static Future<String?> getPendingStripeSessionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pendingStripeSessionIdKey);
+  }
+
+  static Future<void> clearPendingStripeSessionId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingStripeSessionIdKey);
+  }
+
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
@@ -120,5 +136,6 @@ class AppStorage {
     await prefs.remove(_activeBoutiqueKey);
     await prefs.remove(_userRoleKey);
     await prefs.remove(_subscriptionActiveKey);
+    await prefs.remove(_pendingStripeSessionIdKey);
   }
 }
