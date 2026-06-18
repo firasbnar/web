@@ -10,6 +10,7 @@ import io.makewebsite.service.MessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,11 +46,13 @@ public class PublicMessageController {
         Conversation conversation;
         try {
             conversation = messageService.getGuestConversation(conversationId, token);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of("success", false, "message", "Conversation non trouvée"));
         }
 
-        List<MessageResponse> messages = messageService.getMessages(conversationId);
+        List<MessageResponse> messages = messageService.getGuestMessages(conversationId);
 
         GuestConversationDetailResponse response = GuestConversationDetailResponse.builder()
                 .id(conversation.getId())
@@ -79,6 +82,8 @@ public class PublicMessageController {
         try {
             MessageResponse response = messageService.replyAsGuest(conversationId, token, content);
             return ResponseEntity.ok(Map.of("success", true, "data", response));
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of("success", false, "message", "Conversation non trouvée"));
         }

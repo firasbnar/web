@@ -3,11 +3,16 @@ package io.makewebsite.controller;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
 import io.makewebsite.dto.response.ApiResponse;
+import io.makewebsite.security.Permission;
 import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.BoutiquePermissionService;
 import io.makewebsite.service.StoreGeneratorService;
 import io.makewebsite.service.StoreSettingsService;
 import io.makewebsite.service.UploadService;
+import io.makewebsite.util.StripeConfigUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +25,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/boutiques/{id}")
 @RequiredArgsConstructor
+@Slf4j
 public class BoutiqueSettingsController {
 
     private final BoutiqueRepository boutiqueRepository;
@@ -31,10 +37,20 @@ public class BoutiqueSettingsController {
     private final StoreGeneratorService storeGeneratorService;
     private final StoreSettingsService storeSettingsService;
     private final UploadService uploadService;
+    private final BoutiquePermissionService boutiquePermissionService;
 
     private Boutique getBoutique(UUID id, UUID userId) {
-        return boutiqueRepository.findByUserIdAndId(userId, id)
+        boutiquePermissionService.requireBoutiquePermission(userId, id, Permission.SETTINGS_WRITE);
+        return boutiqueRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new RuntimeException("Boutique not found"));
+    }
+
+    private void regenerateSafely(UUID id) {
+        try {
+            storeGeneratorService.regenerate(id);
+        } catch (Exception e) {
+            log.warn("Store regeneration failed after settings save for boutique {}: {}", id, e.getMessage(), e);
+        }
     }
 
     private String slugify(String value) {
@@ -52,63 +68,59 @@ public class BoutiqueSettingsController {
             @PathVariable UUID id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
-        Boutique b = getBoutique(id, principal.getUserId());
+        try {
+            Boutique b = getBoutique(id, principal.getUserId());
 
-        // Map FIXED: email -> email, address -> address, phone -> phone (not seoTitle/description/whatsappNumber)
-        if (body.containsKey("email")) b.setEmail((String) body.get("email"));
-        if (body.containsKey("address")) b.setAddress((String) body.get("address"));
-        if (body.containsKey("phone")) b.setPhone((String) body.get("phone"));
-        if (body.containsKey("companyName")) {
-            String name = (String) body.get("companyName");
-            b.setName(name);
-            if (name != null && !name.isBlank()) b.setSlug(slugify(name));
+            if (body.containsKey("email")) b.setEmail((String) body.get("email"));
+            if (body.containsKey("address")) b.setAddress((String) body.get("address"));
+            if (body.containsKey("phone")) b.setPhone((String) body.get("phone"));
+            if (body.containsKey("companyName")) {
+                b.setName((String) body.get("companyName"));
+            }
+            if (body.containsKey("topBarText")) b.setAnnouncementText((String) body.get("topBarText"));
+            if (body.containsKey("tva")) b.setTva(Double.parseDouble(body.get("tva").toString()));
+            if (body.containsKey("deliveryFees")) b.setDeliveryFees(Double.parseDouble(body.get("deliveryFees").toString()));
+            if (body.containsKey("cashDelivery")) b.setCashOnDelivery(asBoolean(body.get("cashDelivery")));
+            if (body.containsKey("stripeEnabled") || body.containsKey("stripeStatus")) {
+                Boolean stripeEnabled = body.containsKey("stripeEnabled") ? asBoolean(body.get("stripeEnabled")) : null;
+                String stripeStatus = body.containsKey("stripeStatus") ? Objects.toString(body.get("stripeStatus"), null) : null;
+                StripeConfigUtils.applyStripeState(b, stripeEnabled, stripeStatus);
+            }
+            if (body.containsKey("simpleCheckout")) b.setSimpleCheckout(asBoolean(body.get("simpleCheckout")));
+            if (body.containsKey("timezone")) b.setTimezone((String) body.get("timezone"));
+            if (body.containsKey("freeShippingThreshold")) b.setFreeShippingThreshold(Double.parseDouble(body.get("freeShippingThreshold").toString()));
+            if (body.containsKey("estimatedDeliveryDays")) b.setEstimatedDeliveryDays(Integer.parseInt(body.get("estimatedDeliveryDays").toString()));
+            if (body.containsKey("enableLocalPickup")) b.setEnableLocalPickup(asBoolean(body.get("enableLocalPickup")));
+            if (body.containsKey("enableEmailNotifications")) b.setEnableEmailNotifications(asBoolean(body.get("enableEmailNotifications")));
+            if (body.containsKey("enableSmsNotifications")) b.setEnableSmsNotifications(asBoolean(body.get("enableSmsNotifications")));
+            if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications(asBoolean(body.get("enablePushNotifications")));
+            if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails(asBoolean(body.get("enableMarketingEmails")));
+            if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts(asBoolean(body.get("enableOrderAlerts")));
+            if (body.containsKey("clientMessagingEnabled")) b.setClientMessagingEnabled(asBoolean(body.get("clientMessagingEnabled")));
+            boutiqueRepository.save(b);
+            regenerateSafely(id);
+            return ResponseEntity.ok(ApiResponse.ok("Configuration sauvegardée", Map.of("id", b.getId())));
+        } catch (Exception e) {
+            log.error("Config update failed for boutique {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors de la sauvegarde: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
         }
-        if (body.containsKey("topBarText")) b.setAnnouncementText((String) body.get("topBarText"));
-        if (body.containsKey("tva")) b.setTva(Double.parseDouble(body.get("tva").toString()));
-        if (body.containsKey("deliveryFees")) b.setDeliveryFees(Double.parseDouble(body.get("deliveryFees").toString()));
-        if (body.containsKey("cashDelivery")) b.setCashOnDelivery("yes".equals(body.get("cashDelivery")));
-        if (body.containsKey("konnectMerchantId")) b.setKonnectMerchantId((String) body.get("konnectMerchantId"));
-        if (body.containsKey("konnectApiKey")) b.setKonnectApiKey((String) body.get("konnectApiKey"));
-        if (body.containsKey("konnectStatus")) b.setKonnectStatus((String) body.get("konnectStatus"));
-        if (body.containsKey("d17MerchantNumber")) b.setD17MerchantNumber((String) body.get("d17MerchantNumber"));
-        if (body.containsKey("d17QrCodeUrl")) b.setD17QrCodeUrl((String) body.get("d17QrCodeUrl"));
-        if (body.containsKey("d17Status")) b.setD17Status((String) body.get("d17Status"));
-        if (body.containsKey("simpleCheckout")) b.setSimpleCheckout("yes".equals(body.get("simpleCheckout")));
-        if (body.containsKey("timezone")) b.setTimezone((String) body.get("timezone"));
-        if (body.containsKey("freeShippingThreshold")) b.setFreeShippingThreshold(Double.parseDouble(body.get("freeShippingThreshold").toString()));
-        if (body.containsKey("estimatedDeliveryDays")) b.setEstimatedDeliveryDays(Integer.parseInt(body.get("estimatedDeliveryDays").toString()));
-        if (body.containsKey("enableLocalPickup")) b.setEnableLocalPickup("yes".equals(body.get("enableLocalPickup")));
-        if (body.containsKey("enableEmailNotifications")) b.setEnableEmailNotifications("yes".equals(body.get("enableEmailNotifications")));
-        if (body.containsKey("enableSmsNotifications")) b.setEnableSmsNotifications("yes".equals(body.get("enableSmsNotifications")));
-        if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications("yes".equals(body.get("enablePushNotifications")));
-        if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails("yes".equals(body.get("enableMarketingEmails")));
-        if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts("yes".equals(body.get("enableOrderAlerts")));
-        if (body.containsKey("clientMessagingEnabled")) b.setClientMessagingEnabled("yes".equals(body.get("clientMessagingEnabled")));
-        boutiqueRepository.save(b);
-        storeGeneratorService.regenerate(id);
-        return ResponseEntity.ok(ApiResponse.ok("Configuration sauvegardée", Map.of("id", b.getId())));
     }
 
-    // ========== THEME ==========
-    @PutMapping("/store-theme")
+    @PatchMapping("/client-messaging")
     @Transactional
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateTheme(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateClientMessaging(
             @PathVariable UUID id,
-            @RequestBody Map<String, String> body,
+            @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
         Boutique b = getBoutique(id, principal.getUserId());
-        if (body.containsKey("headerColor")) b.setHeaderColor(body.get("headerColor"));
-        if (body.containsKey("footerColor")) b.setFooterColor(body.get("footerColor"));
-        if (body.containsKey("bodyColor")) b.setBodyColor(body.get("bodyColor"));
-        if (body.containsKey("cardProductColor")) b.setCardProductColor(body.get("cardProductColor"));
-        if (body.containsKey("buttonColor")) b.setButtonColor(body.get("buttonColor"));
-        if (body.containsKey("topBarColor")) b.setTopBarColor(body.get("topBarColor"));
-        if (body.containsKey("textColor")) b.setTextColor(body.get("textColor"));
-        if (body.containsKey("fontFamily")) b.setFontFamily(body.get("fontFamily"));
-        if (body.containsKey("darkMode")) b.setDarkMode("yes".equals(body.get("darkMode")));
+        b.setClientMessagingEnabled(asBoolean(body.get("enabled")));
         boutiqueRepository.save(b);
-        storeGeneratorService.regenerate(id);
-        return ResponseEntity.ok(ApiResponse.ok("Thème mis à jour", Map.of("id", b.getId())));
+        regenerateSafely(id);
+        return ResponseEntity.ok(ApiResponse.ok("Messagerie client mise a jour", Map.of(
+                "id", b.getId(),
+                "clientMessagingEnabled", b.getClientMessagingEnabled()
+        )));
     }
 
     // ========== LOGO ==========
@@ -122,7 +134,7 @@ public class BoutiqueSettingsController {
         String url = uploadService.uploadImage(file);
         b.setLogoUrl(url);
         boutiqueRepository.save(b);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Logo mis à jour", Map.of("logoUrl", url)));
     }
 
@@ -164,23 +176,8 @@ public class BoutiqueSettingsController {
         Boutique b = getBoutique(id, principal.getUserId());
         if (body.containsKey("currency")) b.setCurrency(body.get("currency"));
         boutiqueRepository.save(b);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Devise mise à jour", Map.of("currency", b.getCurrency())));
-    }
-
-    // ========== CUSTOM CODE ==========
-    @PutMapping("/custom-code")
-    @Transactional
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateCustomCode(
-            @PathVariable UUID id,
-            @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        Boutique b = getBoutique(id, principal.getUserId());
-        if (body.containsKey("customJs")) b.setCustomJs(body.get("customJs"));
-        if (body.containsKey("customCss")) b.setCustomCss(body.get("customCss"));
-        boutiqueRepository.save(b);
-        storeGeneratorService.regenerate(id);
-        return ResponseEntity.ok(ApiResponse.ok("Code personnalisé mis à jour", Map.of("id", b.getId())));
     }
 
     // ========== DELIVERY SETTINGS ==========
@@ -194,7 +191,7 @@ public class BoutiqueSettingsController {
         if (body.containsKey("deliveryFees")) b.setDeliveryFees(Double.parseDouble(body.get("deliveryFees").toString()));
         if (body.containsKey("freeShippingThreshold")) b.setFreeShippingThreshold(Double.parseDouble(body.get("freeShippingThreshold").toString()));
         if (body.containsKey("estimatedDeliveryDays")) b.setEstimatedDeliveryDays(Integer.parseInt(body.get("estimatedDeliveryDays").toString()));
-        if (body.containsKey("enableLocalPickup")) b.setEnableLocalPickup("yes".equals(body.get("enableLocalPickup")));
+        if (body.containsKey("enableLocalPickup")) b.setEnableLocalPickup(asBoolean(body.get("enableLocalPickup")));
         boutiqueRepository.save(b);
         return ResponseEntity.ok(ApiResponse.ok("Paramètres de livraison sauvegardés", Map.of("id", b.getId())));
     }
@@ -207,11 +204,11 @@ public class BoutiqueSettingsController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
         Boutique b = getBoutique(id, principal.getUserId());
-        if (body.containsKey("enableEmailNotifications")) b.setEnableEmailNotifications("yes".equals(body.get("enableEmailNotifications")));
-        if (body.containsKey("enableSmsNotifications")) b.setEnableSmsNotifications("yes".equals(body.get("enableSmsNotifications")));
-        if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications("yes".equals(body.get("enablePushNotifications")));
-        if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails("yes".equals(body.get("enableMarketingEmails")));
-        if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts("yes".equals(body.get("enableOrderAlerts")));
+        if (body.containsKey("enableEmailNotifications")) b.setEnableEmailNotifications(asBoolean(body.get("enableEmailNotifications")));
+        if (body.containsKey("enableSmsNotifications")) b.setEnableSmsNotifications(asBoolean(body.get("enableSmsNotifications")));
+        if (body.containsKey("enablePushNotifications")) b.setEnablePushNotifications(asBoolean(body.get("enablePushNotifications")));
+        if (body.containsKey("enableMarketingEmails")) b.setEnableMarketingEmails(asBoolean(body.get("enableMarketingEmails")));
+        if (body.containsKey("enableOrderAlerts")) b.setEnableOrderAlerts(asBoolean(body.get("enableOrderAlerts")));
         boutiqueRepository.save(b);
         return ResponseEntity.ok(ApiResponse.ok("Paramètres de notification sauvegardés", Map.of("id", b.getId())));
     }
@@ -240,7 +237,7 @@ public class BoutiqueSettingsController {
             return ResponseEntity.badRequest().body(ApiResponse.error("imageUrl is required"));
         StoreSlider slider = StoreSlider.builder().boutique(b).imageUrl(imageUrl).build();
         slider = sliderRepository.save(slider);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", slider.getId()); res.put("imageUrl", slider.getImageUrl());
         return ResponseEntity.ok(ApiResponse.ok("Slider ajouté", res));
@@ -253,7 +250,7 @@ public class BoutiqueSettingsController {
             @AuthenticationPrincipal UserPrincipal principal) {
         getBoutique(id, principal.getUserId());
         sliderRepository.deleteById(sliderId);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Slider supprimé", null));
     }
 
@@ -291,7 +288,7 @@ public class BoutiqueSettingsController {
             @AuthenticationPrincipal UserPrincipal principal) {
         getBoutique(id, principal.getUserId());
         videoRepository.deleteById(videoId);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Vidéo supprimée", null));
     }
 
@@ -309,7 +306,7 @@ public class BoutiqueSettingsController {
         if (body.containsKey("tiktokUrl")) b.setTiktokUrl(body.get("tiktokUrl"));
         if (body.containsKey("linkedinUrl")) b.setLinkedinUrl(body.get("linkedinUrl"));
         boutiqueRepository.save(b);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Réseaux sociaux mis à jour", Map.of("id", b.getId())));
     }
 
@@ -342,7 +339,7 @@ public class BoutiqueSettingsController {
                 .countryName(displayName)
                 .build();
         countryRepository.save(bc);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Pays ajouté", Map.of("countryName", displayName, "countryCode", code)));
     }
 
@@ -354,7 +351,7 @@ public class BoutiqueSettingsController {
         getBoutique(id, principal.getUserId());
         countryRepository.findByBoutiqueIdAndCountryCode(id, countryName.toUpperCase(Locale.ROOT))
                 .ifPresent(c -> countryRepository.delete(c));
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Pays supprimé", null));
     }
 
@@ -418,7 +415,7 @@ public class BoutiqueSettingsController {
         if (body.containsKey("cartTitle")) lang.setCartTitle(body.get("cartTitle"));
         if (body.containsKey("selectCountry")) lang.setSelectCountry(body.get("selectCountry"));
         languageRepository.save(lang);
-        storeGeneratorService.regenerate(id);
+        regenerateSafely(id);
         return ResponseEntity.ok(ApiResponse.ok("Langue mise à jour", Map.of("id", b.getId())));
     }
 
@@ -455,5 +452,20 @@ public class BoutiqueSettingsController {
             name = locale.getDisplayName(Locale.ENGLISH);
         }
         return name;
+    }
+
+    private static boolean asBoolean(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value == null) {
+            return false;
+        }
+        String text = value.toString().trim();
+        return "true".equalsIgnoreCase(text)
+                || "yes".equalsIgnoreCase(text)
+                || "1".equals(text)
+                || "active".equalsIgnoreCase(text)
+                || "enabled".equalsIgnoreCase(text);
     }
 }

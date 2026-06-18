@@ -109,6 +109,10 @@ public class Order {
     @Column(name = "tracking_number")
     private String trackingNumber;
 
+    @Size(max = 30)
+    @Column(name = "delivery_status")
+    private String deliveryStatus;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

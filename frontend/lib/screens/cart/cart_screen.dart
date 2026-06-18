@@ -10,6 +10,7 @@ import '../../widgets/app_button.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/loading_skeleton.dart';
+import '../../utils/format_utils.dart';
 
 class CartScreen extends StatefulWidget {
   final String boutiqueId;
@@ -84,7 +85,7 @@ class _CartScreenState extends State<CartScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text('cart.subtotal'.tr(), style: AppTypography.caption),
-                            Text('${cart.subtotal.toStringAsFixed(3)} TND', style: AppTypography.heading3),
+                            Text(FormatUtils.money(context, cart.subtotal, currencyCode: 'TND'), style: AppTypography.heading3),
                           ],
                         ),
                       ),
@@ -153,7 +154,10 @@ class _CartItemCard extends StatelessWidget {
               children: [
                 Text(item.productName ?? '', style: AppTypography.body2, maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
-                Text('${item.unitPrice.toStringAsFixed(3)} TND', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                Text(
+                  FormatUtils.money(context, item.unitPrice, currencyCode: 'TND'),
+                  style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),

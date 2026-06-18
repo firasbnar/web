@@ -1,5 +1,6 @@
 package io.makewebsite.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -125,6 +126,7 @@ public class Boutique {
 
     @Builder.Default
     @Column(name = "enable_d17")
+    @JsonIgnore
     private Boolean enableD17 = false;
 
     @Builder.Default
@@ -196,24 +198,38 @@ public class Boutique {
     private Boolean cashOnDelivery = true;
 
     @Column(name = "konnect_merchant_id", length = 100)
+    @JsonIgnore
     private String konnectMerchantId;
 
     @Column(name = "konnect_api_key", length = 200)
+    @JsonIgnore
     private String konnectApiKey;
 
     @Builder.Default
     @Column(name = "konnect_status", length = 20)
+    @JsonIgnore
     private String konnectStatus = "inactive";
 
     @Column(name = "d17_merchant_number", length = 50)
+    @JsonIgnore
     private String d17MerchantNumber;
 
     @Column(name = "d17_qr_code_url", columnDefinition = "TEXT")
+    @JsonIgnore
     private String d17QrCodeUrl;
 
     @Builder.Default
     @Column(name = "d17_status", length = 20)
+    @JsonIgnore
     private String d17Status = "inactive";
+
+    @Builder.Default
+    @Column(name = "stripe_status", length = 50)
+    private String stripeStatus = "DISABLED";
+
+    @Builder.Default
+    @Column(name = "stripe_enabled")
+    private Boolean stripeEnabled = false;
 
     @Builder.Default
     @Column(name = "invoice_sequence")
@@ -261,9 +277,11 @@ public class Boutique {
     private String stripePublishableKey;
 
     @Column(name = "stripe_secret_key", length = 200)
+    @JsonIgnore
     private String stripeSecretKey;
 
     @Column(name = "stripe_webhook_secret", length = 200)
+    @JsonIgnore
     private String stripeWebhookSecret;
 
     @Column(name = "free_shipping_threshold")

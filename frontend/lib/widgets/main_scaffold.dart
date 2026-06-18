@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/boutique_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 
@@ -11,33 +12,49 @@ class MainScaffold extends StatelessWidget {
   final Widget child;
   const MainScaffold({super.key, required this.child});
 
-  int _currentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/products')) return 1;
-    if (location.startsWith('/orders')) return 2;
-    if (location.startsWith('/traffic')) return 3;
-    return 4;
+  List<_NavItem> _navItems(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final boutique = context.watch<BoutiqueProvider>().activeBoutique;
+    final role = boutique?.currentUserRole?.toUpperCase() ?? auth.role?.toUpperCase();
+    final permissions = boutique?.currentUserPermissions ?? const [];
+    final ownerLike = role == 'OWNER' || role == 'ADMIN' || auth.role == 'SUPER_ADMIN';
+    bool can(String permission) => ownerLike || permissions.contains(permission);
+
+    return [
+      const _NavItem(Icons.home_outlined, Icons.home, 'nav.home', '/home'),
+      if (can('PRODUCT_READ')) const _NavItem(Icons.inventory_2_outlined, Icons.inventory_2, 'nav.products', '/products'),
+      if (can('ORDER_READ')) const _NavItem(Icons.receipt_long_outlined, Icons.receipt_long, 'nav.orders', '/orders'),
+      if (can('ANALYTICS_READ')) const _NavItem(Icons.travel_explore_outlined, Icons.travel_explore, 'nav.traffic', '/traffic'),
+      const _NavItem(Icons.more_horiz, Icons.more_horiz, 'nav.more', '__more__'),
+    ];
   }
 
-  void _onTap(BuildContext context, int index) {
-    switch (index) {
-      case 0: context.go('/home');
-      case 1: context.go('/products');
-      case 2: context.go('/orders');
-      case 3: context.go('/traffic');
-      case 4: _showMoreMenu(context);
+  int _currentIndex(BuildContext context, List<_NavItem> items) {
+    final location = GoRouterState.of(context).uri.toString();
+    final index = items.indexWhere((item) => item.route != '__more__' && location.startsWith(item.route));
+    return index >= 0 ? index : items.length - 1;
+  }
+
+  void _onTap(BuildContext context, List<_NavItem> items, int index) {
+    final route = items[index].route;
+    if (route == '__more__') {
+      _showMoreMenu(context);
+    } else {
+      context.go(route);
     }
   }
 
   void _showMoreMenu(BuildContext context) {
     final role = context.read<AuthProvider>().role;
+    final boutique = context.read<BoutiqueProvider>().activeBoutique;
     final isAdmin = role == 'ADMIN';
     final isSuperAdmin = role == 'SUPER_ADMIN';
     final isOwner = role == 'OWNER';
+    final ownerLike = isOwner || isAdmin || isSuperAdmin || boutique?.ownerAccess == true;
+    bool can(String permission) => ownerLike || (boutique?.currentUserPermissions.contains(permission) ?? false);
 
     final List<_MenuItem> allItems = [
-      const _MenuItem(Icons.local_offer_outlined, 'menu.coupons', '/coupons'),
+      _MenuItem(Icons.local_offer_outlined, 'menu.coupons', '/coupons', visible: can('DISCOUNT_WRITE')),
       _MenuItem(Icons.card_membership_outlined, 'menu.subscription', '/plans', visible: isAdmin || isOwner),
       _MenuItem(Icons.history_outlined, "menu.activity_log", '/admin/activities', visible: isAdmin),
       _MenuItem(Icons.admin_panel_settings_outlined, 'menu.administration', '/admin', visible: isAdmin),
@@ -96,7 +113,8 @@ class MainScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
-    final selectedIndex = _currentIndex(context);
+    final navItems = _navItems(context);
+    final selectedIndex = _currentIndex(context, navItems);
 
     developer.log('[SHELL] route=$location selected=$selectedIndex');
 
@@ -113,7 +131,7 @@ class MainScaffold extends StatelessWidget {
           ),
           child: BottomNavigationBar(
             currentIndex: selectedIndex,
-            onTap: (i) => _onTap(context, i),
+            onTap: (i) => _onTap(context, navItems, i),
             type: BottomNavigationBarType.fixed,
             selectedItemColor: AppColors.primary,
             unselectedItemColor: AppColors.textHint,
@@ -121,18 +139,24 @@ class MainScaffold extends StatelessWidget {
             unselectedLabelStyle: const TextStyle(fontSize: 12),
             elevation: 0,
             backgroundColor: Colors.white,
-            items: [
-              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'nav.home'.tr()),
-              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), activeIcon: Icon(Icons.inventory_2), label: 'nav.products'.tr()),
-              BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'nav.orders'.tr()),
-              BottomNavigationBarItem(icon: Icon(Icons.travel_explore_outlined), activeIcon: Icon(Icons.travel_explore), label: 'nav.traffic'.tr()),
-              BottomNavigationBarItem(icon: Icon(Icons.more_horiz), activeIcon: Icon(Icons.more_horiz), label: 'nav.more'.tr()),
-            ],
+            items: navItems.map((item) => BottomNavigationBarItem(
+              icon: Icon(item.icon),
+              activeIcon: Icon(item.activeIcon),
+              label: item.labelKey.tr(),
+            )).toList(),
           ),
         ),
       ],
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String labelKey;
+  final String route;
+  const _NavItem(this.icon, this.activeIcon, this.labelKey, this.route);
 }
 
 class _MenuItem {

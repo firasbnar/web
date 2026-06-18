@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class UpdateRoleRequest {
     @NotBlank
-    @Pattern(regexp = "(?i)^(ADMIN|MANAGER|STAFF|CAISSIER)$", message = "Role d'equipe invalide")
+    @Pattern(regexp = "(?i)^(ADMIN|MANAGER|STAFF|CAISSIER|CASHIER|PRODUCT_MANAGER|SUPPORT)$", message = "Role d'equipe invalide")
     private String role;
 }

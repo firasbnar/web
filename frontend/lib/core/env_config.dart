@@ -22,7 +22,7 @@ class EnvConfig {
   /// Override at build time: --dart-define=FRONTEND_PUBLIC_URL=https://votre-serveur.com
   static const String frontendPublicUrl = String.fromEnvironment(
     'FRONTEND_PUBLIC_URL',
-    defaultValue: 'http://10.229.129.212:8080',
+    defaultValue: 'http://localhost:8080',
   );
 
   /// Deep link used by Stripe Checkout mobile return URLs.
@@ -35,6 +35,9 @@ class EnvConfig {
     'APP_MOBILE_DEEP_LINK_HOST',
     defaultValue: 'stripe-return',
   );
+
+  /// Telegram bot username (without @ prefix) used for bot instructions.
+  static const String telegramBotUsername = 'Webio12_bot';
 
   /// Map tile URL template. Override with a production-ready tile provider
   /// (MapTiler, Stadia, Mapbox, CARTO, etc.) via --dart-define=MAP_TILE_URL=...

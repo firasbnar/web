@@ -79,11 +79,21 @@ class OrdersProvider extends ChangeNotifier {
   }
 
   Future<bool> updateTracking(String id, String company, String tracking) async {
+    // Backward-compatible method name used by older UI code.
+    return updateDelivery(id, company: company, tracking: tracking);
+  }
+
+  Future<bool> updateDelivery(String id, {required String company, required String tracking}) async {
     try {
-      await _api.put('/orders/$id/tracking', data: {'deliveryCompany': company, 'trackingNumber': tracking});
+      final res = await _api.put('/orders/$id/delivery', data: {'deliveryCompany': company, 'trackingNumber': tracking});
+      _selectedOrder = Order.fromJson(res['data']);
+      final idx = _orders.indexWhere((o) => o.id == id);
+      if (idx >= 0) _orders[idx] = _selectedOrder!;
+      notifyListeners();
       return true;
     } catch (e) {
-      _error = ApiClient.extractErrorMessage(e); notifyListeners();
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
       return false;
     }
   }

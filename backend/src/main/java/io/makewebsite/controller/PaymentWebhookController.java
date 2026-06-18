@@ -9,6 +9,7 @@ import com.stripe.model.PaymentIntent;
 import com.stripe.model.checkout.Session;
 import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.entity.Order;
+import io.makewebsite.repository.InvoiceRepository;
 import io.makewebsite.repository.OrderRepository;
 import io.makewebsite.service.PlanService;
 import io.makewebsite.service.PaymentService;
@@ -25,12 +26,13 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentWebhookController {
 
     private final OrderRepository orderRepository;
+    private final InvoiceRepository invoiceRepository;
     private final PaymentService paymentService;
     private final PlanService planService;
     private final TelegramNotificationService telegramNotificationService;
@@ -38,7 +40,7 @@ public class PaymentWebhookController {
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
 
-    @PostMapping("/stripe/webhook")
+    @PostMapping("/payments/stripe/webhook")
     public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
         String payload;
         String sigHeader;
@@ -70,6 +72,7 @@ public class PaymentWebhookController {
         switch (eventType) {
             case "checkout.session.completed" -> handleCheckoutCompleted(event, payload);
             case "payment_intent.succeeded" -> handlePaymentIntentSucceeded(event, payload);
+            case "charge.succeeded" -> log.info("Stripe webhook: charge.succeeded acknowledged");
             case "payment_intent.payment_failed" -> handlePaymentIntentFailed(event, payload);
             case "invoice.payment_succeeded" -> handleInvoicePaymentSucceeded(event, payload);
             case "invoice.payment_failed" -> handleInvoicePaymentFailed(event, payload);
@@ -87,7 +90,7 @@ public class PaymentWebhookController {
             log.info("checkout.session.completed: objectId={}, sessionId={}, paymentStatus={}, metadata={}",
                     objectId, session.getId(), session.getPaymentStatus(), session.getMetadata());
 
-            if (isSubscriptionStripeEvent(session.getMetadata())) {
+            if (isSubscriptionStripeEvent(session.getMetadata()) || isSubscriptionCheckoutSession(session.getId())) {
                 if ("paid".equalsIgnoreCase(session.getPaymentStatus())) {
                     log.info("Activating subscription via checkout.session.completed: sessionId={}", session.getId());
                     planService.handleStripeCheckoutCompleted(session);
@@ -96,11 +99,20 @@ public class PaymentWebhookController {
                 }
                 return;
             }
-            String orderNumber = session.getMetadata().get("orderNumber");
+            if (!isOrderStripeEvent(session.getMetadata()) && orderRepository.findByPaymentRef(session.getId()).isEmpty()) {
+                log.info("Stripe webhook: ignoring checkout session {} with non-order billingType={}",
+                        session.getId(), session.getMetadata() != null ? session.getMetadata().get("billingType") : null);
+                return;
+            }
+            String orderNumber = session.getMetadata() != null ? session.getMetadata().get("orderNumber") : null;
             String paymentRef = session.getId();
             if (orderNumber == null || orderNumber.isBlank()) {
-                log.warn("Stripe webhook: no orderNumber in session metadata (session={})", session.getId());
-                return;
+                Order order = orderRepository.findByPaymentRef(session.getId()).orElse(null);
+                if (order == null) {
+                    log.warn("Stripe webhook: no orderNumber in session metadata (session={})", session.getId());
+                    return;
+                }
+                orderNumber = order.getOrderNumber();
             }
             log.info("Stripe webhook: checkout.session.completed for order {} (session={})", orderNumber, paymentRef);
             markOrderPaid(orderNumber, paymentRef);
@@ -128,6 +140,11 @@ public class PaymentWebhookController {
                 );
                 return;
             }
+            if (!isOrderStripeEvent(paymentIntent.getMetadata())) {
+                log.info("Stripe webhook: ignoring payment intent {} with non-order billingType={}",
+                        paymentIntent.getId(), paymentIntent.getMetadata() != null ? paymentIntent.getMetadata().get("billingType") : null);
+                return;
+            }
             String orderNumber = paymentIntent.getMetadata().get("orderNumber");
             String paymentRef = paymentIntent.getId();
             if (orderNumber == null || orderNumber.isBlank()) {
@@ -135,7 +152,7 @@ public class PaymentWebhookController {
                 return;
             }
             log.info("Stripe webhook: payment_intent.succeeded for order {} (pi={})", orderNumber, paymentRef);
-            markOrderPaid(orderNumber, paymentRef);
+            markOrderPaidByPaymentIntent(orderNumber, paymentRef);
         } catch (Exception e) {
             log.error("Failed to handle payment_intent.succeeded: {}", e.getMessage(), e);
         }
@@ -231,9 +248,22 @@ public class PaymentWebhookController {
         return metadata != null && "SUBSCRIPTION".equalsIgnoreCase(metadata.get("billingType"));
     }
 
+    private boolean isOrderStripeEvent(Map<String, String> metadata) {
+        return metadata != null && "ORDER".equalsIgnoreCase(metadata.get("billingType"));
+    }
+
+    private boolean isSubscriptionCheckoutSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return false;
+        }
+        return invoiceRepository.findByPaymentRef(sessionId)
+                .map(invoice -> invoice.getOrder() == null)
+                .orElse(false);
+    }
+
     private void markOrderPaid(String orderNumber, String paymentRef) {
         orderRepository.findByOrderNumber(orderNumber).ifPresentOrElse(order -> {
-            if ("PAID".equals(order.getPaymentStatus())) {
+            if ("PAID".equals(order.getPaymentStatus()) && "CONFIRMED".equals(order.getStatus())) {
                 log.info("Stripe webhook: order {} already PAID, skipping duplicate webhook (ref={})",
                         orderNumber, order.getPaymentRef());
                 return;
@@ -241,10 +271,34 @@ public class PaymentWebhookController {
             order.setPaymentStatus("PAID");
             order.setPaymentRef(paymentRef);
             order.setPaymentMethod("STRIPE");
+            order.setStatus("CONFIRMED");
             orderRepository.save(order);
+            invoiceRepository.findByOrderId(order.getId()).ifPresent(invoice -> {
+                invoice.setStatus("PAID");
+                invoice.setPaymentMethod("STRIPE");
+                invoice.setPaymentRef(paymentRef);
+                invoiceRepository.save(invoice);
+            });
             log.info("Stripe webhook: order {} marked PAID (ref={})", orderNumber, paymentRef);
             telegramNotificationService.notifyPaymentValidated(order, "STRIPE", paymentRef);
         }, () -> log.warn("Stripe webhook: order {} not found in database", orderNumber));
+    }
+
+    private void markOrderPaidByPaymentIntent(String orderNumber, String paymentIntentId) {
+        orderRepository.findByOrderNumber(orderNumber).ifPresent(order -> {
+            String paymentRef = order.getPaymentRef() != null && !order.getPaymentRef().isBlank()
+                    ? order.getPaymentRef()
+                    : paymentIntentId;
+            markOrderPaid(orderNumber, paymentRef);
+            invoiceRepository.findByOrderId(order.getId()).ifPresent(invoice -> {
+                Map<String, Object> invoiceData = invoice.getInvoiceData() != null
+                        ? new java.util.HashMap<>(invoice.getInvoiceData())
+                        : new java.util.HashMap<>();
+                invoiceData.put("stripePaymentIntentId", paymentIntentId);
+                invoice.setInvoiceData(invoiceData);
+                invoiceRepository.save(invoice);
+            });
+        });
     }
 
     private String getStripeObjectIdFromPayload(String payload) {
@@ -272,7 +326,16 @@ public class PaymentWebhookController {
         throw new RuntimeException("STRIPE_SECRET_KEY not configured");
     }
 
-    @PostMapping("/d17/webhook")
+    /**
+     * Alternate Stripe webhook endpoint at the path used by `stripe listen --forward-to`.
+     * Delegates to the same handler as /api/payments/stripe/webhook.
+     */
+    @PostMapping("/webhooks/stripe")
+    public ResponseEntity<String> handleStripeWebhookFromStripeCli(HttpServletRequest request) {
+        return handleStripeWebhook(request);
+    }
+
+    @PostMapping("/payments/d17/webhook")
     public ResponseEntity<ApiResponse<Void>> handleD17Webhook(@RequestBody Map<String, Object> payload) {
         log.info("D17 webhook received: {}", payload);
         String orderRef = (String) payload.get("order_ref");
@@ -293,7 +356,7 @@ public class PaymentWebhookController {
         return ResponseEntity.ok(ApiResponse.ok("OK", null));
     }
 
-    @PostMapping("/konnect/webhook")
+    @PostMapping("/payments/konnect/webhook")
     public ResponseEntity<ApiResponse<Void>> handleKonnectWebhook(@RequestBody Map<String, Object> payload) {
         log.info("Konnect webhook received: {}", payload);
         String orderRef = (String) payload.get("order_ref");
@@ -312,7 +375,7 @@ public class PaymentWebhookController {
         return ResponseEntity.ok(ApiResponse.ok("OK", null));
     }
 
-    @PostMapping("/konnect/init")
+    @PostMapping("/payments/konnect/init")
     public ResponseEntity<ApiResponse<Map<String, String>>> initKonnectPayment(@RequestBody Map<String, Object> request) {
         String orderNumber = (String) request.get("order_number");
         Double amount = (Double) request.get("amount");

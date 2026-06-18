@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_back_arrow.dart';
+import '../../utils/format_utils.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String boutiqueId;
@@ -122,7 +123,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final data = res['data'];
       if (data['valid'] == true) {
         _discount = (data['discountAmount'] as num).toDouble();
-        _couponMsg = '${'cart.coupon_applied'.tr()}: -${_discount.toStringAsFixed(3)} TND';
+        _couponMsg =
+            '${'cart.coupon_applied'.tr()}: -${FormatUtils.money(context, _discount, currencyCode: 'TND')}';
       } else {
         _couponMsg = data['message'] ?? 'cart.coupon_invalid'.tr();
       }
@@ -443,8 +445,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: bold ? AppTypography.body2.copyWith(fontWeight: FontWeight.w600) : AppTypography.body2),
-          Text('${amount.toStringAsFixed(3)} TND', style: bold ? AppTypography.body2.copyWith(fontWeight: FontWeight.w600) : AppTypography.body2),
+          Expanded(
+            child: Text(
+              label,
+              style: bold ? AppTypography.body2.copyWith(fontWeight: FontWeight.w600) : AppTypography.body2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            FormatUtils.money(context, amount, currencyCode: 'TND'),
+            style: bold ? AppTypography.body2.copyWith(fontWeight: FontWeight.w600) : AppTypography.body2,
+          ),
         ],
       ),
     );

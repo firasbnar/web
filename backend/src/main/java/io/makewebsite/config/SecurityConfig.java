@@ -81,10 +81,10 @@ public class SecurityConfig {
                     // General public API
                     "/api/public/**",
                     "/api/plans",
-                    "/api/traffic/**",
                     "/api/boutiques/public",
-                    "/api/payments/d17/webhook",
+                    "/api/payments/d17/webhook",  // kept for existing unpaid orders
                     "/api/payments/stripe/webhook",
+                    "/api/webhooks/stripe",         // Stripe webhook via stripe listen
                     // WebSocket
                     "/ws/**",
                     // Static assets
@@ -104,6 +104,7 @@ public class SecurityConfig {
                     "/*.css",
                     "/*.map"
                 ).permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/traffic/track").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/messages/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/products/*/reviews").permitAll()
@@ -114,9 +115,9 @@ public class SecurityConfig {
                 // === AUTHENTICATED: role-restricted ===
                 .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                .requestMatchers("/api/boutiques/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
-                .requestMatchers("/api/stores/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
-                .requestMatchers("/api/team/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN")
+                .requestMatchers("/api/boutiques/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN", "TEAM_MEMBER")
+                .requestMatchers("/api/stores/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN", "TEAM_MEMBER")
+                .requestMatchers("/api/team/**").hasAnyRole("OWNER", "ADMIN", "SUPER_ADMIN", "TEAM_MEMBER")
                 // === EVERYTHING ELSE: just authenticated (any role) ===
                 .anyRequest().authenticated()
             )

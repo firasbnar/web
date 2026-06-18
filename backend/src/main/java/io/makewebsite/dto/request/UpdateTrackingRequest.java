@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class UpdateTrackingRequest {
     private String deliveryCompany;
     private String trackingNumber;
+    private String deliveryStatus;
 }

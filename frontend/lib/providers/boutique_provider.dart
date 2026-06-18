@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/api_client.dart';
 import '../core/storage.dart';
@@ -21,6 +22,7 @@ class BoutiqueProvider extends ChangeNotifier {
   bool _countriesLoading = false;
   bool _savingCountries = false;
   Map<String, String> _language = {};
+  bool _forbiddenBoutiques = false;
 
   void clear() {
     _boutiques = [];
@@ -33,6 +35,7 @@ class BoutiqueProvider extends ChangeNotifier {
     _language = {};
     _loading = false;
     _error = null;
+    _forbiddenBoutiques = false;
     notifyListeners();
   }
 
@@ -55,11 +58,55 @@ class BoutiqueProvider extends ChangeNotifier {
     return _activeBoutique!.id;
   }
 
-  Future<void> loadBoutiques() async {
+  Boutique _boutiqueFromMutationResponse(Map<String, dynamic> json, {Map<String, dynamic>? fallbackData}) {
+    final existing = _activeBoutique;
+    final merged = <String, dynamic>{
+      if (existing != null) ...existing.toJson(),
+      ...json,
+      if (fallbackData != null) ...fallbackData,
+    };
+    final role = json['currentUserRole'];
+    final permissions = json['currentUserPermissions'];
+    final hasEmptyPermissions = permissions == null || (permissions is List && permissions.isEmpty);
+    if (existing != null && role == null && hasEmptyPermissions) {
+      merged['ownerAccess'] = existing.ownerAccess;
+      merged['currentUserRole'] = existing.currentUserRole;
+      merged['currentUserPermissions'] = existing.currentUserPermissions;
+    }
+    return Boutique.fromJson(merged);
+  }
+
+  void _setActiveBoutique(Boutique boutique) {
+    _activeBoutique = boutique;
+    _activeBoutiqueId = boutique.id;
+    final index = _boutiques.indexWhere((b) => b.id == boutique.id);
+    if (index >= 0) {
+      _boutiques[index] = boutique;
+    }
+  }
+
+  Future<bool> _isStoredTeamMember() async {
+    final role = (await _api.storage.getUserRole())?.toUpperCase();
+    return role == 'TEAM_MEMBER' ||
+        role == 'STAFF' ||
+        role == 'MANAGER' ||
+        role == 'CAISSIER' ||
+        role == 'CASHIER' ||
+        role == 'PRODUCT_MANAGER' ||
+        role == 'SUPPORT';
+  }
+
+  Future<void> loadBoutiques({bool? teamMember}) async {
+    final useTeamFlow = teamMember ?? await _isStoredTeamMember();
+    if (_forbiddenBoutiques && !useTeamFlow) {
+      developer.log('[BOUTIQUE] Skipping /boutiques/mine after 403');
+      return;
+    }
     _loading = true;
     notifyListeners();
     try {
-      final res = await _api.get('/boutiques/mine');
+      final endpoint = useTeamFlow ? '/team/my-boutiques' : '/boutiques/mine';
+      final res = await _api.get(endpoint);
       final List data = res['data'];
       _boutiques = data.map((e) => Boutique.fromJson(e)).toList();
 
@@ -90,6 +137,14 @@ class BoutiqueProvider extends ChangeNotifier {
       _loading = false;
       notifyListeners();
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 403 && !useTeamFlow) {
+        _forbiddenBoutiques = true;
+        developer.log('[BOUTIQUE] /boutiques/mine forbidden, switching to team-member boutique flow');
+        _loading = false;
+        notifyListeners();
+        await loadBoutiques(teamMember: true);
+        return;
+      }
       _error = ApiClient.extractErrorMessage(e);
       _loading = false;
       notifyListeners();
@@ -108,11 +163,11 @@ class BoutiqueProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> ensureActiveBoutique() async {
+  Future<bool> ensureActiveBoutique({bool? teamMember}) async {
     developer.log('[BOUTIQUE] ensureActiveBoutique start active=$_activeBoutiqueId count=${_boutiques.length}');
     if (_activeBoutique != null) return true;
     if (_boutiques.isEmpty) {
-      await loadBoutiques();
+      await loadBoutiques(teamMember: teamMember);
     }
     if (_activeBoutique != null) {
       developer.log('[BOUTIQUE] ensureActiveBoutique ready active=$_activeBoutiqueId');
@@ -142,7 +197,7 @@ class BoutiqueProvider extends ChangeNotifier {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}', data: data);
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -156,7 +211,7 @@ class BoutiqueProvider extends ChangeNotifier {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}/publish');
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -170,7 +225,7 @@ class BoutiqueProvider extends ChangeNotifier {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}/unpublish');
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -184,7 +239,7 @@ class BoutiqueProvider extends ChangeNotifier {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}/theme', data: data);
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -198,7 +253,7 @@ class BoutiqueProvider extends ChangeNotifier {
     try {
       await _api.put('/stores/$_boutiqueId/settings/branding', data: data);
       if (_activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), ...data});
+        _setActiveBoutique(_boutiqueFromMutationResponse(data));
       }
       notifyListeners();
       return true;
@@ -209,11 +264,12 @@ class BoutiqueProvider extends ChangeNotifier {
     }
   }
 
+
   Future<bool> updateSeo(Map<String, dynamic> data) async {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}/seo', data: data);
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -227,7 +283,7 @@ class BoutiqueProvider extends ChangeNotifier {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}/social', data: data);
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -241,7 +297,7 @@ class BoutiqueProvider extends ChangeNotifier {
     if (_activeBoutique == null) return false;
     try {
       final res = await _api.put('/boutiques/${_activeBoutique!.id}/payments', data: data);
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {
@@ -289,9 +345,7 @@ class BoutiqueProvider extends ChangeNotifier {
   Future<bool> saveConfig(Map<String, dynamic> data) async {
     try {
       await _api.put('/boutiques/$_boutiqueId/config', data: data);
-      // Reload boutique to get fresh data with correct field mapping
-      final updated = await _api.get('/boutiques/$_boutiqueId');
-      _activeBoutique = Boutique.fromJson(updated['data']);
+      await _reloadActiveBoutiqueSilently(fallbackData: data);
       notifyListeners();
       return true;
     } catch (e) {
@@ -304,8 +358,7 @@ class BoutiqueProvider extends ChangeNotifier {
   Future<bool> saveDeliverySettings(Map<String, dynamic> data) async {
     try {
       await _api.put('/boutiques/$_boutiqueId/delivery-settings', data: data);
-      final updated = await _api.get('/boutiques/$_boutiqueId');
-      _activeBoutique = Boutique.fromJson(updated['data']);
+      await _reloadActiveBoutiqueSilently(fallbackData: data);
       notifyListeners();
       return true;
     } catch (e) {
@@ -318,8 +371,7 @@ class BoutiqueProvider extends ChangeNotifier {
   Future<bool> saveNotificationSettings(Map<String, dynamic> data) async {
     try {
       await _api.put('/boutiques/$_boutiqueId/notification-settings', data: data);
-      final updated = await _api.get('/boutiques/$_boutiqueId');
-      _activeBoutique = Boutique.fromJson(updated['data']);
+      await _reloadActiveBoutiqueSilently(fallbackData: data);
       notifyListeners();
       return true;
     } catch (e) {
@@ -329,12 +381,43 @@ class BoutiqueProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateClientMessaging(bool enabled) async {
+    try {
+      final res = await _api.patch('/boutiques/$_boutiqueId/client-messaging', data: {'enabled': enabled});
+      final data = res['data'];
+      if (_activeBoutique != null) {
+        _setActiveBoutique(_boutiqueFromMutationResponse({
+          'clientMessagingEnabled': data is Map ? data['clientMessagingEnabled'] ?? enabled : enabled,
+        }));
+      }
+      await _reloadActiveBoutiqueSilently(fallbackData: {'clientMessagingEnabled': enabled});
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> _reloadActiveBoutiqueSilently({Map<String, dynamic>? fallbackData}) async {
+    try {
+      final updated = await _api.get('/boutiques/$_boutiqueId');
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(updated['data'] ?? {})));
+    } catch (e) {
+      developer.log('[BOUTIQUE] Saved settings but reload failed: $e');
+      if (_activeBoutique != null && fallbackData != null) {
+        _setActiveBoutique(_boutiqueFromMutationResponse(fallbackData));
+      }
+    }
+  }
+
   Future<bool> uploadLogo(XFile file) async {
     try {
       final res = await _api.uploadFile('/stores/$_boutiqueId/settings/logo', file);
       final logoUrl = res['data']?['logoUrl']?.toString();
       if (logoUrl != null && _activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), 'logoUrl': logoUrl});
+        _setActiveBoutique(_boutiqueFromMutationResponse({'logoUrl': logoUrl}));
       }
       notifyListeners();
       return true;
@@ -350,7 +433,7 @@ class BoutiqueProvider extends ChangeNotifier {
       final res = await _api.uploadFile('/boutiques/$_boutiqueId/banner', file);
       final bannerUrl = res['data']?['bannerUrl']?.toString();
       if (bannerUrl != null && _activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), 'bannerUrl': bannerUrl});
+        _setActiveBoutique(_boutiqueFromMutationResponse({'bannerUrl': bannerUrl}));
       }
       notifyListeners();
       return true;
@@ -366,7 +449,7 @@ class BoutiqueProvider extends ChangeNotifier {
       final res = await _api.uploadFile('/boutiques/$_boutiqueId/favicon', file);
       final faviconUrl = res['data']?['faviconUrl']?.toString();
       if (faviconUrl != null && _activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), 'faviconUrl': faviconUrl});
+        _setActiveBoutique(_boutiqueFromMutationResponse({'faviconUrl': faviconUrl}));
       }
       notifyListeners();
       return true;
@@ -381,22 +464,7 @@ class BoutiqueProvider extends ChangeNotifier {
     try {
       await _api.put('/stores/$_boutiqueId/settings/currency', data: {'currency': currency});
       if (_activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), 'currency': currency});
-      }
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = ApiClient.extractErrorMessage(e);
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> saveCustomCode(Map<String, String> data) async {
-    try {
-      await _api.put('/boutiques/$_boutiqueId/custom-code', data: data);
-      if (_activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), ...data});
+        _setActiveBoutique(_boutiqueFromMutationResponse({'currency': currency}));
       }
       notifyListeners();
       return true;
@@ -551,7 +619,7 @@ class BoutiqueProvider extends ChangeNotifier {
     try {
       await _api.put('/boutiques/$_boutiqueId/store-social', data: data);
       if (_activeBoutique != null) {
-        _activeBoutique = Boutique.fromJson({..._activeBoutique!.toJson(), ...data});
+        _setActiveBoutique(_boutiqueFromMutationResponse(data));
       }
       notifyListeners();
       return true;
@@ -580,7 +648,7 @@ class BoutiqueProvider extends ChangeNotifier {
         'telegramChatId': chatId,
         'telegramEnabled': enabled,
       });
-      _activeBoutique = Boutique.fromJson(res['data']);
+      _setActiveBoutique(_boutiqueFromMutationResponse(Map<String, dynamic>.from(res['data'] ?? {})));
       notifyListeners();
       return true;
     } catch (e) {

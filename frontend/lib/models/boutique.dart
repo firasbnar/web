@@ -26,13 +26,10 @@ class Boutique {
   final String? twitterUrl;
   final String? linkedinUrl;
   final String? whatsappNumber;
-  final String? customCss;
-  final String? customJs;
   final bool enableCod;
-  final bool enableD17;
-  final bool enableAdeex;
   final bool enableJax;
   final bool enableIntigo;
+  final bool enableAdeex;
 
   // Storefront config
   final String? storeConfig;
@@ -48,12 +45,6 @@ class Boutique {
   final double? tva;
   final bool simpleCheckout;
   final bool cashOnDelivery;
-  final String? konnectMerchantId;
-  final String? konnectApiKey;
-  final String? konnectStatus;
-  final String? d17MerchantNumber;
-  final String? d17QrCodeUrl;
-  final String? d17Status;
   final String? facebookPixelId;
   final String? googleAnalyticsId;
 
@@ -62,6 +53,8 @@ class Boutique {
   final String? faviconUrl;
   final String? fontFamily;
   final bool darkMode;
+  final bool stripeEnabled;
+  final String? stripeStatus;
   final String? stripePublishableKey;
   final double? freeShippingThreshold;
   final int? estimatedDeliveryDays;
@@ -83,6 +76,9 @@ class Boutique {
   final bool isPublished;
   final String? publishedAt;
   final String? publicUrl;
+  final bool ownerAccess;
+  final String? currentUserRole;
+  final List<String> currentUserPermissions;
 
   Boutique({
     required this.id,
@@ -110,13 +106,10 @@ class Boutique {
     this.twitterUrl,
     this.linkedinUrl,
     this.whatsappNumber,
-    this.customCss,
-    this.customJs,
     this.enableCod = true,
-    this.enableD17 = false,
-    this.enableAdeex = false,
     this.enableJax = false,
     this.enableIntigo = false,
+    this.enableAdeex = false,
     this.storeConfig,
     this.headerColor,
     this.footerColor,
@@ -130,18 +123,14 @@ class Boutique {
     this.tva,
     this.simpleCheckout = false,
     this.cashOnDelivery = true,
-    this.konnectMerchantId,
-    this.konnectApiKey,
-    this.konnectStatus,
-    this.d17MerchantNumber,
-    this.d17QrCodeUrl,
-    this.d17Status,
     this.facebookPixelId,
     this.googleAnalyticsId,
     this.bannerUrl,
     this.faviconUrl,
     this.fontFamily,
     this.darkMode = false,
+    this.stripeEnabled = false,
+    this.stripeStatus,
     this.stripePublishableKey,
     this.freeShippingThreshold,
     this.estimatedDeliveryDays,
@@ -162,6 +151,9 @@ class Boutique {
     this.isPublished = false,
     this.publishedAt,
     this.publicUrl,
+    this.ownerAccess = false,
+    this.currentUserRole,
+    this.currentUserPermissions = const [],
   });
 
   factory Boutique.fromJson(Map<String, dynamic> json) => Boutique(
@@ -190,13 +182,10 @@ class Boutique {
     twitterUrl: json['twitterUrl'],
     linkedinUrl: json['linkedinUrl'],
     whatsappNumber: json['whatsappNumber'],
-    customCss: json['customCss'],
-    customJs: json['customJs'],
     enableCod: json['enableCod'] ?? true,
-    enableD17: json['enableD17'] ?? false,
-    enableAdeex: json['enableAdeex'] ?? false,
     enableJax: json['enableJax'] ?? false,
     enableIntigo: json['enableIntigo'] ?? false,
+    enableAdeex: json['enableAdeex'] ?? false,
     storeConfig: json['storeConfig'],
     headerColor: json['headerColor'] ?? json['header_color'],
     footerColor: json['footerColor'] ?? json['footer_color'],
@@ -210,18 +199,14 @@ class Boutique {
     tva: (json['tva'] ?? 0.0).toDouble(),
     simpleCheckout: json['simpleCheckout'] ?? json['simple_checkout'] ?? false,
     cashOnDelivery: json['cashOnDelivery'] ?? json['cash_on_delivery'] ?? true,
-    konnectMerchantId: json['konnectMerchantId'] ?? json['konnect_merchant_id'],
-    konnectApiKey: json['konnectApiKey'] ?? json['konnect_api_key'],
-    konnectStatus: json['konnectStatus'] ?? json['konnect_status'],
-    d17MerchantNumber: json['d17MerchantNumber'] ?? json['d17_merchant_number'],
-    d17QrCodeUrl: json['d17QrCodeUrl'] ?? json['d17_qr_code_url'],
-    d17Status: json['d17Status'] ?? json['d17_status'],
     facebookPixelId: json['facebookPixelId'] ?? json['facebook_pixel_id'],
     googleAnalyticsId: json['googleAnalyticsId'] ?? json['google_analytics_id'],
     bannerUrl: normalizeRemoteUrl(json['bannerUrl']),
     faviconUrl: json['faviconUrl'],
     fontFamily: json['fontFamily'],
     darkMode: json['darkMode'] ?? false,
+    stripeEnabled: json['stripeEnabled'] ?? ((json['stripeStatus'] ?? json['stripe_status'])?.toString().toLowerCase() == 'active' || (json['stripeStatus'] ?? json['stripe_status'])?.toString().toLowerCase() == 'enabled'),
+    stripeStatus: json['stripeStatus'] ?? json['stripe_status'],
     stripePublishableKey: json['stripePublishableKey'],
     freeShippingThreshold: (json['freeShippingThreshold'] as num?)?.toDouble(),
     estimatedDeliveryDays: json['estimatedDeliveryDays'],
@@ -242,6 +227,11 @@ class Boutique {
     isPublished: json['isPublished'] ?? false,
     publishedAt: json['publishedAt'],
     publicUrl: json['publicUrl'],
+    ownerAccess: json['ownerAccess'] == true,
+    currentUserRole: json['currentUserRole'],
+    currentUserPermissions: (json['currentUserPermissions'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList() ?? const [],
   );
 
   Map<String, dynamic> toJson() => {
@@ -270,13 +260,10 @@ class Boutique {
     'twitterUrl': twitterUrl,
     'linkedinUrl': linkedinUrl,
     'whatsappNumber': whatsappNumber,
-    'customCss': customCss,
-    'customJs': customJs,
     'enableCod': enableCod,
-    'enableD17': enableD17,
-    'enableAdeex': enableAdeex,
     'enableJax': enableJax,
     'enableIntigo': enableIntigo,
+    'enableAdeex': enableAdeex,
     'headerColor': headerColor,
     'footerColor': footerColor,
     'bodyColor': bodyColor,
@@ -289,18 +276,14 @@ class Boutique {
     'tva': tva,
     'simpleCheckout': simpleCheckout,
     'cashOnDelivery': cashOnDelivery,
-    'konnectMerchantId': konnectMerchantId,
-    'konnectApiKey': konnectApiKey,
-    'konnectStatus': konnectStatus,
-    'd17MerchantNumber': d17MerchantNumber,
-    'd17QrCodeUrl': d17QrCodeUrl,
-    'd17Status': d17Status,
     'facebookPixelId': facebookPixelId,
     'googleAnalyticsId': googleAnalyticsId,
     'bannerUrl': bannerUrl,
     'faviconUrl': faviconUrl,
     'fontFamily': fontFamily,
     'darkMode': darkMode,
+    'stripeEnabled': stripeEnabled,
+    'stripeStatus': stripeStatus,
     'stripePublishableKey': stripePublishableKey,
     'freeShippingThreshold': freeShippingThreshold,
     'estimatedDeliveryDays': estimatedDeliveryDays,
@@ -321,7 +304,16 @@ class Boutique {
     'isPublished': isPublished,
     'publishedAt': publishedAt,
     'publicUrl': publicUrl,
+    'ownerAccess': ownerAccess,
+    'currentUserRole': currentUserRole,
+    'currentUserPermissions': currentUserPermissions,
   };
+
+  bool hasPermission(String permission) =>
+      ownerAccess || currentUserPermissions.contains(permission);
+
+  bool hasAnyPermission(List<String> permissions) =>
+      ownerAccess || permissions.any(currentUserPermissions.contains);
 }
 
 class BoutiqueStats {

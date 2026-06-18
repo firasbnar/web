@@ -8,6 +8,7 @@ import '../../providers/wishlist_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../utils/format_utils.dart';
 import '../../widgets/app_back_button.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -235,10 +236,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('${p.price.toStringAsFixed(3)} TND', style: AppTypography.heading1.copyWith(color: AppColors.primary), overflow: TextOverflow.ellipsis),
+                      Expanded(
+                        child: Text(
+                          FormatUtils.money(context, p.price, currencyCode: 'TND'),
+                          style: AppTypography.heading1.copyWith(color: AppColors.primary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       if (p.comparePrice != null && p.comparePrice! > p.price) ...[
                         const SizedBox(width: 12),
-                        Text('${p.comparePrice!.toStringAsFixed(3)} TND', style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint)),
+                        Text(
+                          FormatUtils.money(context, p.comparePrice!, currencyCode: 'TND'),
+                          style: AppTypography.body1.copyWith(decoration: TextDecoration.lineThrough, color: AppColors.textHint),
+                        ),
                       ],
                     ],
                   ),
@@ -248,7 +258,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   if (p.description != null && p.description!.isNotEmpty) ...[
                     Text('products.product_description'.tr(), style: AppTypography.heading4),
                     const SizedBox(height: 8),
-                    Text(p.description!, style: AppTypography.body2, overflow: TextOverflow.ellipsis),
+                    Text(p.description!, style: AppTypography.body2),
                   ],
                   const SizedBox(height: 24),
                   if (p.stock > 0) ...[
@@ -428,8 +438,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     Color color;
     String text;
     if (stock <= 0) { color = AppColors.danger; text = 'inventory.out_of_stock'.tr(); }
-    else if (stock <= 10) { color = AppColors.warning; text = 'inventory.low_stock'.tr(args: [stock.toString()]); }
-    else { color = AppColors.success; text = 'inventory.in_stock'.tr(args: [stock.toString()]); }
+    else if (stock <= 10) { color = AppColors.warning; text = 'inventory.low_stock'.tr(); }
+    else { color = AppColors.success; text = 'inventory.in_stock'.tr(); }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(100)),

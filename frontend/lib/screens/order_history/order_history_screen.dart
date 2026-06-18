@@ -7,6 +7,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/app_back_arrow.dart';
+import '../../utils/format_utils.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -94,7 +95,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text('${o.total.toStringAsFixed(3)} TND', style: AppTypography.heading4.copyWith(color: AppColors.primary)),
+                              Text(FormatUtils.money(context, o.total, currencyCode: 'TND'), style: AppTypography.heading4.copyWith(color: AppColors.primary)),
                               const SizedBox(height: 4),
                               Text('${o.items.length} ${'orders.order_items'.tr()}', style: AppTypography.caption),
                               if (o.createdAt != null) ...[

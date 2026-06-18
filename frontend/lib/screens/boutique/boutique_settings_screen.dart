@@ -32,14 +32,9 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
   final _deliveryFeesCtrl = TextEditingController();
 
   // --- Payment Controllers ---
-  final _konnectMerchantCtrl = TextEditingController();
-  final _konnectApiCtrl = TextEditingController();
-  final _d17MerchantCtrl = TextEditingController();
   final _countryCtrl = TextEditingController();
   final _categoryNameCtrl = TextEditingController();
   final _categorySortCtrl = TextEditingController();
-  final _customJsCtrl = TextEditingController();
-  final _customCssCtrl = TextEditingController();
   final _fbPageTokenCtrl = TextEditingController();
   final _fbPageIdCtrl = TextEditingController();
 
@@ -60,8 +55,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
   bool _savingNotifPush = false;
   bool _savingNotifAlerts = false;
   bool _savingNotifMarketing = false;
-  bool _savingKonnect = false;
-  bool _savingD17 = false;
 
   // --- Payment Provider Keys ---
   final _stripePublishableCtrl = TextEditingController();
@@ -74,23 +67,20 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
   bool _loadingZones = false;
   bool _savingZone = false;
 
-  // --- Branding extras ---
-  String _fontFamily = 'Inter';
-  bool _darkMode = false;
-
   // --- State ---
   String _currency = 'TND';
   bool _cashDelivery = true;
-  bool _konnectEnabled = false;
-  bool _d17Enabled = false;
   bool _simpleCheckout = false;
   bool _loading = true;
   bool _savingConfig = false;
   bool _savingTheme = false;
   bool _savingFb = false;
-  bool _savingCode = false;
   bool _savingCurrency = false;
   bool _savingCategory = false;
+
+  // --- Branding extras ---
+  String _fontFamily = 'Inter';
+  bool _darkMode = false;
 
   // --- Color State ---
   Color _headerColor = const Color(0xFFededed);
@@ -108,8 +98,8 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
   String? _originalName;
   Timer? _debounce;
 
-  // --- D17 QR Code ---
-  String? _d17QrCodeUrl;
+  // Stripe enabled status
+  bool _stripeEnabled = false;
 
   // --- Logo ---
   String? _logoUrl;
@@ -181,17 +171,10 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     _tvaCtrl.text = b.tva?.toStringAsFixed(2) ?? '0.00';
     _deliveryFeesCtrl.text = b.deliveryFees?.toStringAsFixed(2) ?? '7.00';
     _cashDelivery = b.cashOnDelivery;
-    _konnectMerchantCtrl.text = b.konnectMerchantId ?? '';
-    _konnectApiCtrl.text = b.konnectApiKey ?? '';
-    _konnectEnabled = b.konnectStatus == 'active';
-    _d17MerchantCtrl.text = b.d17MerchantNumber ?? '';
-    _d17Enabled = b.d17Status == 'active';
-    _d17QrCodeUrl = b.d17QrCodeUrl;
+    _stripeEnabled = b.stripeEnabled;
     _simpleCheckout = b.simpleCheckout;
     _currency = b.currency ?? 'TND';
     _logoUrl = b.logoUrl;
-    _customJsCtrl.text = b.customJs ?? '';
-    _customCssCtrl.text = b.customCss ?? '';
     _fbPageTokenCtrl.text = b.storeConfig ?? '';
     _fbPageIdCtrl.text = b.facebookPixelId ?? '';
 
@@ -277,6 +260,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       ),
     );
     if (confirm != true) return;
+    if (!mounted) return;
     try {
       final bid = context.read<BoutiqueProvider>().currentBoutique!.id.toString();
       await _api.delete('/boutiques/$bid/delivery-zones/${dz.id}');
@@ -385,6 +369,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     });
   }
 
+
   void _onNameChanged(String value) {
     _nameCtrl.value = _nameCtrl.value.copyWith(
       text: value.toLowerCase(),
@@ -437,14 +422,9 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
     _phoneCtrl.dispose();
     _tvaCtrl.dispose();
     _deliveryFeesCtrl.dispose();
-    _konnectMerchantCtrl.dispose();
-    _konnectApiCtrl.dispose();
-    _d17MerchantCtrl.dispose();
     _countryCtrl.dispose();
     _categoryNameCtrl.dispose();
     _categorySortCtrl.dispose();
-    _customJsCtrl.dispose();
-    _customCssCtrl.dispose();
     _fbPageTokenCtrl.dispose();
     _fbPageIdCtrl.dispose();
     _seoTitleCtrl.dispose();
@@ -580,7 +560,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 3. PAIEMENT À LA LIVRAISON ==========
+          // ========== 3. CASH ON DELIVERY ==========
           _SettingsCard(
             title: 'boutique.cash_on_delivery'.tr(),
             icon: Icons.money_outlined,
@@ -595,132 +575,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 3. KONNECT PAYMENT ==========
-          _SettingsCard(
-            title: 'boutique.konnect'.tr(),
-            icon: Icons.payment_outlined,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _FormRow(children: [
-                  _FormField(
-                      label: 'boutique.konnect_merchant'.tr(),
-                      controller: _konnectMerchantCtrl),
-                  _FormField(
-                      label: 'boutique.konnect_api'.tr(), controller: _konnectApiCtrl),
-                ]),
-                const SizedBox(height: 8),
-                _ToggleRow(
-                  label: 'boutique.konnect'.tr(),
-                  value: _konnectEnabled,
-                  loading: _savingKonnect,
-                  onChanged: (v) async {
-                    setState(() => _savingKonnect = true);
-                    setState(() => _konnectEnabled = v);
-                    await bp.saveConfig({'konnectStatus': v ? 'active' : 'inactive'});
-                    setState(() => _savingKonnect = false);
-                  },
-                ),
-                const SizedBox(height: 12),
-                _SaveButton(
-                  label: 'common.save'.tr(),
-                  onPressed: () => _saveConfig(bp),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ========== 4. D17 PAYMENT ==========
-          _SettingsCard(
-            title: 'boutique.d17'.tr(),
-            icon: Icons.qr_code_outlined,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _FormField(
-                  label: 'boutique.d17_merchant'.tr(),
-                  controller: _d17MerchantCtrl,
-                  hint: 'boutique.d17_hint'.tr(),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    if (_d17QrCodeUrl != null && _d17QrCodeUrl!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Image.network(_d17QrCodeUrl!,
-                            width: 80,
-                            height: 80,
-                            errorBuilder: (_, __, ___) => Container(
-                                width: 80,
-                                height: 80,
-                                color: Colors.grey[200],
-                                child: const Icon(Icons.broken_image))),
-                      ),
-                    IntrinsicWidth(
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.qr_code, size: 18),
-                        label: Text(_d17QrCodeUrl == null
-                            ? 'boutique.upload_qr'.tr()
-                            : 'boutique.change_qr'.tr()),
-                        onPressed: () async {
-                          final path = await _pickImage();
-                          if (path != null) {
-                            try {
-                              final url = await ApiClient.uploadImage(path);
-                              if (url.isNotEmpty) {
-                                setState(() => _d17QrCodeUrl = url);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content: Text('common.success'.tr()),
-                                          backgroundColor: AppColors.success));
-                                }
-                              }
-                            } catch (_) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text('common.error'.tr()),
-                                        backgroundColor: AppColors.danger));
-                              }
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.surfaceAlt,
-                          foregroundColor: AppColors.textPrimary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _ToggleRow(
-                  label: 'boutique.d17'.tr(),
-                  value: _d17Enabled,
-                  loading: _savingD17,
-                  onChanged: (v) async {
-                    setState(() => _savingD17 = true);
-                    setState(() => _d17Enabled = v);
-                    await bp.saveConfig({'d17Status': v ? 'active' : 'inactive'});
-                    setState(() => _savingD17 = false);
-                  },
-                ),
-                const SizedBox(height: 12),
-                _SaveButton(
-                  label: 'common.save'.tr(),
-                  onPressed: () => _saveConfig(bp),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ========== 5. STRIPE ==========
+          // ========== 4. STRIPE ==========
           _SettingsCard(
             title: 'boutique.stripe'.tr(),
             icon: Icons.payment_outlined,
@@ -729,6 +584,15 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
               children: [
                 Text('boutique.stripe_config'.tr(),
                     style: AppTypography.caption),
+                const SizedBox(height: 16),
+                _ToggleRow(
+                  label: 'boutique.enable_stripe_payment'.tr(),
+                  value: _stripeEnabled,
+                  onChanged: (v) async {
+                    setState(() => _stripeEnabled = v);
+                    await bp.saveConfig({'stripeEnabled': v});
+                  },
+                ),
                 const SizedBox(height: 16),
                 _FormField(label: 'boutique.stripe_publishable'.tr(), controller: _stripePublishableCtrl, hint: 'boutique.stripe_pk_hint'.tr()),
                 const SizedBox(height: 12),
@@ -740,6 +604,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                   onPressed: () async {
                     setState(() => _savingPayments = true);
                     final ok = await bp.updatePayments({
+                      'stripeEnabled': _stripeEnabled,
                       'stripePublishableKey': _stripePublishableCtrl.text,
                       'stripeSecretKey': _stripeSecretCtrl.text,
                     });
@@ -756,7 +621,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ========== 6. FORMULAIRE SIMPLIFIÉ ==========
+          // ========== 5. SIMPLIFIED CHECKOUT ==========
           _SettingsCard(
             title: 'boutique.simplified_checkout'.tr(),
             icon: Icons.receipt_long_outlined,
@@ -802,6 +667,69 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                   label: 'common.save'.tr(),
                   loading: _savingFb,
                   onPressed: () => _saveFacebookConfig(bp),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ========== 7. NOTIFICATIONS ==========
+          _SettingsCard(
+            title: 'boutique.notifications'.tr(),
+            icon: Icons.notifications_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ToggleRow(label: 'boutique.email_notifications'.tr(), value: _enableEmailNotif, loading: _savingNotifEmail, onChanged: (v) async {
+                  setState(() => _savingNotifEmail = true);
+                  setState(() => _enableEmailNotif = v);
+                  await bp.saveNotificationSettings({'enableEmailNotifications': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifEmail = false);
+                }),
+                _ToggleRow(label: 'boutique.sms_notifications'.tr(), value: _enableSmsNotif, loading: _savingNotifSms, onChanged: (v) async {
+                  setState(() => _savingNotifSms = true);
+                  setState(() => _enableSmsNotif = v);
+                  await bp.saveNotificationSettings({'enableSmsNotifications': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifSms = false);
+                }),
+                _ToggleRow(label: 'boutique.push_notifications'.tr(), value: _enablePushNotif, loading: _savingNotifPush, onChanged: (v) async {
+                  setState(() => _savingNotifPush = true);
+                  setState(() => _enablePushNotif = v);
+                  await bp.saveNotificationSettings({'enablePushNotifications': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifPush = false);
+                }),
+                _ToggleRow(label: 'boutique.order_alerts'.tr(), value: _enableOrderAlerts, loading: _savingNotifAlerts, onChanged: (v) async {
+                  setState(() => _savingNotifAlerts = true);
+                  setState(() => _enableOrderAlerts = v);
+                  await bp.saveNotificationSettings({'enableOrderAlerts': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifAlerts = false);
+                }),
+                _ToggleRow(label: 'boutique.marketing_emails'.tr(), value: _enableMarketingEmails, loading: _savingNotifMarketing, onChanged: (v) async {
+                  setState(() => _savingNotifMarketing = true);
+                  setState(() => _enableMarketingEmails = v);
+                  await bp.saveNotificationSettings({'enableMarketingEmails': v ? 'yes' : 'no'});
+                  setState(() => _savingNotifMarketing = false);
+                }),
+                const SizedBox(height: 12),
+                _SaveButton(
+                  label: 'common.save'.tr(),
+                  loading: _savingNotif,
+                  onPressed: () async {
+                    setState(() => _savingNotif = true);
+                    final ok = await bp.saveNotificationSettings({
+                      'enableEmailNotifications': _enableEmailNotif ? 'yes' : 'no',
+                      'enableSmsNotifications': _enableSmsNotif ? 'yes' : 'no',
+                      'enablePushNotifications': _enablePushNotif ? 'yes' : 'no',
+                      'enableOrderAlerts': _enableOrderAlerts ? 'yes' : 'no',
+                      'enableMarketingEmails': _enableMarketingEmails ? 'yes' : 'no',
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(ok ? 'boutique.updated'.tr() : 'common.error'.tr()),
+                        backgroundColor: ok ? AppColors.success : AppColors.danger));
+                    }
+                    setState(() => _savingNotif = false);
+                  },
                 ),
               ],
             ),
@@ -921,69 +849,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ========== 8. NOTIFICATIONS ==========
-          _SettingsCard(
-            title: 'boutique.notifications'.tr(),
-            icon: Icons.notifications_outlined,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _ToggleRow(label: 'boutique.email_notifications'.tr(), value: _enableEmailNotif, loading: _savingNotifEmail, onChanged: (v) async {
-                  setState(() => _savingNotifEmail = true);
-                  setState(() => _enableEmailNotif = v);
-                  await bp.saveNotificationSettings({'enableEmailNotifications': v ? 'yes' : 'no'});
-                  setState(() => _savingNotifEmail = false);
-                }),
-                _ToggleRow(label: 'boutique.sms_notifications'.tr(), value: _enableSmsNotif, loading: _savingNotifSms, onChanged: (v) async {
-                  setState(() => _savingNotifSms = true);
-                  setState(() => _enableSmsNotif = v);
-                  await bp.saveNotificationSettings({'enableSmsNotifications': v ? 'yes' : 'no'});
-                  setState(() => _savingNotifSms = false);
-                }),
-                _ToggleRow(label: 'boutique.push_notifications'.tr(), value: _enablePushNotif, loading: _savingNotifPush, onChanged: (v) async {
-                  setState(() => _savingNotifPush = true);
-                  setState(() => _enablePushNotif = v);
-                  await bp.saveNotificationSettings({'enablePushNotifications': v ? 'yes' : 'no'});
-                  setState(() => _savingNotifPush = false);
-                }),
-                _ToggleRow(label: 'boutique.order_alerts'.tr(), value: _enableOrderAlerts, loading: _savingNotifAlerts, onChanged: (v) async {
-                  setState(() => _savingNotifAlerts = true);
-                  setState(() => _enableOrderAlerts = v);
-                  await bp.saveNotificationSettings({'enableOrderAlerts': v ? 'yes' : 'no'});
-                  setState(() => _savingNotifAlerts = false);
-                }),
-                _ToggleRow(label: 'boutique.marketing_emails'.tr(), value: _enableMarketingEmails, loading: _savingNotifMarketing, onChanged: (v) async {
-                  setState(() => _savingNotifMarketing = true);
-                  setState(() => _enableMarketingEmails = v);
-                  await bp.saveNotificationSettings({'enableMarketingEmails': v ? 'yes' : 'no'});
-                  setState(() => _savingNotifMarketing = false);
-                }),
-                const SizedBox(height: 12),
-                _SaveButton(
-                  label: 'common.save'.tr(),
-                  loading: _savingNotif,
-                  onPressed: () async {
-                    setState(() => _savingNotif = true);
-                    final ok = await bp.saveNotificationSettings({
-                      'enableEmailNotifications': _enableEmailNotif ? 'yes' : 'no',
-                      'enableSmsNotifications': _enableSmsNotif ? 'yes' : 'no',
-                      'enablePushNotifications': _enablePushNotif ? 'yes' : 'no',
-                      'enableOrderAlerts': _enableOrderAlerts ? 'yes' : 'no',
-                      'enableMarketingEmails': _enableMarketingEmails ? 'yes' : 'no',
-                    });
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(ok ? 'boutique.updated'.tr() : 'common.error'.tr()),
-                        backgroundColor: ok ? AppColors.success : AppColors.danger));
-                    }
-                    setState(() => _savingNotif = false);
-                  },
                 ),
               ],
             ),
@@ -1165,31 +1030,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // ========== 14. CODE PERSONNALISÉ ==========
-          _SettingsCard(
-            title: 'boutique.custom_code'.tr(),
-            icon: Icons.code_outlined,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('boutique.custom_code_desc'.tr(),
-                    style: AppTypography.caption),
-                const SizedBox(height: 12),
-                _CodeEditorField(
-                    label: 'boutique.custom_js'.tr(), hintText: 'boutique.js_hint'.tr(), controller: _customJsCtrl),
-                const SizedBox(height: 16),
-                _CodeEditorField(label: 'boutique.custom_css'.tr(), hintText: 'boutique.css_hint'.tr(), controller: _customCssCtrl),
-                const SizedBox(height: 16),
-                _SaveButton(
-                  label: 'common.save'.tr(),
-                  loading: _savingCode,
-                  onPressed: () => _saveCustomCode(bp),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 40),
         ],
       ),
@@ -1344,7 +1184,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
 
   Future<void> _saveConfig(BoutiqueProvider bp) async {
     setState(() => _savingConfig = true);
-    await bp.saveConfig({
+    final ok = await bp.saveConfig({
       'email': _emailCtrl.text,
       'address': _addressCtrl.text,
       'companyName': _nameCtrl.text,
@@ -1353,18 +1193,13 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       'tva': _tvaCtrl.text,
       'deliveryFees': _deliveryFeesCtrl.text,
       'cashDelivery': _cashDelivery ? 'yes' : 'no',
-      'konnectMerchantId': _konnectMerchantCtrl.text,
-      'konnectApiKey': _konnectApiCtrl.text,
-      'konnectStatus': _konnectEnabled ? 'active' : 'inactive',
-      'd17MerchantNumber': _d17MerchantCtrl.text,
-      'd17QrCodeUrl': _d17QrCodeUrl ?? '',
-      'd17Status': _d17Enabled ? 'active' : 'inactive',
+      'stripeEnabled': _stripeEnabled,
       'simpleCheckout': _simpleCheckout ? 'yes' : 'no',
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('boutique.updated'.tr()),
-          backgroundColor: AppColors.success));
+          content: Text(ok ? 'boutique.updated'.tr() : bp.error ?? 'common.error'.tr()),
+          backgroundColor: ok ? AppColors.success : AppColors.danger));
     }
     setState(() => _savingConfig = false);
   }
@@ -1380,7 +1215,7 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
       'topBarColor': _colorToHex(_topBarColor),
       'textColor': _colorToHex(_textColor),
       'fontFamily': _fontFamily,
-      'darkMode': _darkMode,
+      'darkMode': _darkMode ? 'yes' : 'no',
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1402,20 +1237,6 @@ class _BoutiqueSettingsScreenState extends State<BoutiqueSettingsScreen> {
           backgroundColor: success ? AppColors.success : AppColors.danger));
     }
     setState(() => _savingFb = false);
-  }
-
-  Future<void> _saveCustomCode(BoutiqueProvider bp) async {
-    setState(() => _savingCode = true);
-    final success = await bp.saveCustomCode({
-      'customJs': _customJsCtrl.text,
-      'customCss': _customCssCtrl.text,
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(success ? 'boutique.updated'.tr() : 'common.error'.tr()),
-          backgroundColor: success ? AppColors.success : AppColors.danger));
-    }
-    setState(() => _savingCode = false);
   }
 
   Future<void> _saveCurrency(BoutiqueProvider bp) async {
@@ -1996,48 +1817,6 @@ class _ColorPickerField extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ============ CODE EDITOR FIELD ============
-class _CodeEditorField extends StatelessWidget {
-  final String label;
-  final String? hintText;
-  final TextEditingController? controller;
-  const _CodeEditorField({required this.label, this.hintText, this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(label,
-              style:
-                  AppTypography.caption.copyWith(fontWeight: FontWeight.w500)),
-        ),
-        TextField(
-          controller: controller,
-          maxLines: 6,
-          style: const TextStyle(
-              fontFamily: 'monospace', fontSize: 13, color: Color(0xFF1E1E1E)),
-          decoration: InputDecoration(
-            hintText: hintText ?? '// code here...'.tr(),
-            filled: true,
-            fillColor: const Color(0xFF282A36),
-            contentPadding: const EdgeInsets.all(12),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none),
-            hintStyle: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                color: Color(0xFF6272A4)),
           ),
         ),
       ],

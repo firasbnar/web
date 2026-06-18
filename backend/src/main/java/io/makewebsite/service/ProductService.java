@@ -7,6 +7,7 @@ import io.makewebsite.dto.request.UpdateStockRequest;
 import io.makewebsite.dto.response.ProductResponse;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.security.Permission;
 import io.makewebsite.security.TenantContext;
 import io.makewebsite.util.CsvUtil;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class ProductService {
     private final TenantAccessService tenantAccessService;
     private final StoreStatusGuard storeStatusGuard;
     private final TelegramNotificationService telegramNotificationService;
+    private final BoutiquePermissionService boutiquePermissionService;
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProducts(UUID boutiqueId, String search, UUID categoryId, Boolean isActive, Pageable pageable) {
@@ -57,7 +59,8 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse createProduct(CreateProductRequest request) {
+    public ProductResponse createProduct(CreateProductRequest request, UUID userId) {
+        boutiquePermissionService.requireBoutiquePermission(userId, request.getBoutiqueId(), Permission.PRODUCT_WRITE);
         Boutique boutique = tenantAccessService.requireBoutiqueAccess(request.getBoutiqueId());
         storeStatusGuard.requireActive(boutique);
         Category category = null;
@@ -93,7 +96,8 @@ public class ProductService {
     }
 
     @Transactional
-    public List<ProductResponse> bulkImportProducts(UUID boutiqueId, List<CreateProductRequest> requests) {
+    public List<ProductResponse> bulkImportProducts(UUID boutiqueId, List<CreateProductRequest> requests, UUID userId) {
+        boutiquePermissionService.requireBoutiquePermission(userId, boutiqueId, Permission.PRODUCT_WRITE);
         Boutique boutique = tenantAccessService.requireBoutiqueAccess(boutiqueId);
         storeStatusGuard.requireActive(boutique);
         List<ProductResponse> results = new java.util.ArrayList<>();
@@ -134,8 +138,9 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateProduct(UUID id, CreateProductRequest request) {
+    public ProductResponse updateProduct(UUID id, CreateProductRequest request, UUID userId) {
         Product product = findTenantProduct(id);
+        boutiquePermissionService.requireBoutiquePermission(userId, product.getBoutique().getId(), Permission.PRODUCT_WRITE);
         if (request.getCategoryId() != null) {
             product.setCategory(categoryRepository.findById(request.getCategoryId()).orElse(null));
         }
@@ -167,8 +172,9 @@ public class ProductService {
     public void deleteProduct(UUID id, UUID userId) {
         Product product = findTenantProduct(id);
         UUID boutiqueId = product.getBoutique().getId();
+        boutiquePermissionService.requireBoutiquePermission(userId, boutiqueId, Permission.PRODUCT_DELETE);
 
-        if (!TenantContext.isSuperAdmin()) {
+        if (!TenantContext.isSuperAdmin() && !boutiquePermissionService.hasBoutiquePermission(userId, boutiqueId, Permission.PRODUCT_DELETE)) {
             boolean isOwner = boutiqueRepository.findOwnerIdByBoutiqueId(boutiqueId).equals(userId);
             if (!isOwner) {
                 throw new SecurityException("Seul le propriétaire de la boutique peut supprimer un produit");
@@ -198,8 +204,10 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateStock(UUID id, UpdateStockRequest request) {
+    public ProductResponse updateStock(UUID id, UpdateStockRequest request, UUID userId) {
         Product product = findTenantProduct(id);
+        boutiquePermissionService.requireAnyBoutiquePermission(
+                userId, product.getBoutique().getId(), Permission.STOCK_UPDATE, Permission.INVENTORY_WRITE);
         int oldStock = product.getStock() != null ? product.getStock() : 0;
         int newStock = request.getStock() != null ? request.getStock() : 0;
         product.setStock(newStock);
@@ -235,8 +243,9 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse toggleActive(UUID id) {
+    public ProductResponse toggleActive(UUID id, UUID userId) {
         Product product = findTenantProduct(id);
+        boutiquePermissionService.requireBoutiquePermission(userId, product.getBoutique().getId(), Permission.PRODUCT_WRITE);
         if (product.getBoutique() != null) {
             storeStatusGuard.requireActive(product.getBoutique());
         }
@@ -259,8 +268,9 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse toggleFeatured(UUID id) {
+    public ProductResponse toggleFeatured(UUID id, UUID userId) {
         Product product = findTenantProduct(id);
+        boutiquePermissionService.requireBoutiquePermission(userId, product.getBoutique().getId(), Permission.PRODUCT_WRITE);
         boolean previous = product.getIsFeatured() != null && product.getIsFeatured();
         product.setIsFeatured(!previous);
         product = productRepository.save(product);

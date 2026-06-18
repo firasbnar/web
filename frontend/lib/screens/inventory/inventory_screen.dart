@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../models/product.dart';
@@ -32,6 +33,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _loadProducts() async {
+    final bp = context.read<BoutiqueProvider>();
+    if (bp.currentBoutique == null) {
+      await bp.ensureActiveBoutique();
+    }
+    if (!mounted) return;
+    final boutique = bp.currentBoutique;
+    if (boutique?.hasAnyPermission(['STOCK_UPDATE', 'INVENTORY_WRITE']) != true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('errors.access_denied'.tr()), backgroundColor: AppColors.danger),
+        );
+        context.go('/home');
+      }
+      return;
+    }
     final bid = _boutiqueId;
     if (bid == null) return;
     setState(() => _loading = true);

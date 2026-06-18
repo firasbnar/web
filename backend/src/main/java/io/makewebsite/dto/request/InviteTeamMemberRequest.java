@@ -25,7 +25,7 @@ public class InviteTeamMemberRequest {
     @Size(max = 100)
     private String name;
 
-    @Pattern(regexp = "(?i)^(ADMIN|MANAGER|STAFF|CAISSIER)$", message = "Role d'equipe invalide")
+    @Pattern(regexp = "(?i)^(ADMIN|MANAGER|STAFF|CAISSIER|CASHIER|PRODUCT_MANAGER|SUPPORT)$", message = "Role d'equipe invalide")
     private String role;
 
     @NotNull

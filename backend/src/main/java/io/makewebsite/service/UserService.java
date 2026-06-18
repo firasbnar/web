@@ -3,6 +3,8 @@ package io.makewebsite.service;
 import io.makewebsite.dto.request.ChangePasswordRequest;
 import io.makewebsite.dto.response.UserResponse;
 import io.makewebsite.entity.User;
+import io.makewebsite.repository.BoutiqueRepository;
+import io.makewebsite.repository.TeamMemberRepository;
 import io.makewebsite.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final BoutiqueRepository boutiqueRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final UploadService uploadService;
     private final PasswordEncoder passwordEncoder;
 
@@ -74,6 +78,11 @@ public class UserService {
     public void setActiveBoutique(UUID userId, UUID boutiqueId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        boolean ownsBoutique = boutiqueRepository.findByUserIdAndId(userId, boutiqueId).isPresent();
+        boolean activeTeamMember = teamMemberRepository.findByBoutiqueIdAndUserIdAndStatus(boutiqueId, userId, "ACTIVE").isPresent();
+        if (!ownsBoutique && !activeTeamMember) {
+            throw new RuntimeException("Boutique non trouvÃ©e");
+        }
         user.setActiveBoutiqueId(boutiqueId);
         userRepository.save(user);
     }

@@ -6,6 +6,7 @@ import '../../theme/app_typography.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/app_back_button.dart';
 import '../../providers/customers_provider.dart';
+import '../../utils/format_utils.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final String customerId;
@@ -73,7 +74,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                   children: [
                     Expanded(child: _statCard('orders.title'.tr(), '${c.totalOrders}', Icons.receipt_long, AppColors.primary)),
                     const SizedBox(width: 12),
-                    Expanded(child: _statCard('common.total'.tr(), '${c.totalSpent.toStringAsFixed(3)} TND', Icons.payments, AppColors.success)),
+                    Expanded(child: _statCard('common.total'.tr(), FormatUtils.money(context, c.totalSpent, currencyCode: 'TND'), Icons.payments, AppColors.success)),
                     const SizedBox(width: 12),
                     Expanded(child: _statCard('orders.date'.tr(), c.lastOrderDate != null ? _formatDate(c.lastOrderDate!) : '-', Icons.calendar_today, AppColors.warning)),
                   ],

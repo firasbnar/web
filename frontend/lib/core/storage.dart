@@ -132,7 +132,6 @@ class AppStorage {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_userKey);
-    await prefs.remove(_localeCodeKey);
     await prefs.remove(_activeBoutiqueKey);
     await prefs.remove(_userRoleKey);
     await prefs.remove(_subscriptionActiveKey);

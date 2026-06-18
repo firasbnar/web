@@ -4,6 +4,7 @@ import io.makewebsite.dto.response.PublicProductDto;
 import io.makewebsite.dto.response.StoreData;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.util.StripeConfigUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,8 +115,7 @@ public class StoreGeneratorService {
         String textColor = b.getTextColor() != null ? b.getTextColor() : "#751515";
         Double deliveryFees = b.getDeliveryFees() != null ? b.getDeliveryFees() : 7.0;
         boolean cashOnDelivery = b.getCashOnDelivery() != null ? b.getCashOnDelivery() : true;
-        boolean konnectActive = "active".equals(b.getKonnectStatus());
-        boolean d17Active = "active".equals(b.getD17Status());
+        boolean stripeEnabled = StripeConfigUtils.isStripeEnabled(b);
         String customCss = b.getCustomCss() != null ? b.getCustomCss() : "";
         String customJs = b.getCustomJs() != null ? b.getCustomJs() : "";
 
@@ -207,12 +207,10 @@ public class StoreGeneratorService {
 
         String paymentIcons = "";
         if (cashOnDelivery) paymentIcons += "<i class=\"fas fa-money-bill-wave\" title=\"COD\"></i>";
-        if (konnectActive) paymentIcons += "<i class=\"fas fa-credit-card\" title=\"Konnect\"></i>";
-        if (d17Active) paymentIcons += "<i class=\"fas fa-mobile-alt\" title=\"D17\"></i>";
+        if (stripeEnabled) paymentIcons += "<i class=\"fab fa-cc-stripe\" title=\"Stripe\"></i>";
 
         String codOption = cashOnDelivery ? "<option value=\"cash-on-delivery\">" + esc(codLabel) + "</option>" : "";
-        String konnectOption = konnectActive ? "<option value=\"konnect\">Paiement par carte (Konnect)</option>" : "";
-        String d17Option = d17Active ? "<option value=\"d17\">D17</option>" : "";
+        String stripeOption = stripeEnabled ? "<option value=\"stripe\">Paiement par carte (Stripe)</option>" : "";
 
         boolean simpleCheckout = b.getSimpleCheckout() != null && b.getSimpleCheckout();
 
@@ -438,7 +436,7 @@ public class StoreGeneratorService {
         "<select name=\"country\" class=\"t2-cart-drawer__input\"><option value=\"\">" + esc(selectCountry) + "</option>" + countriesHtml + "</select>") +
         "<input type=\"tel\" name=\"phone_number\" placeholder=\"" + esc(phonePlaceholder) + "\" required class=\"t2-cart-drawer__input\">" +
         "<div><label>" + esc(paymentMethodLabel) + "</label>" +
-        "<select name=\"payment-method\" required class=\"t2-cart-drawer__input\">" + codOption + konnectOption + d17Option + "</select></div>" +
+        "<select name=\"payment-method\" required class=\"t2-cart-drawer__input\">" + codOption + stripeOption + "</select></div>" +
         "<button type=\"submit\" class=\"t2-cart-drawer__submit\" style=\"background:" + accent + ";\">" + esc(placeOrderButton) + "</button>" +
         "</form></div></div>\n" +
 
@@ -495,12 +493,17 @@ public class StoreGeneratorService {
         "billingAddress:addr,city:ct,country:(f['country']?f['country'].value:''),paymentMethod:pm," +
         "items:cart.map(i=>({productId:i.id,quantity:i.qty,unitPrice:i.price,color:i.color||'',size:i.size||''}))};\n" +
         "fetch('/api/public/store/"+slug+"/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(order)}).then(r=>r.json()).then(d=>{" +
-        "if(d.success){document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;" +
+        "if(d.success){if(d.checkoutUrl){cart=[];saveCart();toggleCartSidebar();window.location.href=d.checkoutUrl;return}" +
+        "document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;" +
         "document.getElementById('customUserCity').textContent=d.city||order.city;document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;" +
         "document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;" +
         "document.getElementById('customOrderConfirmationModal').classList.add('open');cart=[];saveCart();toggleCartSidebar()}" +
          "else{alert('Erreur: '+(d.message||'Commande non accept\u00E9e'))}}).catch(function(e){alert('Erreur r\u00E9seau. V\u00E9rifiez votre connexion.')});return false}\n" +
-         "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});document.querySelectorAll('.add-cart').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg);else addToCart(this.dataset.productId,this.dataset.productName,this.dataset.productPrice,this.dataset.productImg)})});updateCartUI()});\n" +
+         "// Payment return handling\n" +
+"!function(){var params=new URLSearchParams(window.location.search);var pmt=params.get('payment');var ord=params.get('order');" +
+"if(pmt==='success'&&ord){setTimeout(function(){alert('Paiement r\u00E9ussi pour la commande '+ord+'. Votre commande a \u00E9t\u00E9 confirm\u00E9e.')},500)}" +
+"else if(pmt==='cancel'){setTimeout(function(){alert('Paiement annul\u00E9. Vous pouvez r\u00E9essayer ou choisir un autre mode de paiement.')},500)}}();\n" +
+"document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});document.querySelectorAll('.add-cart').forEach(function(btn){btn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();const card=this.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg);else addToCart(this.dataset.productId,this.dataset.productName,this.dataset.productPrice,this.dataset.productImg)})});updateCartUI()});\n" +
         "\n" +
         "// Slider autoplay\n" +
         "!function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;" +

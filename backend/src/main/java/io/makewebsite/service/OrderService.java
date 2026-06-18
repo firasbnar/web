@@ -331,8 +331,20 @@ public class OrderService {
     @Transactional
     public OrderResponse updateTracking(UUID id, UpdateTrackingRequest request) {
         Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Commande non trouvée"));
+
+        if (request.getDeliveryCompany() != null && request.getDeliveryCompany().trim().isEmpty()) {
+            throw new RuntimeException("Société de livraison requise");
+        }
+        if (request.getTrackingNumber() != null && request.getTrackingNumber().trim().isEmpty()) {
+            throw new RuntimeException("Numéro de suivi requis");
+        }
+        if (request.getDeliveryStatus() != null && request.getDeliveryStatus().trim().isEmpty()) {
+            throw new RuntimeException("Statut de livraison invalide");
+        }
+
         if (request.getDeliveryCompany() != null) order.setDeliveryCompany(request.getDeliveryCompany());
         if (request.getTrackingNumber() != null) order.setTrackingNumber(request.getTrackingNumber());
+        if (request.getDeliveryStatus() != null) order.setDeliveryStatus(request.getDeliveryStatus());
         order = orderRepository.save(order);
         return mapToResponse(order);
     }
@@ -393,6 +405,7 @@ public class OrderService {
                 .paymentRef(o.getPaymentRef()).shippingAddress(o.getShippingAddress())
                 .city(o.getCity())
                 .deliveryCompany(o.getDeliveryCompany()).trackingNumber(o.getTrackingNumber())
+                .deliveryStatus(o.getDeliveryStatus())
                 .notes(o.getNotes()).invoiceNumber(o.getInvoiceNumber())
                 .invoiceCreatedAt(o.getInvoiceCreatedAt()).createdAt(o.getCreatedAt())
                 .items(items.stream().map(i -> OrderItemResponse.builder()

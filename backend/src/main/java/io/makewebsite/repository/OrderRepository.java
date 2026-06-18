@@ -33,6 +33,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Optional<Order> findByOrderNumber(String orderNumber);
 
+    Optional<Order> findByPaymentRef(String paymentRef);
+
     @Query("SELECT o FROM Order o JOIN FETCH o.boutique WHERE o.orderNumber = :orderNumber")
     Optional<Order> findByOrderNumberWithBoutique(@Param("orderNumber") String orderNumber);
 

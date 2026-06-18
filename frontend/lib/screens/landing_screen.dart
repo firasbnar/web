@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../core/storage.dart';
+import '../core/locale_manager.dart';
 import '../theme/app_colors.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -26,8 +26,7 @@ class _LandingScreenState extends State<LandingScreen> {
     final ctx = _featuresKey.currentContext;
     if (ctx != null) {
       Scrollable.ensureVisible(ctx,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
     }
   }
 
@@ -109,13 +108,18 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildLangButton() {
     final code = context.locale.languageCode;
-    final flag = code == 'en' ? '\u{1F1EC}\u{1F1E7}' : code == 'ar' ? '\u{1F1F8}\u{1F1E6}' : '\u{1F1EB}\u{1F1F7}';
+    final flag = code == 'en'
+        ? '\u{1F1EC}\u{1F1E7}'
+        : code == 'ar'
+            ? '\u{1F1F8}\u{1F1E6}'
+            : '\u{1F1EB}\u{1F1F7}';
     final label = code.toUpperCase();
     return GestureDetector(
       onTap: () async {
         final selected = await showModalBottomSheet<String>(
           context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
           builder: (ctx) => SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -137,9 +141,8 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
         );
         if (selected == null) return;
-        await AppStorage().saveLocaleCode(selected);
         if (!mounted) return;
-        await context.setLocale(Locale(selected));
+        await LocaleManager.applyLocale(context, selected);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -205,7 +208,7 @@ class _LandingScreenState extends State<LandingScreen> {
           if (!isSmall) _buildHeroDecorativeCards(),
           if (!isSmall) const SizedBox(height: 20),
           Text(
-            'Cr\u00E9ez votre boutique en ligne en 1 minute',
+            'landing.hero_title'.tr(),
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: isSmall ? 24 : 28,
@@ -216,7 +219,7 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Lancez votre boutique en Tunisie sans code, g\u00E9rez vos produits, commandes et paiements depuis une seule application.',
+            'landing.hero_subtitle'.tr(),
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
@@ -435,7 +438,7 @@ class _LandingScreenState extends State<LandingScreen> {
         ),
         child: Center(
           child: Text(
-            'Commencer gratuitement',
+            'landing.primary_cta'.tr(),
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -457,7 +460,7 @@ class _LandingScreenState extends State<LandingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Voir les fonctionnalit\u00E9s',
+              'landing.secondary_cta'.tr(),
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -475,10 +478,30 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildBenefits() {
     final items = [
-      ('0%', 'Commission', Icons.percent, const Color(0xFF16A34A)),
-      ('\uD83D\uDCB3', 'Direct', Icons.credit_card, const Color(0xFF2710BF)),
-      ('\uD83E\uDD16', 'IA', Icons.smart_toy_outlined, const Color(0xFF7C3AED)),
-      ('\uD83D\uDCE2', 'Telegram', Icons.telegram, const Color(0xFF2563EB)),
+      (
+        '0%',
+        'landing.benefits.commission',
+        Icons.percent,
+        const Color(0xFF16A34A)
+      ),
+      (
+        '\uD83D\uDCB3',
+        'landing.benefits.direct',
+        Icons.credit_card,
+        const Color(0xFF2710BF)
+      ),
+      (
+        '\uD83E\uDD16',
+        'landing.benefits.ai',
+        Icons.smart_toy_outlined,
+        const Color(0xFF7C3AED)
+      ),
+      (
+        '\uD83D\uDCE2',
+        'landing.benefits.telegram',
+        Icons.telegram,
+        const Color(0xFF2563EB)
+      ),
     ];
 
     return Padding(
@@ -488,48 +511,50 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: _buildSectionLabel('AVANTAGES EXPRESS'),
+            child: _buildSectionLabel('landing.section_benefits'.tr()),
           ),
           SizedBox(
             height: 90,
             child: Row(
-              children: items.map((item) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(8),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
+              children: items
+                  .map((item) => Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(item.$3, size: 22, color: item.$4),
-                              const SizedBox(height: 4),
-                              Text(
-                                item.$2,
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(8),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(item.$3, size: 22, color: item.$4),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.$2.tr(),
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  )).toList(),
+                      ))
+                  .toList(),
             ),
           ),
         ],
@@ -551,18 +576,26 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildHowToUse() {
     final steps = [
-      ('Cr\u00E9ez votre compte',
-       'Inscrivez-vous gratuitement en quelques secondes.',
-       Icons.person_add_outlined),
-      ('Configurez votre boutique',
-       'Personnalisez couleurs, logo et informations.',
-       Icons.palette_outlined),
-      ('Ajoutez vos produits',
-       'Importez avec photos, descriptions et prix.',
-       Icons.inventory_2_outlined),
-      ('Lancez vos ventes',
-       'Partagez le lien et commencez \u00E0 vendre.',
-       Icons.rocket_launch_outlined),
+      (
+        'landing.steps.account_title',
+        'landing.steps.account_desc',
+        Icons.person_add_outlined
+      ),
+      (
+        'landing.steps.setup_title',
+        'landing.steps.setup_desc',
+        Icons.palette_outlined
+      ),
+      (
+        'landing.steps.products_title',
+        'landing.steps.products_desc',
+        Icons.inventory_2_outlined
+      ),
+      (
+        'landing.steps.launch_title',
+        'landing.steps.launch_desc',
+        Icons.rocket_launch_outlined
+      ),
     ];
 
     return Container(
@@ -575,10 +608,10 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionLabel('COMMENT \u00C7A MARCHE'),
+          _buildSectionLabel('landing.section_how_it_works'.tr()),
           const SizedBox(height: 8),
           Text(
-            'Lancez votre boutique en 4 \u00E9tapes',
+            'landing.how_title'.tr(),
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -617,7 +650,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          step.$1,
+                          step.$1.tr(),
                           style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -626,7 +659,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          step.$2,
+                          step.$2.tr(),
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
@@ -648,14 +681,46 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildFeatures(bool isSmall) {
     final features = [
-      ('Gestion des\nproduits', Icons.inventory_2_outlined, const Color(0xFF2710BF)),
-      ('Gestion des\ncommandes', Icons.receipt_long_outlined, const Color(0xFF059669)),
-      ('Syst\u00E8me de\ncaisse', Icons.point_of_sale_outlined, const Color(0xFF7C3AED)),
-      ('Analytics', Icons.analytics_outlined, const Color(0xFF2563EB)),
-      ('SEO', Icons.travel_explore_outlined, const Color(0xFFD97706)),
-      ('Domaine\npersonnalis\u00E9', Icons.language_outlined, const Color(0xFFDC2626)),
-      ('Multi-\nlangues', Icons.translate_outlined, const Color(0xFF0891B2)),
-      ('Assistant\nIA', Icons.smart_toy_outlined, const Color(0xFF7C3AED)),
+      (
+        'landing.features.products',
+        Icons.inventory_2_outlined,
+        const Color(0xFF2710BF)
+      ),
+      (
+        'landing.features.orders',
+        Icons.receipt_long_outlined,
+        const Color(0xFF059669)
+      ),
+      (
+        'landing.features.pos',
+        Icons.point_of_sale_outlined,
+        const Color(0xFF7C3AED)
+      ),
+      (
+        'landing.features.analytics',
+        Icons.analytics_outlined,
+        const Color(0xFF2563EB)
+      ),
+      (
+        'landing.features.seo',
+        Icons.travel_explore_outlined,
+        const Color(0xFFD97706)
+      ),
+      (
+        'landing.features.domain',
+        Icons.language_outlined,
+        const Color(0xFFDC2626)
+      ),
+      (
+        'landing.features.multilingual',
+        Icons.translate_outlined,
+        const Color(0xFF0891B2)
+      ),
+      (
+        'landing.features.ai',
+        Icons.smart_toy_outlined,
+        const Color(0xFF7C3AED)
+      ),
     ];
     final crossAxisCount = isSmall ? 3 : 4;
 
@@ -666,7 +731,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: _buildSectionLabel('FONCTIONNALIT\u00C9S'),
+            child: _buildSectionLabel('landing.section_features'.tr()),
           ),
           GridView.builder(
             key: _featuresKey,
@@ -709,7 +774,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        f.$1,
+                        f.$1.tr(),
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 10,
@@ -731,9 +796,27 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildPricing() {
     final plans = [
-      ('Gratuit', 'DT 0', '2 jours', 'Commencer', const Color(0xFF6B7280)),
-      ('Premium', 'DT 35', '/mois', 'Choisir', const Color(0xFF2710BF)),
-      ('3 Mois', 'DT 99', '/3 mois', 'Choisir', const Color(0xFF7C3AED)),
+      (
+        'landing.pricing.free_name',
+        'DT 0',
+        'landing.pricing.free_term',
+        'landing.pricing.start',
+        const Color(0xFF6B7280)
+      ),
+      (
+        'landing.pricing.premium_name',
+        'DT 35',
+        'landing.pricing.monthly_term',
+        'landing.pricing.choose',
+        const Color(0xFF2710BF)
+      ),
+      (
+        'landing.pricing.three_months_name',
+        'DT 99',
+        'landing.pricing.three_months_term',
+        'landing.pricing.choose',
+        const Color(0xFF7C3AED)
+      ),
     ];
 
     return Container(
@@ -746,10 +829,10 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionLabel('TARIFS'),
+          _buildSectionLabel('landing.section_pricing'.tr()),
           const SizedBox(height: 4),
           Text(
-            'Simple et transparent',
+            'landing.pricing_title'.tr(),
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -763,7 +846,8 @@ class _LandingScreenState extends State<LandingScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isHighlighted ? Colors.white : Colors.white.withAlpha(15),
+                color:
+                    isHighlighted ? Colors.white : Colors.white.withAlpha(15),
                 borderRadius: BorderRadius.circular(16),
                 border: isHighlighted
                     ? Border.all(color: AppColors.primary, width: 1.5)
@@ -776,7 +860,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          plan.$1,
+                          plan.$1.tr(),
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -799,9 +883,10 @@ class _LandingScreenState extends State<LandingScreen> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 3, left: 2),
+                              padding:
+                                  const EdgeInsets.only(bottom: 3, left: 2),
                               child: Text(
-                                plan.$3,
+                                plan.$3.tr(),
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: isHighlighted
@@ -826,7 +911,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        plan.$4,
+                        plan.$4.tr(),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -846,15 +931,9 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildTestimonials() {
     final testimonials = [
-      ('Marwa Ben A\u00EFssa',
-          'Site pr\u00EAt, argent arrive direct, et design magnifique !',
-          5),
-      ('Nour El Houda Mzoughi',
-          'Personnalise comme tu veux, plein de mod\u00E8les.',
-          5),
-      ('Slim Rekik',
-          'Conversion excellente, site responsive.',
-          5),
+      ('Marwa Ben A\u00EFssa', 'landing.testimonials.marwa', 5),
+      ('Nour El Houda Mzoughi', 'landing.testimonials.nour', 5),
+      ('Slim Rekik', 'landing.testimonials.slim', 5),
     ];
 
     return Padding(
@@ -864,7 +943,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: _buildSectionLabel('T\u00C9MOIGNAGES'),
+            child: _buildSectionLabel('landing.section_testimonials'.tr()),
           ),
           SizedBox(
             height: 130,
@@ -905,7 +984,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       const SizedBox(height: 8),
                       Expanded(
                         child: Text(
-                          t.$2,
+                          t.$2.tr(),
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
@@ -951,7 +1030,7 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Column(
         children: [
           Text(
-            'Pr\u00EAt \u00E0 lancer votre boutique ?',
+            'landing.bottom_title'.tr(),
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 22,
@@ -961,7 +1040,7 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Rejoignez les entrepreneurs tunisiens qui nous font confiance.',
+            'landing.bottom_subtitle'.tr(),
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 13,
@@ -989,7 +1068,7 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
               child: Center(
                 child: Text(
-                  'Cr\u00E9er ma boutique',
+                  'landing.bottom_cta'.tr(),
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,

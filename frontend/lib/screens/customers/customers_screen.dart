@@ -13,6 +13,7 @@ import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/app_back_arrow.dart';
+import '../../utils/format_utils.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -188,7 +189,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                           ],
                         )),
                         DataCell(Text('${c.totalOrders}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
-                        DataCell(Text('${c.totalSpent.toStringAsFixed(3)} TND', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+                        DataCell(Text(FormatUtils.money(context, c.totalSpent, currencyCode: 'TND'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
                         DataCell(c.lastOrderDate != null
                             ? Text(_formatDate(c.lastOrderDate!), style: const TextStyle(fontSize: 12))
                             : const Text('-', style: TextStyle(fontSize: 12))),

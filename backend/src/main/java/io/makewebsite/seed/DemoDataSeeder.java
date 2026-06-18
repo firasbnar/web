@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-@Component
+        @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DemoDataSeeder implements CommandLineRunner {
@@ -341,7 +341,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         int totalWeight = 0;
         for (int w : statusWeights) totalWeight += w;
 
-        String[] paymentMethods = {"COD", "CARTE_BANCAIRE", "CARTE_BANCAIRE", "D17", "EDINAR"};
+        String[] paymentMethods = {"COD", "CARTE_BANCAIRE", "CARTE_BANCAIRE", "CARTE_BANCAIRE", "EDINAR"};
         String[] cities = {
                 "Tunis", "Sfax", "Sousse", "Nabeul", "Gabès", "Bizerte", "Monastir", "Kairouan",
                 "Ariana", "Ben Arous", "Hammamet", "Mahdia", "Gafsa", "Tozeur", "Médenine"

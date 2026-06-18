@@ -10,6 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/storage.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../utils/format_utils.dart';
 
 class PlansScreen extends StatefulWidget {
   const PlansScreen({super.key});
@@ -67,23 +68,82 @@ class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _startStripeCheckout(int planId) async {
+  Future<void> _startPlanSubscription(dynamic plan) async {
+    final planId = plan['id'] as int;
+    final price = (plan['priceDt'] ?? 0).toDouble();
     final messenger = ScaffoldMessenger.of(context);
     if (_isOpeningCheckout) {
       developer.log('[PLANS] Already opening checkout, skipping duplicate');
       return;
     }
-    developer.log('[PLANS] Manual checkout tap for planId=$planId');
-    developer.log('[PLANS] Starting Stripe checkout for planId=$planId');
+    developer.log('[PLANS] Starting subscription for planId=$planId price=$price');
     setState(() {
       _isOpeningCheckout = true;
       _processingPlanId = planId;
     });
     try {
+      if (price <= 0) {
+        final subResponse = await _api.post(
+          '/subscriptions/subscribe',
+          data: {'planId': planId, 'paymentMethod': 'FREE'},
+        );
+        developer.log('[PLANS] Free plan activated: $subResponse');
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('subscription.free_activated'.tr())),
+          );
+        }
+        if (mounted) {
+          final auth = context.read<AuthProvider>();
+          final boutiques = context.read<BoutiqueProvider>();
+          auth.setSubscriptionActive(true);
+          await auth.hasActiveSubscription();
+          await boutiques.loadBoutiques();
+          if (mounted) {
+            if (boutiques.boutiques.isEmpty) {
+              context.go('/create-store');
+            } else if (boutiques.boutiques.length == 1) {
+              context.go('/home');
+            } else {
+              context.go('/store-selector');
+            }
+          }
+        }
+        return;
+      }
+
+      developer.log('[PLANS] Starting Stripe checkout for planId=$planId');
       final response = await _api.post(
         '/subscriptions/checkout-session',
         data: {'planId': planId, 'paymentMethod': 'STRIPE'},
       );
+      final status = response['data']?['status']?.toString();
+      if (status == 'FREE_ACTIVATED') {
+        developer.log('[PLANS] Free plan activated via checkout endpoint');
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('subscription.free_activated'.tr())),
+          );
+        }
+        if (mounted) {
+          final auth = context.read<AuthProvider>();
+          final boutiques = context.read<BoutiqueProvider>();
+          auth.setSubscriptionActive(true);
+          await auth.hasActiveSubscription();
+          await boutiques.loadBoutiques();
+          if (mounted) {
+            if (boutiques.boutiques.isEmpty) {
+              context.go('/create-store');
+            } else if (boutiques.boutiques.length == 1) {
+              context.go('/home');
+            } else {
+              context.go('/store-selector');
+            }
+          }
+        }
+        return;
+      }
+
       final sessionUrl = response['data']?['sessionUrl']?.toString();
       final sessionId = response['data']?['sessionId']?.toString();
       if (sessionUrl == null || sessionUrl.isEmpty) {
@@ -285,7 +345,7 @@ class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
     final name = plan['name'] ?? '';
     final price = (plan['priceDt'] ?? 0).toDouble();
     final days = plan['durationDays'] ?? 0;
-    final maxProducts = plan['maxProducts'] ?? 0;
+    final maxProducts = plan['maxProducts'];
     final features = plan['features'] is String ? plan['features'] : '';
     final isHighlighted = name == '3 Mois';
 
@@ -320,9 +380,9 @@ class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
             ],
           ),
           const SizedBox(height: 8),
-          Text('${price.toStringAsFixed(2)} TND${days > 0 ? " / $days ${'plans.monthly'.tr().toLowerCase()}" : ""}', style: AppTypography.heading2.copyWith(color: AppColors.primary)),
+          Text('${FormatUtils.money(context, price, currencyCode: 'TND')}${days > 0 ? " / $days ${'plans.monthly'.tr().toLowerCase()}" : ""}', style: AppTypography.heading2.copyWith(color: AppColors.primary)),
           const SizedBox(height: 4),
-          Text('plans.products_limit'.tr(args: [maxProducts.toString()]), style: AppTypography.caption),
+          Text(maxProducts == null || maxProducts >= 99999 ? 'plans.unlimited_products'.tr() : 'plans.products_limit'.tr(args: [maxProducts.toString()]), style: AppTypography.caption),
           const SizedBox(height: 16),
           if (features.isNotEmpty) ...[
             ...features.replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').split(',').map((f) => Padding(
@@ -331,7 +391,13 @@ class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
                 children: [
                   const Icon(Icons.check_circle, color: AppColors.success, size: 18),
                   const SizedBox(width: 8),
-                  Text(f.trim(), style: AppTypography.body2),
+                  Expanded(
+                    child: Text(
+                      f.trim(),
+                      style: AppTypography.body2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             )),
@@ -342,7 +408,7 @@ class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
             child: ElevatedButton(
               onPressed: (isCurrentPlan || _isOpeningCheckout || _processingPlanId != null)
                   ? null
-                  : () => _startStripeCheckout(plan['id']),
+                  : () => _startPlanSubscription(plan),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isCurrentPlan ? AppColors.surfaceAlt : AppColors.primary,
                 foregroundColor: isCurrentPlan ? AppColors.textHint : Colors.white,
@@ -358,7 +424,11 @@ class _PlansScreenState extends State<PlansScreen> with WidgetsBindingObserver {
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                  : Text(isCurrentPlan ? 'plans.current_plan'.tr() : 'plans.select'.tr()),
+                  : Text(isCurrentPlan
+                      ? 'plans.current_plan'.tr()
+                      : (price <= 0
+                          ? 'plans.commencer_gratuitement'.tr()
+                          : 'plans.select'.tr())),
             ),
           ),
         ],

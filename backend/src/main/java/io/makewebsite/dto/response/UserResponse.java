@@ -21,4 +21,6 @@ public class UserResponse {
     private String language;
     private String avatarUrl;
     private boolean emailVerified;
+    private String authProvider;
+    private String providerId;
 }

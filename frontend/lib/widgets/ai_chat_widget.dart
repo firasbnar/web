@@ -1,128 +1,85 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api_client.dart';
 import '../core/storage.dart';
 
 class AiChatWidget extends StatefulWidget {
   final String boutiqueId;
   final String boutiqueName;
+  final String ownerId;
 
   const AiChatWidget({
     super.key,
     required this.boutiqueId,
     required this.boutiqueName,
+    required this.ownerId,
   });
 
   @override
   State<AiChatWidget> createState() => _AiChatWidgetState();
 }
 
-class _AiChatWidgetState extends State<AiChatWidget>
-    with TickerProviderStateMixin {
-  bool _isOpen = false;
+class _AiChatWidgetState extends State<AiChatWidget> {
   bool _isLoading = false;
-  bool _tooltipVisible = true;
   bool _quickRepliesVisible = true;
-  bool _eyesClosed = false;
-  bool _isPressed = false;
   final List<_ChatMessage> _messages = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Timer? _sendDebounce;
 
-  late AnimationController _floatController;
-  late AnimationController _pulseController;
-  late AnimationController _ringController;
-  late Animation<double> _floatAnim;
-  late Animation<double> _pulseAnim;
-  Timer? _blinkTimer;
+  String get _storageKey =>
+      'merchant_ai_chat_${widget.ownerId}_${widget.boutiqueId}';
 
   @override
   void initState() {
     super.initState();
-
-    _floatController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
-    _floatAnim = Tween<double>(begin: 0, end: -4).animate(
-      CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
-    );
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.97, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutSine),
-    );
-
-    _ringController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat();
-
-    _startBlinking();
-
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _tooltipVisible = false);
-    });
+    _loadHistory();
   }
 
   @override
   void dispose() {
-    _floatController.dispose();
-    _pulseController.dispose();
-    _ringController.dispose();
     _inputController.dispose();
     _scrollController.dispose();
-    _blinkTimer?.cancel();
     _sendDebounce?.cancel();
     super.dispose();
   }
 
-  void _startBlinking() {
-    _scheduleBlink();
-  }
-
-  void _scheduleBlink() {
-    _blinkTimer?.cancel();
-    _blinkTimer = Timer(Duration(seconds: 2 + Random().nextInt(4)), () {
-      if (!mounted) return;
-      setState(() => _eyesClosed = true);
-      Future.delayed(const Duration(milliseconds: 150), () {
-        if (mounted) setState(() => _eyesClosed = false);
-      });
-      _scheduleBlink();
-    });
-  }
-
-  void _togglePanel() {
-    setState(() {
-      _isOpen = !_isOpen;
-      _tooltipVisible = false;
-    });
-    if (_isOpen && _messages.isEmpty) {
-      Future.delayed(const Duration(milliseconds: 300), () {
+  Future<void> _loadHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = prefs.getString(_storageKey);
+      if (data != null && data.isNotEmpty) {
+        final list = (jsonDecode(data) as List).cast<Map<String, dynamic>>();
         if (mounted) {
-          _addBotMessage(_ChatMessage(
-            role: 'assistant',
-            content: 'Bonjour ! Je suis votre assistant business pour **${widget.boutiqueName}**. Je peux analyser ventes, stock, trafic et clients.',
-          ));
+          setState(() {
+            _messages.addAll(list.map((m) => _ChatMessage.fromJson(m)));
+          });
+          _scrollDown();
         }
-      });
-    }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = jsonEncode(_messages.map((m) => m.toJson()).toList());
+      await prefs.setString(_storageKey, data);
+    } catch (_) {}
   }
 
   void _addBotMessage(_ChatMessage msg) {
     setState(() => _messages.add(msg));
+    _saveHistory();
     _scrollDown();
   }
 
   void _addUserMessage(_ChatMessage msg) {
     setState(() => _messages.add(msg));
+    _saveHistory();
     _scrollDown();
   }
 
@@ -138,6 +95,34 @@ class _AiChatWidgetState extends State<AiChatWidget>
     });
   }
 
+  Future<void> _onClearHistory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Effacer l\u2019historique'),
+        content:
+            const Text('Voulez-vous vraiment effacer l\u2019historique du chat ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Effacer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      setState(() {
+        _messages.clear();
+        _quickRepliesVisible = true;
+      });
+      await _saveHistory();
+    }
+  }
+
   Future<void> _sendMessage(String text, {bool isQuick = false}) async {
     final t = text.trim();
     if (t.isEmpty || _isLoading) return;
@@ -146,10 +131,6 @@ class _AiChatWidgetState extends State<AiChatWidget>
     _addUserMessage(_ChatMessage(role: 'user', content: t));
     _inputController.clear();
     setState(() => _isLoading = true);
-
-    final history = _messages
-        .map((m) => {'role': m.role, 'content': m.content})
-        .toList();
 
     try {
       final storage = AppStorage();
@@ -164,50 +145,20 @@ class _AiChatWidgetState extends State<AiChatWidget>
         },
       ));
 
-      final endpoint = '/ai/owner/chat';
-      final response = await dio.post(endpoint, data: {
-        'boutiqueId': widget.boutiqueId,
+      final response = await dio.post('/ai/merchant-chat', data: {
         'message': t,
-        'sessionId': 'owner-${widget.boutiqueId}',
-        'messages': history,
+        'boutiqueId': widget.boutiqueId,
       });
 
       final data = response.data;
-      final payload = data is Map && data['data'] is Map ? data['data'] as Map : data as Map?;
-      String reply = '';
-      List<Map<String, dynamic>> products = [];
-      Map<String, dynamic>? analytics;
-
-      if (payload is Map) {
-        final content = payload['content'];
-        if (content is List && content.isNotEmpty) {
-          reply = (content[0]?['text'] as String?) ?? '';
-        }
-        if (reply.isEmpty) {
-          reply = (payload['reply'] as String?) ?? '';
-        }
-        final rawProducts = payload['products'];
-        if (rawProducts is List) {
-          products = rawProducts
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList();
-        }
-        final rawAnalytics = payload['analytics'];
-        if (rawAnalytics is Map) {
-          analytics = Map<String, dynamic>.from(rawAnalytics);
-        }
-      }
-
-      if (reply.isEmpty) {
-        reply = "Desole, je n'ai pas pu obtenir une reponse. Reessayez.";
-      }
+      final payload = data is Map ? data['data'] : null;
+      final reply = payload is Map ? (payload['answer'] as String?) ?? '' : '';
 
       _addBotMessage(_ChatMessage(
         role: 'assistant',
-        content: reply,
-        products: products,
-        analytics: analytics,
+        content: reply.isNotEmpty
+            ? reply
+            : "Desole, je n'ai pas pu obtenir une reponse. Reessayez.",
       ));
     } catch (_) {
       _addBotMessage(_ChatMessage(
@@ -233,509 +184,18 @@ class _AiChatWidgetState extends State<AiChatWidget>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isMobile = size.width <= 480;
-    final panelWidth = isMobile ? size.width - 24 : 370.0;
-    final panelHeight = size.height > 600 ? 540.0 : size.height * 0.7;
-
-    return SizedBox(
-      width: _isOpen ? panelWidth : 56,
-      height: _isOpen ? panelHeight + 84 : 78,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (_isOpen) _buildChatPanel(panelWidth, panelHeight),
-          _buildFloatingRobotAssistant(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFloatingRobotAssistant() {
-    return Positioned(
-      right: 0,
-      bottom: 0,
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      duration: const Duration(milliseconds: 200),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_tooltipVisible) _buildHelpBubble(),
-          GestureDetector(
-            onTapDown: (_) => setState(() => _isPressed = true),
-            onTapUp: (_) => setState(() => _isPressed = false),
-            onTapCancel: () => setState(() => _isPressed = false),
-            onTap: _togglePanel,
-            child: AnimatedScale(
-              scale: _isPressed ? 0.93 : 1.0,
-              duration: const Duration(milliseconds: 150),
-              child: AnimatedBuilder(
-                animation: Listenable.merge([_floatController, _pulseController]),
-                builder: (_, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _floatAnim.value),
-                    child: Transform.scale(
-                      scale: _pulseAnim.value,
-                      child: child,
-                    ),
-                  );
-                },
-                child: _buildRobotMascot(),
-              ),
-            ),
-          ),
+          _buildPanelHeader(),
+          Expanded(child: _buildMessagesArea()),
+          if (_quickRepliesVisible) _buildQuickReplies(),
+          _buildInputRow(),
+          _buildFooter(),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHelpBubble() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6, left: 16),
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x18000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Text(
-              'Besoin d\'aide ?',
-              style: TextStyle(
-                color: Color(0xFF5B21B6),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -4,
-            child: Transform.rotate(
-              angle: 45 * pi / 180,
-              child: Container(
-                width: 9,
-                height: 9,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRobotMascot() {
-    return SizedBox(
-      width: 56,
-      height: 78,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Soft shadow behind
-          Positioned(
-            bottom: 4,
-            left: 10,
-            right: 10,
-            child: AnimatedBuilder(
-              animation: _floatController,
-              builder: (_, __) {
-                final lift = -_floatAnim.value / 4;
-                final opac = 0.18 - lift * 0.08;
-                final scale = 1.0 - lift * 0.25;
-                return Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(3),
-                      color: const Color(0xFF6D28D9).withAlpha(
-                          (opac * 255).round()),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          // Rocket glow
-          Positioned(
-            left: 17,
-            right: 17,
-            bottom: 10,
-            child: AnimatedBuilder(
-              animation: _pulseController,
-              builder: (_, __) {
-                final p = _pulseAnim.value;
-                return Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFF38BDF8), Color(0xFF6D28D9)],
-                    ),
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF38BDF8)
-                            .withAlpha((40 * p).round()),
-                        blurRadius: 10 * p,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          // Left arm
-          Positioned(
-            left: 2,
-            top: 42,
-            child: Container(
-              width: 7,
-              height: 12,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F3FF),
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x10000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Right arm
-          Positioned(
-            right: 2,
-            top: 42,
-            child: Container(
-              width: 7,
-              height: 12,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F3FF),
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x10000000),
-                    blurRadius: 3,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Body
-          Positioned(
-            left: 8,
-            right: 8,
-            top: 34,
-            child: Container(
-              height: 22,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFCFCFF),
-                    Color(0xFFF5F3FF),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6D28D9).withAlpha(12),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Left ear
-          Positioned(
-            left: -2,
-            top: 12,
-            child: Container(
-              width: 10,
-              height: 16,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6D28D9),
-                borderRadius: BorderRadius.circular(5),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x306D28D9),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Right ear
-          Positioned(
-            right: -2,
-            top: 12,
-            child: Container(
-              width: 10,
-              height: 16,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6D28D9),
-                borderRadius: BorderRadius.circular(5),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x306D28D9),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Antenna
-          Positioned(
-            top: -1,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 2,
-                    height: 8,
-                    color: const Color(0xFF6D28D9),
-                  ),
-                  Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF6D28D9),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x556D28D9),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Head
-          Positioned(
-            left: 4,
-            right: 4,
-            top: 3,
-            child: _buildRobotHead(),
-          ),
-          // Close badge
-          if (_isOpen)
-            Positioned(
-              top: 5,
-              right: 6,
-              child: GestureDetector(
-                onTap: _togglePanel,
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6D28D9),
-                    shape: BoxShape.circle,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x306D28D9),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text('\u2715',
-                        style: TextStyle(
-                            fontSize: 9,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRobotHead() {
-    return Container(
-      height: 32,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFCFCFF),
-            Color(0xFFF8F6FF),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6D28D9).withAlpha(16),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Glossy shine
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(14)),
-              child: Container(
-                height: 16,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x40FFFFFF),
-                      Color(0x10FFFFFF),
-                      Color(0x00FFFFFF),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Face screen
-          Positioned(
-            left: 6,
-            right: 6,
-            top: 5,
-            bottom: 5,
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF111827),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF1F2937),
-                  width: 0.5,
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildEye(),
-                      const SizedBox(width: 12),
-                      _buildEye(),
-                    ],
-                  ),
-                  Positioned(
-                    bottom: 3,
-                    child: Container(
-                      width: 12,
-                      height: 2,
-                      decoration: BoxDecoration(
-                        color: _eyesClosed
-                            ? Colors.transparent
-                            : const Color(0xFF4ADE80),
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEye() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (_, __) {
-        final glow = _pulseAnim.value;
-        return Container(
-          width: 6,
-          height: _eyesClosed ? 1 : 6,
-          margin: EdgeInsets.only(top: _eyesClosed ? 9 : 0),
-          decoration: BoxDecoration(
-            shape: _eyesClosed ? BoxShape.rectangle : BoxShape.circle,
-            borderRadius: _eyesClosed ? BorderRadius.circular(0.5) : null,
-            gradient: const RadialGradient(
-              center: Alignment(0.3, -0.3),
-              colors: [Color(0xFF7DD3FC), Color(0xFF38BDF8)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF38BDF8).withAlpha((80 * glow).round()),
-                blurRadius: 5 * glow,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChatPanel(double width, double height) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    return Positioned(
-      right: 0,
-      bottom: 84 + bottomPadding,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(248),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Colors.white.withAlpha(200),
-            width: 1.5,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x18000000),
-              blurRadius: 48,
-              offset: Offset(0, 12),
-            ),
-            BoxShadow(
-              color: Color(0x0C000000),
-              blurRadius: 16,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            _buildPanelHeader(),
-            Expanded(child: _buildMessagesArea()),
-            if (_quickRepliesVisible) _buildQuickReplies(),
-            _buildInputRow(),
-            _buildFooter(),
-          ],
-        ),
       ),
     );
   }
@@ -771,7 +231,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Assistant ${widget.boutiqueName}',
+                  'Merchant Copilot',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -808,22 +268,12 @@ class _AiChatWidgetState extends State<AiChatWidget>
               ],
             ),
           ),
-          GestureDetector(
-            onTap: _togglePanel,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                color: Color(0x1AFFFFFF),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text('\u2715',
-                    style: TextStyle(
-                        fontSize: 14, color: Color(0xB3FFFFFF))),
-              ),
+          if (_messages.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.white70, size: 20),
+              tooltip: 'Effacer l\u2019historique',
+              onPressed: _onClearHistory,
             ),
-          ),
         ],
       ),
     );
@@ -833,7 +283,26 @@ class _AiChatWidgetState extends State<AiChatWidget>
     return Container(
       color: const Color(0xFFFAFAFA),
       child: _messages.isEmpty && !_isLoading
-          ? const SizedBox.shrink()
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.smart_toy_outlined,
+                        size: 48, color: const Color(0xFF7C3AED).withAlpha(60)),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Posez une question sur votre boutique',
+                      style: TextStyle(
+                        color: Color(0xFFB0B0B0),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
@@ -933,107 +402,7 @@ class _AiChatWidgetState extends State<AiChatWidget>
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildRichText(msg.content),
-        if (msg.analytics != null && msg.analytics!.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _buildAnalyticsSummary(msg.analytics!),
-        ],
-        if (msg.products.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          ...msg.products.take(4).map(_buildProductResult),
-        ],
       ],
-    );
-  }
-
-  Widget _buildAnalyticsSummary(Map<String, dynamic> analytics) {
-    final items = analytics.entries
-        .where((e) => e.value is num || e.value is String)
-        .take(4)
-        .toList();
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: items.map((e) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE8D8FF)),
-          ),
-          child: Text(
-            '${e.key}: ${e.value}',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF5B21B6)),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildProductResult(Map<String, dynamic> product) {
-    final image = product['image'] as String?;
-    final price = product['price'];
-    return Container(
-      margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8D8FF)),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: image != null && image.isNotEmpty
-                ? Image.network(
-                    image,
-                    width: 42,
-                    height: 42,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _productPlaceholder(),
-                  )
-                : _productPlaceholder(),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${product['name'] ?? 'Produit'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  price == null ? 'Prix non disponible' : '$price TND',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF7C3AED),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _productPlaceholder() {
-    return Container(
-      width: 42,
-      height: 42,
-      color: const Color(0xFFF5F0FF),
-      child: const Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF7C3AED)),
     );
   }
 
@@ -1111,40 +480,25 @@ class _AiChatWidgetState extends State<AiChatWidget>
                 color: const Color(0xFFE8D8FF),
               ),
             ),
-            child: _buildAnimatedDots(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (i) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF7C3AED).withAlpha(150),
+                    ),
+                  ),
+                );
+              }),
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAnimatedDots() {
-    return AnimatedBuilder(
-      animation: _ringController,
-      builder: (_, __) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (i) {
-            final delay = [0.0, 0.2, 0.4][i];
-            final t = (_ringController.value + delay) % 1.0;
-            final y = (t < 0.5 ? t * 12 : (1 - t) * 12) - 3;
-            return Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Transform.translate(
-                offset: Offset(0, y),
-                child: Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF7C3AED).withAlpha(150),
-                  ),
-                ),
-              ),
-            );
-          }),
-        );
-      },
     );
   }
 
@@ -1310,13 +664,23 @@ class _AiChatWidgetState extends State<AiChatWidget>
 class _ChatMessage {
   final String role;
   final String content;
-  final List<Map<String, dynamic>> products;
-  final Map<String, dynamic>? analytics;
+  final DateTime timestamp;
 
   _ChatMessage({
     required this.role,
     required this.content,
-    this.products = const [],
-    this.analytics,
-  });
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {
+    'role': role,
+    'content': content,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory _ChatMessage.fromJson(Map<String, dynamic> json) => _ChatMessage(
+    role: json['role'] as String,
+    content: json['content'] as String,
+    timestamp: DateTime.parse(json['timestamp'] as String),
+  );
 }

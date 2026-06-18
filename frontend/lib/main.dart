@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
@@ -7,8 +8,8 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
+import 'core/locale_manager.dart';
 import 'core/router.dart';
-import 'core/storage.dart';
 import 'providers/auth_provider.dart';
 import 'providers/boutique_provider.dart';
 import 'providers/products_provider.dart';
@@ -29,12 +30,12 @@ import 'providers/public_wishlist_provider.dart';
 import 'providers/public_messages_provider.dart';
 import 'providers/websocket_provider.dart';
 import 'services/app_link_handler.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   usePathUrlStrategy();
-  final storedLocaleCode = await AppStorage().getLocaleCode();
-  final startLocale = storedLocaleCode != null && storedLocaleCode.isNotEmpty ? Locale(storedLocaleCode) : null;
+  final startLocale = await LocaleManager.resolveStartupLocale();
 
   ErrorWidget.builder = (() {
     String lastMsg = '';
@@ -57,18 +58,19 @@ Future<void> main() async {
         color: Color(0xFFFFF3F0),
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text(userMsg, style: TextStyle(color: Color(0xFFD32F2F), fontSize: 14)),
+          child: Text(userMsg,
+              style: TextStyle(color: Color(0xFFD32F2F), fontSize: 14)),
         ),
       );
     };
   })();
   runApp(
     EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('fr'), Locale('ar')],
+      supportedLocales: LocaleManager.supportedLocales,
       path: 'assets/i18n',
-      fallbackLocale: const Locale('fr'),
+      fallbackLocale: LocaleManager.fallbackLocale,
       startLocale: startLocale,
-      saveLocale: true,
+      saveLocale: false,
       child: const MakeWebsiteApp(),
     ),
   );
@@ -124,6 +126,12 @@ class _MakeWebsiteAppState extends State<MakeWebsiteApp> {
           theme: AppTheme.lightTheme,
           routerConfig: _router!,
           locale: context.locale,
+          builder: (context, child) => Directionality(
+            textDirection: LocaleManager.isRtl(context)
+                ? ui.TextDirection.rtl
+                : ui.TextDirection.ltr,
+            child: child ?? const SizedBox.shrink(),
+          ),
           localizationsDelegates: [
             ...context.localizationDelegates,
             GlobalMaterialLocalizations.delegate,

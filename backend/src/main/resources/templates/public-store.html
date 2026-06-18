@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;display=swap" rel="stylesheet">
-<link rel="icon" th:href="${store.faviconUrl != null and !store.faviconUrl.isEmpty()} ? ${store.faviconUrl} : '/favicon.ico'">
+<link rel="icon" th:href="${not #strings.isEmpty(store.faviconUrl) ? store.faviconUrl : '/favicon.ico'}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <style>
@@ -35,10 +35,12 @@ img{max-width:100%;display:block}
 .nav a{font-size:0.9375rem;font-weight:500;padding:4px 0;border-bottom:2px solid transparent;transition:var(--transition)}
 .nav a:hover,.nav a.active{border-bottom-color:var(--accent);color:var(--accent)}
 .header-actions{display:flex;gap:12px;align-items:center}
-.lang-switch{display:flex;gap:6px;align-items:center}
-.lang-switch button{border:1px solid var(--border);background:var(--white);color:var(--text);border-radius:9999px;padding:6px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;transition:var(--transition);font-family:var(--font)}
-.lang-switch button.active{background:var(--accent);border-color:var(--accent);color:#fff}
-.lang-switch button:hover{border-color:var(--accent)}
+.lang-switch{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);background:var(--white);border-radius:9999px;box-shadow:0 4px 14px rgba(0,0,0,0.05);min-width:168px}
+.lang-switch__label{font-size:0.75rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.lang-switch__control{position:relative;flex:1}
+.lang-switch__control::after{content:'\25BE';position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:0.75rem}
+.lang-select{width:100%;appearance:none;-webkit-appearance:none;-moz-appearance:none;border:none;background:transparent;color:var(--text);font-size:0.875rem;font-weight:600;padding:2px 24px 2px 0;font-family:var(--font);cursor:pointer;outline:none}
+.lang-select option{color:#111}
 .header-actions button{background:none;border:none;cursor:pointer;position:relative;padding:8px;font-size:1.2rem;color:var(--text);border-radius:var(--radius-sm);transition:var(--transition)}
 .header-actions button:hover{background:rgba(0,0,0,0.05)}
 .cart-count{position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:0.625rem;min-width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 4px}
@@ -94,6 +96,8 @@ img{max-width:100%;display:block}
 .add-cart{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:#fff;padding:10px 16px;border-radius:var(--radius-full);font-size:0.8125rem;font-weight:600;cursor:pointer;transition:var(--transition);border:none;width:100%}
 .add-cart:hover{filter:brightness(1.1)}
 .add-cart:disabled{opacity:0.5;cursor:not-allowed;filter:none}
+.add-cart[data-oos="true"]{opacity:0.55;cursor:not-allowed;filter:none;background:#e5e7eb !important;color:#6b7280 !important}
+.add-cart[data-oos="true"] i{color:#6b7280 !important}
 .newsletter-section{background:var(--bg-alt,#f5f5f5);padding:60px 20px;text-align:center}
 .newsletter-inner{max-width:480px;margin:0 auto}
 .newsletter-inner h3{font-size:1.5rem;margin-bottom:8px}
@@ -108,6 +112,8 @@ img{max-width:100%;display:block}
 .footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;padding-bottom:32px}
 .footer-brand .logo{margin-bottom:12px}
 .footer-brand p{color:var(--text-soft);font-size:0.875rem;line-height:1.7}
+.footer-address{margin-top:8px;display:flex;align-items:flex-start;gap:6px;color:var(--text-soft);font-size:0.875rem;line-height:1.7}
+.footer-address i{margin-top:3px;flex-shrink:0}
 .footer-col h4{font-size:0.9375rem;font-weight:600;margin-bottom:16px}
 .footer-col ul{list-style:none;padding:0}
 .footer-col ul li{margin-bottom:10px}
@@ -144,6 +150,27 @@ img{max-width:100%;display:block}
 .t2-cart-drawer__submit:hover{filter:brightness(1.1)}
 .t2-cart-drawer__overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:999;opacity:0;pointer-events:none;transition:opacity 0.35s ease}
 .t2-cart-drawer__overlay.show{opacity:1;pointer-events:auto}
+
+/* --- Add-to-cart toast --- */
+.t2-toast-host{position:fixed;left:16px;right:16px;bottom:16px;z-index:2000;display:flex;justify-content:center;pointer-events:none}
+.t2-toast{pointer-events:auto;max-width:560px;width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.14);display:flex;gap:12px;padding:12px 12px 12px 12px;align-items:flex-start;transform:translateY(18px);opacity:0;transition:transform .22s ease,opacity .22s ease}
+.t2-toast.show{transform:translateY(0);opacity:1}
+.t2-toast__side{width:6px;align-self:stretch;border-radius:999px;margin-right:2px}
+.t2-toast--success .t2-toast__side{background:#16a34a}
+.t2-toast--warning .t2-toast__side{background:#f59e0b}
+.t2-toast--error .t2-toast__side{background:#ef4444}
+.t2-toast__img{width:48px;height:48px;border-radius:12px;object-fit:cover;background:#f3f4f6;flex:0 0 48px}
+.t2-toast__content{flex:1;min-width:0}
+.t2-toast__title{font-weight:700;font-size:0.95rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t2-toast__subtitle{margin-top:2px;color:var(--muted);font-size:0.85rem;line-height:1.25}
+.t2-toast__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.t2-toast__btn{border:1px solid var(--border);background:#fff;color:var(--text);padding:8px 12px;border-radius:999px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:var(--transition)}
+.t2-toast__btn:hover{border-color:var(--accent);color:var(--accent)}
+.t2-toast__btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.t2-toast__btn--primary:hover{filter:brightness(1.06);color:#fff}
+.t2-toast__close{border:none;background:transparent;cursor:pointer;color:var(--muted);padding:6px;border-radius:10px;transition:var(--transition);flex:0 0 auto}
+.t2-toast__close:hover{background:#f3f4f6;color:var(--text)}
+@media(max-width:480px){.t2-toast{padding:12px}.t2-toast__actions{gap:8px}.t2-toast__btn{flex:1;justify-content:center}}
 .custom-modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;display:none;align-items:center;justify-content:center}
 .custom-modal.open{display:flex}
 .custom-modal::before{content:'';position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4)}
@@ -195,6 +222,8 @@ img{max-width:100%;display:block}
 html[dir="rtl"] body{font-family:'Cairo',var(--font)}
 html[dir="rtl"] .header-inner{flex-direction:row-reverse}
 html[dir="rtl"] .nav{flex-direction:row-reverse}
+html[dir="rtl"] .lang-switch__control::after{right:auto;left:10px}
+html[dir="rtl"] .lang-select{padding:2px 0 2px 24px}
 html[dir="rtl"] .cart-count{right:auto;left:0}
 html[dir="rtl"] .t2-cart-drawer{right:auto;left:-420px}
 html[dir="rtl"] .t2-cart-drawer.open{left:0}
@@ -202,33 +231,39 @@ html[dir="rtl"] .chat-fab{right:auto;left:24px}
 html[dir="rtl"] .chat-modal-content{text-align:right}
 html[dir="rtl"] .t2-cart-drawer__row{direction:rtl}
 html[dir="rtl"] .order-summary{text-align:right}
-@media(max-width:768px){.nav{display:none}.footer-top{grid-template-columns:1fr}.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.slide img{height:240px}.trust-inner{gap:24px;flex-wrap:wrap;justify-content:center}.t2-cart-drawer{width:100vw;right:-100vw}}
-@media(max-width:640px){.products-grid{grid-template-columns:repeat(2,1fr);gap:10px}.main{padding:20px 10px}.info{padding:10px}.name{font-size:0.8125rem}.price{font-size:1rem}.add-cart{padding:8px 12px;font-size:0.75rem}}
+html[dir="rtl"] .price,html[dir="rtl"] .pd-price,html[dir="rtl"] .t2-cart-item__price,html[dir="rtl"] #total-price,html[dir="rtl"] #shipping-cost,html[dir="rtl"] #grand-total,html[dir="rtl"] #customOrderTotal{direction:ltr;unicode-bidi:embed;display:inline-block}
+@media(max-width:768px){.nav{display:none}.footer-top{grid-template-columns:1fr}.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.slide img{height:240px}.trust-inner{gap:24px;flex-wrap:wrap;justify-content:center}.t2-cart-drawer{width:100vw;right:-100vw}.header-inner{height:auto;min-height:64px;padding:10px 16px;gap:10px;flex-wrap:wrap}.header-actions{margin-left:auto}.lang-switch{min-width:150px}}
+@media(max-width:640px){.products-grid{grid-template-columns:repeat(2,1fr);gap:10px}.main{padding:20px 10px}.info{padding:10px}.name{font-size:0.8125rem}.price{font-size:1rem}.add-cart{padding:8px 12px;font-size:0.75rem}.lang-switch{width:100%;order:3}}
 </style>
-<th:block th:if="${store.customCss != null and !store.customCss.isEmpty()}">
+<th:block th:if="${not #strings.isEmpty(store.customCss)}">
 <style th:inline="text">[[${store.customCss}]]</style>
 </th:block>
 </head>
 <body>
 
 <!-- Announcement bar -->
-<div class="announcement" th:if="${store.announcement != null and !store.announcement.isEmpty()}" th:text="${store.announcement}"></div>
+<div class="announcement" th:if="${not #strings.isEmpty(store.announcement)}" th:text="${store.announcement}"></div>
 
 <!-- Header -->
 <header class="header">
 <div class="header-inner">
-<div class="logo"><a href="./"><img th:src="${store.logoUrl != null and !store.logoUrl.isEmpty()} ? ${store.logoUrl} : '/images/default-product.png'" th:alt="${store.name}"><span th:text="${store.name}">Store</span></a></div>
+<div class="logo"><a href="./"><img th:src="${not #strings.isEmpty(store.logoUrl) ? store.logoUrl : '/images/default-product.png'}" th:alt="${store.name}"><span th:text="${store.name}">Store</span></a></div>
 <nav class="nav">
-<a href="./" class="active" th:text="${store.language != null and store.language.seeAll != null} ? ${store.language.seeAll} : 'Voir tout'">Voir tout</a>
-<a th:each="cat : ${store.categories}" th:href="@{'?menu_item_id=' + ${cat.id}}" th:text="${cat.name}">Category</a>
+<a href="./" class="active" id="navSeeAll" th:text="${store.language != null and store.language.seeAll != null ? store.language.seeAll : 'Voir tout'}">Voir tout</a>
+<a th:each="cat : ${store.categories}" th:href="@{|?menu_item_id=${cat.id}|}" th:text="${cat.name}">Category</a>
 </nav>
 <div class="header-actions">
 <div class="lang-switch" id="langSwitch">
-<button type="button" data-lang="fr" class="active">Français</button>
-<button type="button" data-lang="en">English</button>
-<button type="button" data-lang="ar">العربية</button>
+<span class="lang-switch__label" id="langSwitchLabel">Langue</span>
+<div class="lang-switch__control">
+<select id="langSelect" class="lang-select" aria-label="Language selector">
+<option value="fr">Français</option>
+<option value="en">English</option>
+<option value="ar">العربية</option>
+</select>
 </div>
-<button class="cart-btn" onclick="openContactModal()" id="headerChatBtn" title="Contacter la boutique"><i class="fas fa-comment"></i></button>
+</div>
+<button th:if="${store.clientMessagingEnabled == true}" class="cart-btn" onclick="openContactModal()" id="headerChatBtn" title="Contacter la boutique"><i class="fas fa-comment"></i></button>
 <button class="cart-btn" onclick="toggleCartSidebar()"><i class="fas fa-shopping-bag"></i><span class="cart-count" id="cartCount">0</span></button>
 </div>
 </div>
@@ -240,7 +275,7 @@ html[dir="rtl"] .order-summary{text-align:right}
 <div class="slider-container">
 <div class="slider-track" id="sliderTrack">
 <div class="slide" th:each="slider : ${store.sliders}">
-<img th:src="${slider.imageUrl != null and !slider.imageUrl.isEmpty()} ? ${slider.imageUrl} : '/images/default-product.png'" th:alt="${store.name}" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'">
+<img th:src="${not #strings.isEmpty(slider.imageUrl) ? slider.imageUrl : '/images/default-product.png'}" th:alt="${store.name}" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'">
 </div>
 </div>
 <div class="slider-nav">
@@ -255,9 +290,9 @@ html[dir="rtl"] .order-summary{text-align:right}
 <!-- Trust strip -->
 <div class="trust-strip">
 <div class="trust-inner">
-<div class="trust-item" id="trustDelivery"><i class="fas fa-truck-fast"></i> Livraison 24-48h</div>
-<div class="trust-item" id="trustSecurePayment"><i class="fas fa-shield-halved"></i> Paiement s&eacute;curis&eacute;</div>
-<div class="trust-item" id="trustSupport"><i class="fas fa-headset"></i> Service client 7j/7</div>
+<div class="trust-item"><i class="fas fa-truck-fast"></i> <span id="trustDeliveryText">Livraison 24-48h</span></div>
+<div class="trust-item"><i class="fas fa-shield-halved"></i> <span id="trustSecurePaymentText">Paiement sécurisé</span></div>
+<div class="trust-item"><i class="fas fa-headset"></i> <span id="trustSupportText">Service client 7j/7</span></div>
 </div>
 </div>
 
@@ -268,17 +303,17 @@ html[dir="rtl"] .order-summary{text-align:right}
 <th:block th:if="${detailProduct == null}">
 <div class="section-head">
 <h2 class="section-title" id="productsTitle">Nos produits</h2>
-<p class="section-subtitle" th:text="${store.name} + ' &ndash; Qualité et livraison rapide.'">Store name</p>
+<p class="section-subtitle" id="productsSubtitle">Store name</p>
 </div>
 
 <!-- Search -->
 <div style="margin-bottom:16px;">
-<input type="text" id="search-input" th:placeholder="${store.language != null and store.language.searchProducts != null} ? ${store.language.searchProducts} : 'Rechercher des produits...'" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-full);font-family:var(--font);font-size:0.9375rem;" oninput="filterProducts()">
+<input type="text" id="search-input" th:placeholder="${store.language != null and store.language.searchProducts != null ? store.language.searchProducts : 'Rechercher des produits...'}" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-full);font-family:var(--font);font-size:0.9375rem;" oninput="filterProducts()">
 </div>
 
 <!-- Categories chips -->
 <div class="category-chips" id="categoryChips">
-<button class="chip active" data-cat="" th:text="${store.language != null and store.language.seeAll != null} ? ${store.language.seeAll} : 'Tout'">Tout</button>
+<button class="chip active" id="categoryAllChip" data-cat="" th:text="${store.language != null and store.language.seeAll != null ? store.language.seeAll : 'Tout'}">Tout</button>
 <button th:each="cat : ${store.categories}" class="chip" th:data-cat="${cat.id}" th:text="${cat.name}">Category</button>
 </div>
 
@@ -287,32 +322,32 @@ html[dir="rtl"] .order-summary{text-align:right}
 <th:block th:if="${#lists.isEmpty(store.products)}">
 <div style="grid-column:1/-1;text-align:center;padding:48px;color:#737373;">
 <i class="fas fa-box-open" style="font-size:3rem;opacity:0.3;display:block;margin-bottom:16px;"></i>
-<p th:text="${store.language != null and store.language.noProducts != null} ? ${store.language.noProducts} : 'Aucun produit disponible pour le moment.'">No products</p>
+<p id="noProductsText" th:text="${store.language != null and store.language.noProducts != null ? store.language.noProducts : 'Aucun produit disponible pour le moment.'}">No products</p>
 </div>
 </th:block>
 <article class="product-card" th:each="product : ${store.products}"
-	th:attr="data-product-id=${product.id}, data-product-name=${product.name}, data-product-price=${product.price != null ? product.price : 0}, data-product-img=${product.firstImage}, data-product-stock=${product.stock != null ? product.stock : 0}, data-product-category=${product.categoryId}">
+	th:attr="data-product-id=${product.id}, data-product-name=${product.name}, data-product-price=${product.price != null ? product.price : 0}, data-product-img=${product.firstImage}, data-product-stock=${product.stock != null ? product.stock : -1}, data-product-category=${product.categoryId}">
 <div class="image-wrap">
 <th:block th:if="${product.comparePrice != null and product.comparePrice > 0}">
-<div class="product-badges"><span class="badge badge-sale">Promo</span></div>
+<div class="product-badges"><span class="badge badge-sale" data-i18n-key="promo">Promo</span></div>
 </th:block>
 <th:block th:if="${product.stock != null and product.stock <= 0}">
-<div class="product-badges" style="top:8px;right:8px;left:auto"><span class="badge badge-oos">Indisponible</span></div>
+<div class="product-badges" style="top:8px;right:8px;left:auto"><span class="badge badge-oos" data-i18n-key="unavailable">Indisponible</span></div>
 </th:block>
-<a th:href="@{'?product_id=' + ${product.id}}"><img th:src="${product.firstImage}" th:alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></a>
+<a th:href="@{|?product_id=${product.id}|}"><img th:src="${product.firstImage}" th:alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='/images/default-product.png'"></a>
 </div>
 <div class="info">
-<h3 class="name"><a th:href="@{'?product_id=' + ${product.id}}" th:text="${product.name}">Product name</a></h3>
+<h3 class="name"><a th:href="@{|?product_id=${product.id}|}" th:text="${product.name}">Product name</a></h3>
 <div class="price-wrap">
 <p class="price">
 <th:block th:if="${product.comparePrice != null and product.comparePrice > 0}">
-<old th:text="${store.currencySymbol} + ${#numbers.formatDecimal(product.comparePrice, 1, 2)}">0.00</old> </th:block>
-<span th:text="${store.currencySymbol} + ${product.price != null ? #numbers.formatDecimal(product.price, 1, 2) : '0,00'}">0.00</span>
+<old th:text="${store.currencySymbol + #numbers.formatDecimal(product.comparePrice, 1, 2)}">0.00</old> </th:block>
+<span th:text="${store.currencySymbol + (product.price != null ? #numbers.formatDecimal(product.price, 1, 2) : '0,00')}">0.00</span>
 </p>
 </div>
-<div class="stock-indicator" th:classappend="${product.stock != null and product.stock > 0} ? 'in-stock' : 'out-of-stock'" th:text="${product.stock != null and product.stock > 0} ? '✓ En stock' : '✗ Rupture de stock'"></div>
+<div class="stock-indicator" th:classappend="${product.stock != null and product.stock > 0 ? 'in-stock' : 'out-of-stock'}" th:attr="data-stock=${product.stock != null ? product.stock : 0}" th:text="${product.stock != null and product.stock > 0 ? '✓ En stock' : '✗ Rupture de stock'}"></div>
 <div class="card-actions">
-<button type="button" class="add-cart" th:disabled="${product.stock != null and product.stock <= 0}" th:style="'background:' + ${store.accent} + ';'" th:attr="data-oos=${product.stock != null and product.stock <= 0}"><i class="fas fa-cart-plus"></i> <span th:text="${product.stock != null and product.stock > 0} ? (${store.language != null and store.language.addToCart != null} ? ${store.language.addToCart} : 'Ajouter au panier') : 'Indisponible'">Ajouter</span></button>
+<button type="button" class="add-cart" th:style="${'background:' + store.accent + ';'}" th:attr="data-oos=${product.stock != null and product.stock <= 0}"><i class="fas fa-cart-plus"></i> <span class="add-cart-label" th:text="${product.stock != null and product.stock > 0 ? (store.language != null and store.language.addToCart != null ? store.language.addToCart : 'Ajouter au panier') : 'Indisponible'}">Ajouter</span></button>
 </div>
 </div>
 </article>
@@ -324,7 +359,14 @@ html[dir="rtl"] .order-summary{text-align:right}
 <style>
 .pd-wrap{display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:1000px;margin:0 auto;padding:20px}
 @media(max-width:768px){.pd-wrap{grid-template-columns:1fr}}
+.pd-gallery-wrap{display:flex;flex-direction:column;gap:12px}
+.pd-main-img-wrap{width:100%}
 .pd-img{width:100%;border-radius:12px;max-height:500px;object-fit:cover}
+.pd-thumbs{display:flex;gap:10px;flex-wrap:wrap}
+.pd-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid var(--border);cursor:pointer;opacity:0.7;transition:0.2s}
+.pd-thumb:hover{opacity:1}
+.pd-thumb.active{border-color:var(--accent);opacity:1}
+@media(max-width:768px){.pd-thumb{width:56px;height:56px}}
 .pd-name{font-size:1.75rem;font-weight:700;margin-bottom:12px}
 .pd-price{font-size:1.5rem;font-weight:700;color:var(--accent);margin-bottom:16px}
 .pd-stock{font-size:0.9375rem;margin-bottom:16px}
@@ -385,14 +427,46 @@ window.selectOption = function(btn, type) {
   else selectedSize=btn.dataset.value;
 };
 
+window.switchImage = function(el) {
+  var mainImg = document.getElementById('pdMainImg');
+  if (!mainImg) return;
+  mainImg.src = el.dataset.src;
+  document.querySelectorAll('.pd-thumb').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+};
+
 window.addToCartPd = function() {
   var btn = document.getElementById('pdAddCart');
   if (!btn) return;
   var qty = parseInt(document.getElementById('pdQty').value) || 1;
   var hasColor = document.querySelector('.pd-color-btn');
   var hasSize = document.querySelector('.pd-size-btn');
-  if (hasColor && selectedColor === null) { alert('Veuillez choisir une couleur.'); return; }
-  if (hasSize && selectedSize === null) { alert('Veuillez choisir une taille.'); return; }
+  if (hasColor && selectedColor === null) { alert(t('select_color')); return; }
+  if (hasSize && selectedSize === null) { alert(t('select_size')); return; }
+
+  // Stock checks (global stock per product)
+  var stockRaw = btn.dataset.productStock;
+  var stock = stockRaw != null ? Number(stockRaw) : null;
+  if (!isFinite(stock) || stock < 0) stock = null; // null = unlimited/unknown
+  var isOos = btn.getAttribute('data-oos') === 'true' || (stock !== null && stock <= 0);
+  if (isOos) {
+    if (typeof showCartToast === 'function') {
+      showCartToast({type: 'error', message: t('out_of_stock_msg')});
+    }
+    return;
+  }
+
+  var currentTotal = 0;
+  if (typeof getCartTotalQtyForProduct === 'function') {
+    currentTotal = getCartTotalQtyForProduct(btn.dataset.productId);
+  }
+  if (stock !== null && (currentTotal + qty) > stock) {
+    if (typeof showCartToast === 'function') {
+      showCartToast({type: 'warning', message: t('max_stock_reached')});
+    }
+    return;
+  }
+
   addToCartOptions(
     btn.dataset.productId,
     btn.dataset.productName,
@@ -402,29 +476,31 @@ window.addToCartPd = function() {
     selectedSize || '',
     qty
   );
-  alert(qty + ' x ' + btn.dataset.productName + ' ajouté au panier');
+  if (typeof showCartToast === 'function') {
+    showCartToast({type: 'success', name: btn.dataset.productName, img: btn.dataset.productImg, qty: qty});
+  }
 };
 
 function submitReview(){
   var formEl=document.getElementById('rvFormContent');
   var productId=formEl?formEl.dataset.productId:'';
-  if(!productId){alert("Produit introuvable. Impossible d'envoyer l'avis.");return}
+  if(!productId){alert(t('review_product_missing'));return}
   var nm=document.getElementById('rvName').value.trim();
-  if(!nm){alert('Veuillez entrer votre nom');return}
+  if(!nm){alert(t('review_name_required'));return}
   var rt=0;
   document.querySelectorAll('#rvStars span').forEach(function(s){
     if(s.classList.contains('selected'))rt=parseInt(s.dataset.star)
   });
-  if(!rt){alert('Veuillez sélectionner une note');return}
+  if(!rt){alert(t('review_rating_required'));return}
   var cm=document.getElementById('rvComment').value.trim();
   fetch('/api/public/stores/'+STORE_SLUG+'/products/'+productId+'/reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerName:nm,rating:rt,comment:cm})}).then(function(r){return r.json()}).then(function(d){
     if(d.success){
       document.getElementById('rvFormContent').style.display='none';
       document.getElementById('rvSuccess').style.display='block';
     }else{
-      alert(d.message||"Erreur lors de l'envoi");
+      alert(d.message||t('send_error'));
     }
-  }).catch(function(){alert("Erreur réseau. Vérifiez votre connexion.")});
+  }).catch(function(){alert(t('network_error'))});
 }
 document.addEventListener('DOMContentLoaded',function(){
   // Color/size option buttons
@@ -471,37 +547,44 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 
 <div class="pd-wrap">
-<div><img class="pd-img" th:src="${store.detailProductImg}" th:alt="${detailProduct.name}" onerror="this.onerror=null;this.src='/images/default-product.png'"></div>
+<div class="pd-gallery-wrap">
+<div class="pd-main-img-wrap"><img class="pd-img" id="pdMainImg" th:src="${store.detailProductImg}" th:alt="${detailProduct.name}" onerror="this.onerror=null;this.src='/images/default-product.png'"></div>
+<div class="pd-thumbs" th:if="${store.detailHasMultipleImages == true}">
+<th:block th:each="img,stat : ${store.detailProductImages}">
+<img class="pd-thumb" th:src="${img}" th:classappend="${stat.first} ? 'active'" th:data-src="${img}" onclick="switchImage(this)" th:alt="${'Image ' + stat.count}">
+</th:block>
+</div>
+</div>
 <div>
 <h1 class="pd-name" th:text="${detailProduct.name}">Product name</h1>
-<div class="pd-category" th:if="${detailProduct.categoryId != null}"><span th:text="'Catégorie: ' + ${detailProduct.categoryName}">Category</span></div>
+<div class="pd-category" th:if="${detailProduct.categoryId != null}"><span th:text="${'Catégorie: ' + (detailProduct.categoryName != null ? detailProduct.categoryName : '')}">Category</span></div>
 <div class="pd-price">
 <th:block th:if="${detailProduct.comparePrice != null and detailProduct.comparePrice > 0}">
-<old style="text-decoration:line-through;color:var(--muted);margin-right:8px" th:text="${store.currencySymbol} + ${#numbers.formatDecimal(detailProduct.comparePrice, 1, 2)}"></old> </th:block>
-<span th:text="${store.currencySymbol} + ${detailProduct.price != null ? #numbers.formatDecimal(detailProduct.price, 1, 2) : '0,00'}">0.00</span>
+<old style="text-decoration:line-through;color:var(--muted);margin-right:8px" th:text="${store.currencySymbol + #numbers.formatDecimal(detailProduct.comparePrice, 1, 2)}"></old> </th:block>
+<span th:text="${store.currencySymbol + (detailProduct.price != null ? #numbers.formatDecimal(detailProduct.price, 1, 2) : '0,00')}">0.00</span>
 </div>
 <div class="pd-stock">
-<span th:if="${detailProduct.stock == null or detailProduct.stock > 0}" style="color:#16a34a;font-weight:500">✓ En stock</span>
-<span th:if="${detailProduct.stock != null and detailProduct.stock <= 0}" style="color:#ef4444;font-weight:500">✗ Rupture de stock</span>
+<span id="detailStockText" th:if="${detailProduct.stock == null or detailProduct.stock > 0}" style="color:#16a34a;font-weight:500">✓ En stock</span>
+<span id="detailStockText" th:if="${detailProduct.stock != null and detailProduct.stock <= 0}" style="color:#ef4444;font-weight:500">✗ Rupture de stock</span>
 </div>
-<th:block th:if="${store.detailHasColors}">
+<th:block th:if="${store.detailHasColors == true}">
 <div class="pd-option-wrap" style="margin-bottom:16px">
-<div class="pd-option-label" style="font-weight:600;font-size:0.9375rem;margin-bottom:8px">Couleurs</div>
+<div class="pd-option-label" id="detailColorsLabel" style="font-weight:600;font-size:0.9375rem;margin-bottom:8px">Couleurs</div>
 <div class="pd-option-list" style="display:flex;gap:8px;flex-wrap:wrap">
 <button type="button" class="pd-color-btn" data-option-type="color" th:each="c : ${store.detailColorList}" th:data-value="${c}" th:text="${c}" style="padding:6px 16px;border:2px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:0.875rem;transition:0.2s"></button>
 </div>
 </div>
 </th:block>
-<th:block th:if="${store.detailHasSizes}">
+<th:block th:if="${store.detailHasSizes == true}">
 <div class="pd-option-wrap" style="margin-bottom:16px">
-<div class="pd-option-label" style="font-weight:600;font-size:0.9375rem;margin-bottom:8px">Tailles</div>
+<div class="pd-option-label" id="detailSizesLabel" style="font-weight:600;font-size:0.9375rem;margin-bottom:8px">Tailles</div>
 <div class="pd-option-list" style="display:flex;gap:8px;flex-wrap:wrap">
 <button type="button" class="pd-size-btn" data-option-type="size" th:each="s : ${store.detailSizeList}" th:data-value="${s}" th:text="${s}" style="padding:6px 16px;border:2px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:0.875rem;transition:0.2s"></button>
 </div>
 </div>
 </th:block>
 <div class="pd-option-wrap" style="margin-bottom:16px">
-<div class="pd-option-label" style="font-weight:600;font-size:0.9375rem;margin-bottom:8px">Quantité</div>
+<div class="pd-option-label" id="detailQuantityLabel" style="font-weight:600;font-size:0.9375rem;margin-bottom:8px">Quantité</div>
 <div style="display:flex;align-items:center;gap:8px">
 <button type="button" id="pdQtyMinus" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:1rem">-</button>
 <input type="number" id="pdQty" value="1" min="1" th:max="${detailProduct.stock != null ? detailProduct.stock : 999}" style="width:50px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:8px;font-size:0.9375rem">
@@ -510,24 +593,24 @@ document.addEventListener('DOMContentLoaded',function(){
 </div>
 <div class="pd-desc" th:text="${detailProduct.description}">Description</div>
 <div class="pd-actions">
-<button type="button" id="pdAddCart" class="add-cart" th:disabled="${detailProduct.stock != null and detailProduct.stock <= 0}" style="width:100%"
-th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.name}, data-product-price=${detailProduct.price != null ? detailProduct.price : 0}, data-product-img=${store.detailProductImg}"><i class="fas fa-cart-plus"></i> <span th:text="${detailProduct.stock != null and detailProduct.stock > 0} ? 'Ajouter au panier' : 'Indisponible'">Ajouter</span></button>
+<button type="button" id="pdAddCart" class="add-cart" style="width:100%"
+th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.name}, data-product-price=${detailProduct.price != null ? detailProduct.price : 0}, data-product-img=${store.detailProductImg}, data-product-stock=${detailProduct.stock != null ? detailProduct.stock : -1}, data-oos=${detailProduct.stock != null and detailProduct.stock <= 0}"><i class="fas fa-cart-plus"></i> <span id="pdAddCartLabel" th:text="${detailProduct.stock != null and detailProduct.stock > 0 ? 'Ajouter au panier' : 'Indisponible'}">Ajouter</span></button>
 </div>
 </div>
 </div>
-<div class="pd-back"><a th:href="'/store/' + ${store.slug}">← Retour aux produits</a></div>
+<div class="pd-back"><a id="backToProductsLink" th:href="${'/store/' + store.slug}">← Retour aux produits</a></div>
 <div class="pd-reviews">
-<h2>Avis clients</h2>
+<h2 id="customerReviewsTitle">Avis clients</h2>
 <div id="pdReviewsList">
 <th:block th:if="${#lists.isEmpty(reviews)}">
-<p class="rv-none">Aucun avis pour le moment. Soyez le premier à donner votre avis.</p>
+<p class="rv-none" id="noReviewsText">Aucun avis pour le moment. Soyez le premier à donner votre avis.</p>
 </th:block>
 <th:block th:if="${! #lists.isEmpty(reviews)}">
 <div class="pd-rating-summary">
 <th:block th:each="i : ${#numbers.sequence(1, 5)}">
 <span th:classappend="${i <= T(java.lang.Math).round(averageRating)} ? 'star-on' : 'star-off'">★</span>
 </th:block>
-<span class="pd-rating-text" th:text="${#numbers.formatDecimal(averageRating, 1, 1)} + ' (' + ${reviewsCount} + ' avis)'"></span>
+<span class="pd-rating-text" th:text="${#numbers.formatDecimal(averageRating, 1, 1) + ' (' + reviewsCount + ' avis)'}"></span>
 </div>
 <div th:each="review : ${reviews}" class="pd-review-item">
 <div class="rv-header">
@@ -539,15 +622,15 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <span th:classappend="${i <= review.rating} ? 'star-on' : 'star-off'">★</span>
 </th:block>
 </div>
-<p th:if="${review.comment != null and !review.comment.isEmpty()}" class="rv-comment" th:text="${review.comment}">comment</p>
+<p th:if="${not #strings.isEmpty(review.comment)}" class="rv-comment" th:text="${review.comment}">comment</p>
 </div>
 </th:block>
 </div>
 <div class="pd-rv-form" id="rvFormContent" th:attr="data-product-id=${detailProduct.id}">
-<h3>Donnez votre avis</h3>
-<label for="rvName">Votre nom</label>
+<h3 id="reviewFormTitle">Donnez votre avis</h3>
+<label for="rvName" id="reviewNameLabel">Votre nom</label>
 <input type="text" id="rvName" placeholder="Votre nom" maxlength="100">
-<label>Note</label>
+<label id="reviewRatingLabel">Note</label>
 <div class="rv-star-selector" id="rvStars">
 <span data-star="1">★</span>
 <span data-star="2">★</span>
@@ -555,9 +638,9 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <span data-star="4">★</span>
 <span data-star="5">★</span>
 </div>
-<label for="rvComment">Votre avis (facultatif)</label>
+<label for="rvComment" id="reviewCommentLabel">Votre avis (facultatif)</label>
 <textarea id="rvComment" placeholder="Partagez votre expérience avec ce produit…" maxlength="2000"></textarea>
-<button type="button" class="rv-submit">Envoyer mon avis</button>
+<button type="button" class="rv-submit" id="reviewSubmitBtn">Envoyer mon avis</button>
 </div>
 <div class="rv-success" id="rvSuccess">Merci pour votre avis. Il sera affiché après validation par le marchand.</div>
 </div>
@@ -568,12 +651,12 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <!-- Newsletter -->
 <section class="newsletter-section">
 <div class="newsletter-inner">
-<h3>Restez inform&eacute;</h3>
-<p>Inscrivez-vous pour recevoir nos nouveaut&eacute;s et offres exclusives.</p>
+<h3 id="newsletterTitle">Restez informé</h3>
+<p id="newsletterSubtitle">Inscrivez-vous pour recevoir nos nouveautés et offres exclusives.</p>
 <form class="newsletter-form" action="/api/public/subscribe" method="POST">
 <input type="hidden" name="boutique_id" th:value="${store.boutiqueId}">
-<input type="email" name="email" placeholder="Votre adresse email" required>
-<button type="submit">S'inscrire</button>
+<input type="email" id="newsletterEmailInput" name="email" placeholder="Votre adresse email" required>
+<button type="submit" id="newsletterSubmitBtn">S'inscrire</button>
 </form>
 </div>
 </section>
@@ -583,42 +666,44 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <div class="footer-inner">
 <div class="footer-top">
 <div class="footer-brand">
-<div class="logo"><a href="./"><img th:src="${store.logoUrl != null and !store.logoUrl.isEmpty()} ? ${store.logoUrl} : '/images/default-product.png'" th:alt="${store.name}"><span th:text="${store.name}">Store</span></a></div>
+<div class="logo"><a href="./"><img th:src="${not #strings.isEmpty(store.logoUrl) ? store.logoUrl : '/images/default-product.png'}" th:alt="${store.name}"><span th:text="${store.name}">Store</span></a></div>
 <p th:text="${store.boutiqueDescription}">Description</p>
+<p th:if="${not #strings.isEmpty(store.address)}" class="footer-address"><i class="fas fa-map-marker-alt"></i> <span th:text="${store.address}">Adresse</span></p>
 </div>
 <div class="footer-col">
-<h4 th:text="${store.language != null and store.language.menuLabel != null} ? ${store.language.menuLabel} : 'Menu'">Menu</h4>
+<h4 th:text="${store.language != null and store.language.menuLabel != null ? store.language.menuLabel : 'Menu'}">Menu</h4>
 <ul>
-<li><a href="./" th:text="${store.language != null and store.language.seeAll != null} ? ${store.language.seeAll} : 'Voir tout'">Voir tout</a></li>
-<li th:each="cat : ${store.categories}"><a th:href="@{'?menu_item_id=' + ${cat.id}}" th:text="${cat.name}">Category</a></li>
+<li><a href="./" th:text="${store.language != null and store.language.seeAll != null ? store.language.seeAll : 'Voir tout'}">Voir tout</a></li>
+<li th:each="cat : ${store.categories}"><a th:href="@{|?menu_item_id=${cat.id}|}" th:text="${cat.name}">Category</a></li>
 </ul>
 </div>
 <div class="footer-col">
-<h4 th:text="${store.language != null and store.language.support != null} ? ${store.language.support} : 'Support'">Support</h4>
+<h4 th:text="${store.language != null and store.language.support != null ? store.language.support : 'Support'}">Support</h4>
 <ul>
-<li th:if="${store.whatsappNumber != null and !store.whatsappNumber.isEmpty()}"><a th:href="'https://wa.me/' + ${store.whatsappNumber}"><i class="fab fa-whatsapp"></i> WhatsApp</a></li>
+<li th:if="${not #strings.isEmpty(store.whatsappNumber)}"><a th:href="${'https://wa.me/' + store.whatsappNumber}"><i class="fab fa-whatsapp"></i> WhatsApp</a></li>
+<li th:if="${not #strings.isEmpty(store.email)}"><a th:href="${'mailto:' + store.email}"><i class="fas fa-envelope"></i> <span th:text="${store.email}">Email</span></a></li>
+<li th:if="${not #strings.isEmpty(store.phone)}"><a th:href="${'tel:' + store.phone}"><i class="fas fa-phone"></i> <span th:text="${store.phone}">Téléphone</span></a></li>
 </ul>
 </div>
 <div class="footer-col">
-<h4 th:text="${store.language != null and store.language.followUs != null} ? ${store.language.followUs} : 'Suivez-nous'">Suivez-nous</h4>
+<h4 th:text="${store.language != null and store.language.followUs != null ? store.language.followUs : 'Suivez-nous'}">Suivez-nous</h4>
 <ul>
-<li th:if="${store.facebookUrl != null and !store.facebookUrl.isEmpty()}"><a th:href="${store.facebookUrl}" target="_blank"><i class="fab fa-facebook"></i> Facebook</a></li>
-<li th:if="${store.instagramUrl != null and !store.instagramUrl.isEmpty()}"><a th:href="${store.instagramUrl}" target="_blank"><i class="fab fa-instagram"></i> Instagram</a></li>
-<li th:if="${store.tiktokUrl != null and !store.tiktokUrl.isEmpty()}"><a th:href="${store.tiktokUrl}" target="_blank"><i class="fab fa-tiktok"></i> TikTok</a></li>
+<li th:if="${not #strings.isEmpty(store.facebookUrl)}"><a th:href="${store.facebookUrl}" target="_blank"><i class="fab fa-facebook"></i> Facebook</a></li>
+<li th:if="${not #strings.isEmpty(store.instagramUrl)}"><a th:href="${store.instagramUrl}" target="_blank"><i class="fab fa-instagram"></i> Instagram</a></li>
+<li th:if="${not #strings.isEmpty(store.tiktokUrl)}"><a th:href="${store.tiktokUrl}" target="_blank"><i class="fab fa-tiktok"></i> TikTok</a></li>
 </ul>
 </div>
 </div>
 <div class="footer-payments">
-<span>Paiement s&eacute;curis&eacute;</span>
+<span id="footerSecurePaymentText">Paiement sécurisé</span>
 <div class="icons">
 <i class="fas fa-money-bill-wave" th:if="${store.cashOnDelivery}" title="COD"></i>
-<i class="fas fa-credit-card" th:if="${store.konnectActive}" title="Konnect"></i>
-<i class="fas fa-mobile-alt" th:if="${store.d17Active}" title="D17"></i>
+<i class="fab fa-cc-stripe" th:if="${store.stripeEnabled}" title="Stripe"></i>
 </div>
 </div>
 <div class="footer-bottom">
-<span th:text="'&copy; ' + ${#dates.createNow().year} + ' ' + ${store.name} + '. ' + (${store.language != null and store.language.footerText != null} ? ${store.language.footerText} : 'Tous droits réservés.')"></span>
-<span>Cr&eacute;&eacute; par <a href="https://makewebsite.io" target="_blank">MakeWebsite.io</a></span>
+<span th:text="${'&copy; ' + #dates.createNow().year + ' ' + store.name + '. ' + (store.language != null and store.language.footerText != null ? store.language.footerText : 'Tous droits réservés.')}"></span>
+<span id="poweredByText">Créé par <a href="https://makewebsite.io" target="_blank">MakeWebsite.io</a></span>
 </div>
 </div>
 </footer>
@@ -629,23 +714,23 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <!-- Cart drawer -->
 <div id="cartSidebar" class="t2-cart-drawer">
 <div class="t2-cart-drawer__header">
-<h2 class="t2-cart-drawer__title" id="cartTitleEl" th:text="${store.language != null and store.language.cartTitle != null} ? ${store.language.cartTitle} : 'Panier'">Panier</h2>
+<h2 class="t2-cart-drawer__title" id="cartTitleEl" th:text="${store.language != null and store.language.cartTitle != null ? store.language.cartTitle : 'Panier'}">Panier</h2>
 <button id="closeCartSidebar" class="t2-cart-drawer__close" onclick="toggleCartSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
 </div>
 <div class="t2-cart-drawer__body">
 <div id="cartItems"></div>
 <div class="t2-cart-drawer__totals">
-<div class="t2-cart-drawer__row"><span th:text="${store.language != null and store.language.totalPriceLabel != null} ? ${store.language.totalPriceLabel} : 'Prix Total :'">Prix Total :</span><span id="total-price" th:text="${store.currencySymbol} + '0.00'">0.00</span></div>
-            <div class="t2-cart-drawer__row"><span th:text="${store.language != null and store.language.shippingCostLabel != null} ? ${store.language.shippingCostLabel} : 'Frais de livraison'">Frais de livraison</span><span id="shipping-cost" th:text="${store.currencySymbol} + ${#numbers.formatDecimal(store.deliveryFees, 1, 2)}">0.00</span></div>
+<div class="t2-cart-drawer__row"><span id="totalPriceLabelEl" th:text="${store.language != null and store.language.totalPriceLabel != null ? store.language.totalPriceLabel : 'Prix Total :'}">Prix Total :</span><span id="total-price" th:text="${store.currencySymbol + '0.00'}">0.00</span></div>
+            <div class="t2-cart-drawer__row"><span id="shippingCostLabelEl" th:text="${store.language != null and store.language.shippingCostLabel != null ? store.language.shippingCostLabel : 'Frais de livraison'}">Frais de livraison</span><span id="shipping-cost" th:text="${store.currencySymbol + #numbers.formatDecimal(store.deliveryFees, 1, 2)}">0.00</span></div>
             <div class="t2-cart-drawer__row" id="couponInputRow"><div style="display:flex;gap:6px;width:100%"><input type="text" id="couponCode" placeholder="Code promo" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.8125rem;outline:none"><button type="button" id="applyCouponBtn" onclick="applyCoupon()" style="padding:8px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.8125rem">Appliquer</button></div></div>
             <div class="t2-cart-drawer__row" id="discountRow" style="display:none"><span id="discountLabelEl" style="color:#16a34a">Remise</span><span id="discount-amount" style="color:#16a34a;font-weight:600"></span><button type="button" id="removeCouponBtn" onclick="removeCoupon()" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:0.875rem;margin-left:8px" title="Retirer le code promo">&times;</button></div>
-            <div class="t2-cart-drawer__row t2-cart-drawer__row--total"><span th:text="${store.language != null and store.language.grandTotalLabel != null} ? ${store.language.grandTotalLabel} : 'Total Général'">Total Général</span><span id="grand-total" th:text="${store.currencySymbol} + '0.00'">0.00</span></div>
+            <div class="t2-cart-drawer__row t2-cart-drawer__row--total"><span id="grandTotalLabelEl" th:text="${store.language != null and store.language.grandTotalLabel != null ? store.language.grandTotalLabel : 'Total Général'}">Total Général</span><span id="grand-total" th:text="${store.currencySymbol + '0.00'}">0.00</span></div>
 </div>
 <form id="checkout-form" class="t2-cart-drawer__form" onsubmit="return submitOrder(event)">
-<input type="text" name="full-name" th:placeholder="${store.language != null and store.language.fullNamePlaceholder != null} ? ${store.language.fullNamePlaceholder} : 'Entrez votre nom complet'" required class="t2-cart-drawer__input">
-<input type="text" name="billing-address" th:placeholder="${store.language != null and store.language.billingAddressPlaceholder != null} ? ${store.language.billingAddressPlaceholder} : 'Entrez votre adresse de livraison'" required class="t2-cart-drawer__input">
+<input type="text" name="full-name" th:placeholder="${store.language != null and store.language.fullNamePlaceholder != null ? store.language.fullNamePlaceholder : 'Entrez votre nom complet'}" required class="t2-cart-drawer__input">
+<input type="text" name="billing-address" th:placeholder="${store.language != null and store.language.billingAddressPlaceholder != null ? store.language.billingAddressPlaceholder : 'Entrez votre adresse de livraison'}" required class="t2-cart-drawer__input">
 <select name="city" required class="t2-cart-drawer__input">
-<option value="" th:text="${store.language != null and store.language.cityPlaceholder != null} ? ${store.language.cityPlaceholder} : 'Sélectionnez votre gouvernorat'">Select city</option>
+<option value="" th:text="${store.language != null and store.language.cityPlaceholder != null ? store.language.cityPlaceholder : 'Sélectionnez votre gouvernorat'}">Select city</option>
 <option value="Ariana">Ariana</option><option value="Béja">Béja</option><option value="Ben Arous">Ben Arous</option>
 <option value="Bizerte">Bizerte</option><option value="Gabès">Gabès</option><option value="Gafsa">Gafsa</option>
 <option value="Jendouba">Jendouba</option><option value="Kairouan">Kairouan</option><option value="Kasserine">Kasserine</option>
@@ -656,53 +741,57 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
 <option value="Tozeur">Tozeur</option><option value="Tunis">Tunis</option><option value="Zaghouan">Zaghouan</option>
 </select>
 <th:block th:if="${not store.simpleCheckout}">
-<input type="email" name="email" th:placeholder="${store.language != null and store.language.emailPlaceholder != null} ? ${store.language.emailPlaceholder} : 'Entrez votre e-mail'" class="t2-cart-drawer__input">
+<input type="email" name="email" th:placeholder="${store.language != null and store.language.emailPlaceholder != null ? store.language.emailPlaceholder : 'Entrez votre e-mail'}" class="t2-cart-drawer__input">
 <select name="country" class="t2-cart-drawer__input">
-<option value="" th:text="${store.language != null and store.language.selectCountry != null} ? ${store.language.selectCountry} : 'Sélectionnez votre pays'">Select country</option>
+<option value="" th:text="${store.language != null and store.language.selectCountry != null ? store.language.selectCountry : 'Sélectionnez votre pays'}">Select country</option>
 <option th:each="c : ${store.countries}" th:value="${c.countryName}" th:text="${c.countryName}">Country</option>
 </select>
 </th:block>
-<input type="tel" name="phone_number" th:placeholder="${store.language != null and store.language.phonePlaceholder != null} ? ${store.language.phonePlaceholder} : 'Entrez votre numéro de téléphone'" required class="t2-cart-drawer__input">
+<input type="tel" name="phone_number" th:placeholder="${store.language != null and store.language.phonePlaceholder != null ? store.language.phonePlaceholder : 'Entrez votre numéro de téléphone'}" required class="t2-cart-drawer__input">
             <input type="hidden" name="coupon-code" id="orderCouponCode" value="">
-            <div><label th:text="${store.language != null and store.language.paymentMethodLabel != null} ? ${store.language.paymentMethodLabel} : 'Méthode de paiement :'">Payment method</label>
+            <div><label id="paymentMethodLabelEl" th:text="${store.language != null and store.language.paymentMethodLabel != null ? store.language.paymentMethodLabel : 'Méthode de paiement :'}">Payment method</label>
             <select name="payment-method" required class="t2-cart-drawer__input">
-<option value="cash-on-delivery" th:if="${store.cashOnDelivery}" th:text="${store.language != null and store.language.cashOnDelivery != null} ? ${store.language.cashOnDelivery} : 'Paiement à la livraison'">COD</option>
-<option value="konnect" th:if="${store.konnectActive}">Paiement par carte (Konnect)</option>
-<option value="d17" th:if="${store.d17Active}">D17</option>
+<option value="cash-on-delivery" th:if="${store.cashOnDelivery}" th:text="${store.language != null and store.language.cashOnDelivery != null ? store.language.cashOnDelivery : 'Paiement à la livraison'}">COD</option>
+<option value="stripe" id="stripePaymentOption" th:if="${store.stripeEnabled}">Paiement par carte (Stripe)</option>
 </select>
 </div>
-<button type="submit" class="t2-cart-drawer__submit" th:style="'background:' + ${store.accent} + ';'" th:text="${store.language != null and store.language.placeOrderButton != null} ? ${store.language.placeOrderButton} : 'Passer la commande'">Commander</button>
+<button type="submit" class="t2-cart-drawer__submit" th:style="${'background:' + store.accent + ';'}" th:text="${store.language != null and store.language.placeOrderButton != null ? store.language.placeOrderButton : 'Passer la commande'}">Commander</button>
 </form>
 </div>
 </div>
+
+<!-- Add-to-cart toast host -->
+<div id="cartToastHost" class="t2-toast-host" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Order confirmation modal -->
 <div id="customOrderConfirmationModal" class="custom-modal">
 <div class="custom-modal-content">
 <div class="modal-header"><div class="success-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-<h2 id="orderConfirmationTitleEl" th:text="${store.language != null and store.language.orderConfirmationTitle != null} ? ${store.language.orderConfirmationTitle} : 'Confirmation de commande'">Confirmation</h2></div>
+<h2 id="orderConfirmationTitleEl" th:text="${store.language != null and store.language.orderConfirmationTitle != null ? store.language.orderConfirmationTitle : 'Confirmation de commande'}">Confirmation</h2></div>
 <div class="order-summary">
-<div class="order-item"><div class="order-label">Nom complet :</div><div class="order-value" id="customUserFullName"></div></div>
-<div class="order-item"><div class="order-label">Adresse :</div><div class="order-value" id="customUserBillingAddress"></div></div>
-            <div class="order-item"><div class="order-label">Ville</div><div class="order-value" id="customUserCity"></div></div>
-            <div class="order-item"><div class="order-label">Téléphone</div><div class="order-value" id="customUserPhoneNumber"></div></div>
-            <div class="order-item" id="customDiscountRow" style="display:none"><div class="order-label">Remise</div><div class="order-value" id="customDiscountValue" style="color:#16a34a"></div></div>
-            <div class="order-item"><div class="order-label">Méthode de paiement :</div><div class="order-value" id="customUserPaymentMethod"></div></div>
+<div class="order-item"><div class="order-label" id="orderFullNameLabel">Nom complet :</div><div class="order-value" id="customUserFullName"></div></div>
+<div class="order-item"><div class="order-label" id="orderAddressLabel">Adresse :</div><div class="order-value" id="customUserBillingAddress"></div></div>
+            <div class="order-item"><div class="order-label" id="orderCityLabel">Ville</div><div class="order-value" id="customUserCity"></div></div>
+            <div class="order-item"><div class="order-label" id="orderPhoneLabel">Téléphone</div><div class="order-value" id="customUserPhoneNumber"></div></div>
+            <div class="order-item"><div class="order-label" id="orderNumberLabel">Numéro de commande :</div><div class="order-value" id="customOrderNumber"></div></div>
+            <div class="order-item" id="customDiscountRow" style="display:none"><div class="order-label" id="orderDiscountLabel">Remise</div><div class="order-value" id="customDiscountValue" style="color:#16a34a"></div></div>
+            <div class="order-item"><div class="order-label" id="orderPaymentMethodLabel">Méthode de paiement :</div><div class="order-value" id="customUserPaymentMethod"></div></div>
+            <div class="order-item"><div class="order-label" id="orderTotalLabel">Total :</div><div class="order-value" id="customOrderTotal"></div></div>
 </div>
 <div class="modal-footer"><button class="close-modal-btn" id="closeOrderModalBtn" onclick="document.getElementById('customOrderConfirmationModal').classList.remove('open')">Fermer</button></div>
 </div>
 </div>
 
 <!-- Custom JS placeholder -->
-<th:block th:if="${store.customJs != null and !store.customJs.isEmpty()}">
+<th:block th:if="${not #strings.isEmpty(store.customJs)}">
 <script th:inline="text">[[${store.customJs}]]</script>
 </th:block>
 
 <!-- Chat floating button -->
-<button id="chatFab" class="chat-fab" onclick="openContactModal()" title="Contacter la boutique"><i class="fas fa-comment-dots"></i></button>
+<button th:if="${store.clientMessagingEnabled == true}" id="chatFab" class="chat-fab" onclick="openContactModal()" title="Contacter la boutique"><i class="fas fa-comment-dots"></i></button>
 
 <!-- Contact / chat modal -->
-<div id="contactModal" class="chat-modal">
+<div th:if="${store.clientMessagingEnabled == true}" id="contactModal" class="chat-modal">
   <div class="chat-modal-overlay" onclick="closeContactModal()"></div>
   <div class="chat-modal-content">
     <div class="chat-modal-header">
@@ -711,13 +800,13 @@ th:attr="data-product-id=${detailProduct.id}, data-product-name=${detailProduct.
     </div>
     <div id="contactFormContainer" class="chat-body">
       <form id="contactForm" class="chat-form" onsubmit="return submitContactForm(event)">
-        <label for="chatName">Nom *</label>
+        <label for="chatName" id="chatNameLabel">Nom *</label>
         <input type="text" id="chatName" required placeholder="Votre nom">
-        <label for="chatEmail">Email (optionnel)</label>
+        <label for="chatEmail" id="chatEmailLabel">Email (optionnel)</label>
         <input type="email" id="chatEmail" placeholder="votre@email.com">
-        <label for="chatPhone">Téléphone (optionnel)</label>
+        <label for="chatPhone" id="chatPhoneLabel">Téléphone (optionnel)</label>
         <input type="tel" id="chatPhone" placeholder="Votre téléphone">
-        <label for="chatMessage">Message *</label>
+        <label for="chatMessage" id="chatMessageLabel">Message *</label>
         <textarea id="chatMessage" required placeholder="Votre message..."></textarea>
         <button type="submit" class="chat-submit" id="chatSubmitBtn">Envoyer</button>
       </form>
@@ -741,12 +830,16 @@ const STORE_SLUG = /*[[${store.slug}]]*/ '';
 const CURRENCY_SYMBOL = /*[[${store.currencySymbol}]]*/ 'DT';
 const DELIVERY_FEES = /*[[${store.deliveryFees}]]*/ 0;
 const BOUTIQUE_ID = /*[[${store.boutiqueId}]]*/ '';
+const STORE_NAME = /*[[${store.name}]]*/ '';
 const DEFAULT_PRODUCT_IMAGE='/images/default-product.png';
 /*]]*/
 
 const I18N = {
   en: {
     products: 'Products',
+    discover_products: 'Discover our products',
+    language: 'Language',
+    see_all: 'See all',
     search_products: 'Search products...',
     add_to_cart: 'Add to cart',
     unavailable: 'Unavailable',
@@ -795,10 +888,50 @@ const I18N = {
     secure_payment: 'Secure payment',
     support_7_7: 'Customer support 7/7',
     color: 'Color',
-    size: 'Size'
+    size: 'Size',
+    back_to_products: '← Back to products',
+    review_form_title: 'Write a review',
+    your_name: 'Your name',
+    your_rating: 'Rating',
+    your_comment: 'Your review (optional)',
+    review_placeholder: 'Share your experience with this product…',
+    review_success: 'Thank you for your review. It will appear after merchant approval.',
+    no_reviews: 'No reviews yet. Be the first to share your review.',
+    no_products: 'No products available right now.',
+    newsletter_title: 'Stay updated',
+    newsletter_subtitle: 'Subscribe to receive new arrivals and exclusive offers.',
+    newsletter_email: 'Your email address',
+    subscribe: 'Subscribe',
+    powered_by: 'Powered by <a href="https://makewebsite.io" target="_blank">MakeWebsite.io</a>',
+    full_name_label: 'Full name:',
+    address_label: 'Address:',
+    city_label: 'City',
+    phone_label: 'Phone',
+    order_number_label: 'Order number:',
+    order_total_label: 'Total:',
+    stripe_card: 'Card payment (Stripe)',
+    cash_on_delivery: 'Cash on delivery',
+    contact_name: 'Name *',
+    contact_email_optional: 'Email (optional)',
+    contact_phone_optional: 'Phone (optional)',
+    contact_message: 'Message *',
+    select_color: 'Please choose a color.',
+    select_size: 'Please choose a size.',
+    added_to_cart: 'added to cart',
+    added_to_cart_title: 'Added to cart',
+    view_cart: 'View cart',
+    continue_shopping: 'Continue shopping',
+    max_stock_reached: 'Maximum available stock reached',
+    out_of_stock_msg: 'This product is out of stock',
+    review_product_missing: 'Product not found. Unable to submit the review.',
+    review_name_required: 'Please enter your name',
+    review_rating_required: 'Please select a rating'
   },
   fr: {
     products: 'Nos produits',
+    discover_products: 'Découvrez nos produits',
+    language: 'Langue',
+    see_all: 'Voir tout',
     search_products: 'Rechercher des produits...',
     add_to_cart: 'Ajouter au panier',
     unavailable: 'Indisponible',
@@ -847,10 +980,50 @@ const I18N = {
     secure_payment: 'Paiement sécurisé',
     support_7_7: 'Service client 7j/7',
     color: 'Couleur',
-    size: 'Taille'
+    size: 'Taille',
+    back_to_products: '← Retour aux produits',
+    review_form_title: 'Donnez votre avis',
+    your_name: 'Votre nom',
+    your_rating: 'Note',
+    your_comment: 'Votre avis (facultatif)',
+    review_placeholder: 'Partagez votre expérience avec ce produit…',
+    review_success: 'Merci pour votre avis. Il sera affiché après validation par le marchand.',
+    no_reviews: 'Aucun avis pour le moment. Soyez le premier à donner votre avis.',
+    no_products: 'Aucun produit disponible pour le moment.',
+    newsletter_title: 'Restez informé',
+    newsletter_subtitle: 'Inscrivez-vous pour recevoir nos nouveautés et offres exclusives.',
+    newsletter_email: 'Votre adresse email',
+    subscribe: 'S\'inscrire',
+    powered_by: 'Créé par <a href="https://makewebsite.io" target="_blank">MakeWebsite.io</a>',
+    full_name_label: 'Nom complet :',
+    address_label: 'Adresse :',
+    city_label: 'Ville',
+    phone_label: 'Téléphone',
+    order_number_label: 'Numéro de commande :',
+    order_total_label: 'Total :',
+    stripe_card: 'Paiement par carte (Stripe)',
+    cash_on_delivery: 'Paiement à la livraison',
+    contact_name: 'Nom *',
+    contact_email_optional: 'Email (optionnel)',
+    contact_phone_optional: 'Téléphone (optionnel)',
+    contact_message: 'Message *',
+    select_color: 'Veuillez choisir une couleur.',
+    select_size: 'Veuillez choisir une taille.',
+    added_to_cart: 'ajouté au panier',
+    added_to_cart_title: 'Ajouté au panier',
+    view_cart: 'Voir le panier',
+    continue_shopping: 'Continuer vos achats',
+    max_stock_reached: 'Stock maximum atteint',
+    out_of_stock_msg: 'Ce produit est en rupture de stock',
+    review_product_missing: 'Produit introuvable. Impossible d\'envoyer l\'avis.',
+    review_name_required: 'Veuillez entrer votre nom',
+    review_rating_required: 'Veuillez sélectionner une note'
   },
   ar: {
     products: 'منتجاتنا',
+    discover_products: 'اكتشف منتجاتنا',
+    language: 'اللغة',
+    see_all: 'عرض الكل',
     search_products: 'ابحث عن المنتجات...',
     add_to_cart: 'أضف إلى السلة',
     unavailable: 'غير متوفر',
@@ -899,7 +1072,44 @@ const I18N = {
     secure_payment: 'دفع آمن',
     support_7_7: 'خدمة العملاء 7/7',
     color: 'اللون',
-    size: 'المقاس'
+    size: 'المقاس',
+    back_to_products: '← العودة إلى المنتجات',
+    review_form_title: 'أضف تقييمك',
+    your_name: 'اسمك',
+    your_rating: 'التقييم',
+    your_comment: 'رأيك (اختياري)',
+    review_placeholder: 'شارك تجربتك مع هذا المنتج…',
+    review_success: 'شكراً على تقييمك. سيظهر بعد موافقة التاجر.',
+    no_reviews: 'لا توجد تقييمات بعد. كن أول من يشارك رأيه.',
+    no_products: 'لا توجد منتجات متاحة حالياً.',
+    newsletter_title: 'ابقَ على اطلاع',
+    newsletter_subtitle: 'اشترك ليصلك الجديد والعروض الحصرية.',
+    newsletter_email: 'بريدك الإلكتروني',
+    subscribe: 'اشتراك',
+    powered_by: 'مدعوم من <a href="https://makewebsite.io" target="_blank">MakeWebsite.io</a>',
+    full_name_label: 'الاسم الكامل:',
+    address_label: 'العنوان:',
+    city_label: 'المدينة',
+    phone_label: 'الهاتف',
+    order_number_label: 'رقم الطلب:',
+    order_total_label: 'الإجمالي:',
+    stripe_card: 'الدفع بالبطاقة (Stripe)',
+    cash_on_delivery: 'الدفع عند الاستلام',
+    contact_name: 'الاسم *',
+    contact_email_optional: 'البريد الإلكتروني (اختياري)',
+    contact_phone_optional: 'الهاتف (اختياري)',
+    contact_message: 'الرسالة *',
+    select_color: 'يرجى اختيار لون.',
+    select_size: 'يرجى اختيار مقاس.',
+    added_to_cart: 'تمت إضافته إلى السلة',
+    added_to_cart_title: 'تمت الإضافة إلى السلة',
+    view_cart: 'عرض السلة',
+    continue_shopping: 'متابعة التسوق',
+    max_stock_reached: 'تم الوصول إلى الحد الأقصى للمخزون المتاح',
+    out_of_stock_msg: 'هذا المنتج غير متوفر',
+    review_product_missing: 'المنتج غير موجود. تعذر إرسال التقييم.',
+    review_name_required: 'يرجى إدخال الاسم',
+    review_rating_required: 'يرجى اختيار تقييم'
   }
 };
 
@@ -908,47 +1118,189 @@ function getStoreLangKey(){return 'store_lang_'+STORE_SLUG}
 function getStoreLang(){var v=localStorage.getItem(getStoreLangKey());return (v==='fr'||v==='en'||v==='ar')?v:'fr'}
 function t(k){var d=I18N[currentLang]||I18N.fr;return d[k]||I18N.fr[k]||k}
 function setText(id, value){var el=document.getElementById(id);if(el)el.textContent=value}
+function setHtml(id, value){var el=document.getElementById(id);if(el)el.innerHTML=value}
 function setPlaceholder(id, value){var el=document.getElementById(id);if(el)el.setAttribute('placeholder',value)}
+function localizeStoreCards(){
+  document.querySelectorAll('[data-i18n-key]').forEach(function(el){
+    var key=el.getAttribute('data-i18n-key');
+    if(key)el.textContent=t(key);
+  });
+  document.querySelectorAll('.stock-indicator').forEach(function(el){
+    var stock=Number(el.getAttribute('data-stock')||'0');
+    el.textContent=stock>0?t('in_stock'):t('out_of_stock');
+  });
+  document.querySelectorAll('.add-cart-label').forEach(function(el){
+    var button=el.closest('.add-cart');
+    var isOos=button&&button.getAttribute('data-oos')==='true';
+    el.textContent=isOos?t('unavailable'):t('add_to_cart');
+  });
+}
 
 function applyLang(){
   currentLang=getStoreLang();
-  document.documentElement.setAttribute('lang', currentLang);
-  document.documentElement.setAttribute('dir', currentLang==='ar'?'rtl':'ltr');
+  document.documentElement.lang=currentLang;
+  document.documentElement.dir=currentLang==='ar'?'rtl':'ltr';
 
-  document.querySelectorAll('#langSwitch button').forEach(function(btn){
-    btn.classList.toggle('active', (btn.dataset.lang||'')===currentLang);
-  });
-
-  setText('trustDelivery', t('delivery_24_48'));
-  setText('trustSecurePayment', t('secure_payment'));
-  setText('trustSupport', t('support_7_7'));
-
+  var langSelect=document.getElementById('langSelect');
+  if(langSelect)langSelect.value=currentLang;
+  setText('langSwitchLabel', t('language'));
+  setText('navSeeAll', t('see_all'));
+  setText('trustDeliveryText', t('delivery_24_48'));
+  setText('trustSecurePaymentText', t('secure_payment'));
+  setText('trustSupportText', t('support_7_7'));
   setText('productsTitle', t('products'));
+  setText('productsSubtitle', STORE_NAME ? STORE_NAME + ' · ' + t('discover_products') : t('discover_products'));
+  setText('categoryAllChip', t('see_all'));
+  setText('noProductsText', t('no_products'));
   setText('cartTitleEl', t('cart'));
+  setText('totalPriceLabelEl', t('total_price'));
+  setText('shippingCostLabelEl', t('delivery_fees'));
+  setText('grandTotalLabelEl', t('grand_total'));
+  setText('paymentMethodLabelEl', t('payment_method'));
   setText('orderConfirmationTitleEl', t('order_confirmation'));
   setText('closeOrderModalBtn', t('close'));
+  setText('orderFullNameLabel', t('full_name_label'));
+  setText('orderAddressLabel', t('address_label'));
+  setText('orderCityLabel', t('city_label'));
+  setText('orderPhoneLabel', t('phone_label'));
+  setText('orderNumberLabel', t('order_number_label'));
+  setText('orderDiscountLabel', t('discount'));
+  setText('orderPaymentMethodLabel', t('payment_method'));
+  setText('orderTotalLabel', t('order_total_label'));
   setPlaceholder('search-input', t('search_products'));
   setPlaceholder('couponCode', t('coupon_code'));
   setText('applyCouponBtn', t('apply_coupon'));
   setText('discountLabelEl', t('discount'));
   var r=document.getElementById('removeCouponBtn');if(r)r.setAttribute('title',t('remove_coupon'));
+  setText('detailColorsLabel', t('colors'));
+  setText('detailSizesLabel', t('sizes'));
+  setText('detailQuantityLabel', t('quantity'));
+  setText('customerReviewsTitle', t('customer_reviews'));
+  setText('reviewFormTitle', t('review_form_title'));
+  setText('reviewNameLabel', t('your_name'));
+  setText('reviewRatingLabel', t('your_rating'));
+  setText('reviewCommentLabel', t('your_comment'));
+  setText('reviewSubmitBtn', t('send_review'));
+  setText('noReviewsText', t('no_reviews'));
+  setText('rvSuccess', t('review_success'));
+  setPlaceholder('rvName', t('your_name'));
+  setPlaceholder('rvComment', t('review_placeholder'));
+  setText('backToProductsLink', t('back_to_products'));
+  setText('newsletterTitle', t('newsletter_title'));
+  setText('newsletterSubtitle', t('newsletter_subtitle'));
+  setPlaceholder('newsletterEmailInput', t('newsletter_email'));
+  setText('newsletterSubmitBtn', t('subscribe'));
+  setText('footerSecurePaymentText', t('secure_payment'));
+  setHtml('poweredByText', t('powered_by'));
   var chatBtn=document.getElementById('chatFab');if(chatBtn)chatBtn.setAttribute('title',t('contact_store'));
   var headerChatBtn=document.getElementById('headerChatBtn');if(headerChatBtn)headerChatBtn.setAttribute('title',t('contact_store'));
   setText('chatModalTitle', t('contact_store'));
+  setText('chatNameLabel', t('contact_name'));
+  setText('chatEmailLabel', t('contact_email_optional'));
+  setText('chatPhoneLabel', t('contact_phone_optional'));
+  setText('chatMessageLabel', t('contact_message'));
   setText('chatSubmitBtn', t('send'));
+  setPlaceholder('chatName', t('your_name'));
+  setPlaceholder('chatEmail', 'email@example.com');
+  setPlaceholder('chatPhone', t('phone_label'));
   setPlaceholder('chatMessage', t('write_message'));
   setPlaceholder('chatReplyInput', t('write_message'));
+  var stripeOption=document.getElementById('stripePaymentOption');if(stripeOption)stripeOption.textContent=t('stripe_card');
+  var detailStock=document.getElementById('detailStockText');var detailBtn=document.getElementById('pdAddCart');if(detailStock&&detailBtn){detailStock.textContent=detailBtn.getAttribute('data-oos')==='true'?t('out_of_stock'):t('in_stock')}
+  var detailLabel=document.getElementById('pdAddCartLabel');if(detailLabel&&detailBtn){detailLabel.textContent=detailBtn.getAttribute('data-oos')==='true'?t('unavailable'):t('add_to_cart')}
+  localizeStoreCards();
+}
+
+function setTextSafe(id,value){var el=document.getElementById(id);if(el)el.textContent=value==null?'':String(value)}
+function formatMoney(value){
+  var n=Number(value);
+  if(!isFinite(n))n=0;
+  try{
+    return CURRENCY_SYMBOL+new Intl.NumberFormat(currentLang||'fr',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+  }catch(e){
+    return CURRENCY_SYMBOL+n.toFixed(2);
+  }
+}
+function normalizePaymentMethodLabel(method){
+  var value=(method||'').toString().trim().toLowerCase();
+  if(value==='stripe')return t('stripe_card');
+  if(value==='cash-on-delivery'||value==='cash_on_delivery'||value==='cod')return t('cash_on_delivery');
+  return method||'';
+}
+function openOrderConfirmationModal(data){
+  setTextSafe('customUserFullName',data.customerName||'');
+  setTextSafe('customUserBillingAddress',data.address||'');
+  setTextSafe('customUserCity',data.city||'');
+  setTextSafe('customUserPhoneNumber',data.phone||'');
+  setTextSafe('customOrderNumber',data.orderNumber||'');
+  setTextSafe('customUserPaymentMethod',normalizePaymentMethodLabel(data.paymentMethod));
+  setTextSafe('customOrderTotal',data.total!=null?formatMoney(data.total):'');
+  var discountRow=document.getElementById('customDiscountRow');
+  var discountValue=document.getElementById('customDiscountValue');
+  if(discountRow&&discountValue){
+    var discount=Number(data.discount)||0;
+    if(discount>0){
+      discountRow.style.display='flex';
+      discountValue.textContent='-'+formatMoney(discount);
+    }else{
+      discountRow.style.display='none';
+      discountValue.textContent='';
+    }
+  }
+  var modal=document.getElementById('customOrderConfirmationModal');
+  if(modal)modal.classList.add('open');
+}
+function finalizeConfirmedOrder(data){
+  openOrderConfirmationModal(data||{});
+  cart=[];
+  appliedCoupon=null;
+  saveCart();
+  var sidebar=document.getElementById('cartSidebar');
+  if(sidebar&&sidebar.classList.contains('open'))toggleCartSidebar();
+}
+function clearPaymentReturnUrl(){
+  window.history.replaceState({},document.title,'/store/'+STORE_SLUG);
+}
+function fetchPublicOrderStatus(orderNumber){
+  return fetch('/api/public/orders/'+encodeURIComponent(orderNumber)+'/status')
+    .then(function(response){
+      return response.json().then(function(data){
+        if(!response.ok||!data||data.success===false){
+          throw new Error(data&&data.message?data.message:'Unable to load order status');
+        }
+        return data;
+      });
+    });
+}
+function waitForPaidOrderStatus(orderNumber){
+  var startedAt=Date.now();
+  function attempt(){
+    return fetchPublicOrderStatus(orderNumber)
+      .then(function(data){
+        if((data.paymentStatus||'').toString().toUpperCase()==='PAID'){
+          return data;
+        }
+        if(Date.now()-startedAt>=20000){
+          throw new Error('PAYMENT_CONFIRMATION_TIMEOUT');
+        }
+        return new Promise(function(resolve,reject){
+          setTimeout(function(){attempt().then(resolve).catch(reject)},2000);
+        });
+      });
+  }
+  return attempt();
 }
 
 document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('#langSwitch button').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var lang=this.dataset.lang||'fr';
+  var langSelect=document.getElementById('langSelect');
+  if(langSelect){
+    langSelect.addEventListener('change',function(){
+      var lang=this.value||'fr';
       localStorage.setItem(getStoreLangKey(),lang);
       applyLang();
       updateCartUI();
     });
-  });
+  }
   applyLang();
 });
 
@@ -960,11 +1312,97 @@ function escHtml(v){return String(v??'').replace(/[&<>"']/g,function(c){return {
 function escAttr(v){return escHtml(v).replace(/`/g,'&#96;')}
 function productImg(v){return v&&String(v).trim()?v:DEFAULT_PRODUCT_IMAGE}
 function resolveImgUrl(v){if(!v||!String(v).trim())return DEFAULT_PRODUCT_IMAGE;var s=String(v).trim();if(s.startsWith('http://')||s.startsWith('https://')||s.startsWith('/'))return s;if(s.startsWith('images/')||s.startsWith('uploads/'))return '/'+s;return '/uploads/'+s}
+
+function openCartSidebar(){var s=document.getElementById('cartSidebar');var o=document.getElementById('cartOverlay');if(s&&!s.classList.contains('open'))s.classList.add('open');if(o&&!o.classList.contains('show'))o.classList.add('show')}
+function closeCartSidebar(){var s=document.getElementById('cartSidebar');var o=document.getElementById('cartOverlay');if(s&&s.classList.contains('open'))s.classList.remove('open');if(o&&o.classList.contains('show'))o.classList.remove('show')}
+function parseStockValue(v){var n=Number(v);if(!isFinite(n)||n<0)return null;return n}
+function getCartTotalQtyForProduct(productId){return cart.reduce(function(sum,i){return sum+(i&&i.id===productId?(Number(i.qty)||0):0)},0)}
+
+let cartToastTimer=null;
+let cartToastEl=null;
+function closeCartToast(){
+  if(cartToastTimer){clearTimeout(cartToastTimer);cartToastTimer=null}
+  if(cartToastEl){
+    var el=cartToastEl;
+    cartToastEl=null;
+    el.classList.remove('show');
+    setTimeout(function(){try{el.remove()}catch(e){}},220);
+  }
+}
+function showCartToast(opts){
+  opts=opts||{};
+  var host=document.getElementById('cartToastHost');
+  if(!host)return;
+  closeCartToast();
+
+  var type=opts.type||'success';
+  var name=(opts.name||'').toString();
+  var qty=opts.qty!=null?Number(opts.qty):null;
+  var message=(opts.message||'').toString();
+  var title=(type==='success'?(name||t('added_to_cart_title')):(message||name||t('error_prefix')));
+  var subtitle='';
+  if(type==='success'){
+    subtitle=(qty!=null?qty+' × ':'')+t('added_to_cart_title');
+  }else{
+    subtitle=name&&message?name:'';
+  }
+
+  var iconSvg=type==='warning'
+    ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>'
+    : type==='error'
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+
+  var mediaHtml='';
+  if(type==='success'){
+    var img=resolveImgUrl(productImg(opts.img));
+    mediaHtml='<img class="t2-toast__img" src="'+escAttr(img)+'" alt="'+escAttr(name||'')+'" onerror="this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE">';
+  }else{
+    mediaHtml='<div class="t2-toast__img" style="display:flex;align-items:center;justify-content:center;color:'+(type==='warning'?'#b45309':'#b91c1c')+'">'+iconSvg+'</div>';
+  }
+
+  var actionsHtml='';
+  if(type==='success'){
+    actionsHtml='<div class="t2-toast__actions">' +
+      '<button type="button" class="t2-toast__btn t2-toast__btn--primary" data-toast-action="view">'+escHtml(t('view_cart'))+'</button>' +
+      '<button type="button" class="t2-toast__btn" data-toast-action="continue">'+escHtml(t('continue_shopping'))+'</button>' +
+      '</div>';
+  }
+
+  var el=document.createElement('div');
+  el.className='t2-toast t2-toast--'+type;
+  el.innerHTML=
+    '<div class="t2-toast__side"></div>'+
+    mediaHtml+
+    '<div class="t2-toast__content">'+
+      '<div class="t2-toast__title">'+escHtml(title)+'</div>'+
+      (subtitle?'<div class="t2-toast__subtitle">'+escHtml(subtitle)+'</div>':'')+
+      actionsHtml+
+    '</div>'+
+    '<button type="button" class="t2-toast__close" aria-label="'+escAttr(t('close'))+'" title="'+escAttr(t('close'))+'">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>'+
+    '</button>';
+
+  el.querySelector('.t2-toast__close')?.addEventListener('click',function(){closeCartToast()});
+  el.querySelectorAll('[data-toast-action]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var a=this.getAttribute('data-toast-action');
+      if(a==='view'){openCartSidebar()}
+      closeCartToast();
+    });
+  });
+
+  host.appendChild(el);
+  cartToastEl=el;
+  requestAnimationFrame(function(){el.classList.add('show')});
+  cartToastTimer=setTimeout(function(){closeCartToast()},3000);
+}
+
 function addToCart(id,name,price,img){const existing=cart.find(i=>i.id===id&&!i.color&&!i.size);if(existing)existing.qty+=1;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:1});saveCart()}
 function addToCartOptions(id,name,price,img,color,size,qty){qty=Math.max(1,Number(qty)||1);const existing=cart.find(i=>i.id===id&&(i.color||'')===(color||'')&&(i.size||'')===(size||''));if(existing)existing.qty+=qty;else cart.push({id,name,price:Number(price)||0,img:productImg(img),qty:qty,color:color||'',size:size||''});saveCart()}
 function removeFromCart(id,color,size){cart=cart.filter(i=>!(i.id===id&&(i.color||'')===(color||'')&&(i.size||'')===(size||'')));saveCart()}
 function changeQty(id,delta){const item=cart.find(i=>i.id===id);if(item){item.qty=Math.max(1,item.qty+delta);saveCart()}}
-function updateCartUI(){const count=cart.reduce(function(s,i){return s+(i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null?i.qty:0)},0);document.getElementById('cartCount').textContent=count;const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-shopping-bag" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i><p>'+t('cart_empty')+'</p></div>';document.getElementById('total-price').textContent=CURRENCY_SYMBOL+'0.00';document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+'0.00';return}let html='';let sub=0;cart.forEach(i=>{if(!i||!i.id||!String(i.id).trim()||!i.name||!String(i.name).trim()||i.price==null)return;const price=Number(i.price)||0;const ck=escAttr(i.id+'||'+(i.color||'')+'||'+(i.size||''));sub+=price*i.qty;var opt='';if(i.color)opt+='<div style="font-size:0.75rem;color:var(--muted)">'+t('color')+': '+escHtml(i.color)+'</div>';if(i.size)opt+='<div style="font-size:0.75rem;color:var(--muted)">'+t('size')+': '+escHtml(i.size)+'</div>';html+='<div class="t2-cart-item"><img src="'+escAttr(productImg(i.img))+'" alt="'+escAttr(i.name)+'" onerror="this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE"><div class="t2-cart-item__info"><div class="t2-cart-item__name">'+escHtml(i.name)+'</div>'+opt+'<div class="t2-cart-item__price">'+CURRENCY_SYMBOL+(price*i.qty).toFixed(2)+'</div><div class="t2-cart-item__qty"><button type="button" data-cart-action="dec" data-cart-key="'+ck+'">-</button><span>'+i.qty+'</span><button type="button" data-cart-action="inc" data-cart-key="'+ck+'">+</button></div></div><button type="button" class="t2-cart-item__remove" data-cart-action="remove" data-cart-key="'+ck+'"><i class="fas fa-trash-alt"></i></button></div>'});container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){var k=this.dataset.cartKey;if(!k)return;var parts=k.split('||');var id=parts[0],col=parts[1]||'',sz=parts[2]||'';var a=this.dataset.cartAction;if(a==='inc'){var item=cart.find(function(i){return i.id===id&&(i.color||'')===col&&(i.size||'')===sz});if(item)item.qty+=1;saveCart()}else if(a==='dec'){changeQty(id,-1)}else if(a==='remove'){removeFromCart(id,col,sz)}})});document.getElementById('total-price').textContent=CURRENCY_SYMBOL+sub.toFixed(2);var d=appliedCoupon?Number(appliedCoupon.discountAmount)||0:0;var gt=sub+DELIVERY_FEES-d;document.getElementById('grand-total').textContent=CURRENCY_SYMBOL+gt.toFixed(2)}
+function updateCartUI(){const count=cart.reduce(function(s,i){return s+(i&&i.id!=null&&String(i.id).trim()!==''&&i.name&&String(i.name).trim()!==''&&i.price!=null?i.qty:0)},0);document.getElementById('cartCount').textContent=count;const container=document.getElementById('cartItems');if(!cart.length){container.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fas fa-shopping-bag" style="font-size:2.5rem;opacity:0.3;display:block;margin-bottom:12px"></i><p>'+t('cart_empty')+'</p></div>';document.getElementById('total-price').textContent=formatMoney(0);document.getElementById('grand-total').textContent=formatMoney(0);return}let html='';let sub=0;cart.forEach(i=>{if(!i||!i.id||!String(i.id).trim()||!i.name||!String(i.name).trim()||i.price==null)return;const price=Number(i.price)||0;const ck=escAttr(i.id+'||'+(i.color||'')+'||'+(i.size||''));sub+=price*i.qty;var opt='';if(i.color)opt+='<div style="font-size:0.75rem;color:var(--muted)">'+t('color')+': '+escHtml(i.color)+'</div>';if(i.size)opt+='<div style="font-size:0.75rem;color:var(--muted)">'+t('size')+': '+escHtml(i.size)+'</div>';html+='<div class="t2-cart-item"><img src="'+escAttr(productImg(i.img))+'" alt="'+escAttr(i.name)+'" onerror="this.onerror=null;this.src=DEFAULT_PRODUCT_IMAGE"><div class="t2-cart-item__info"><div class="t2-cart-item__name">'+escHtml(i.name)+'</div>'+opt+'<div class="t2-cart-item__price">'+formatMoney(price*i.qty)+'</div><div class="t2-cart-item__qty"><button type="button" data-cart-action="dec" data-cart-key="'+ck+'">-</button><span>'+i.qty+'</span><button type="button" data-cart-action="inc" data-cart-key="'+ck+'">+</button></div></div><button type="button" class="t2-cart-item__remove" data-cart-action="remove" data-cart-key="'+ck+'"><i class="fas fa-trash-alt"></i></button></div>'});container.innerHTML=html;container.querySelectorAll('[data-cart-action]').forEach(function(btn){btn.addEventListener('click',function(){var k=this.dataset.cartKey;if(!k)return;var parts=k.split('||');var id=parts[0],col=parts[1]||'',sz=parts[2]||'';var a=this.dataset.cartAction;if(a==='inc'){var item=cart.find(function(i){return i.id===id&&(i.color||'')===col&&(i.size||'')===sz});if(item)item.qty+=1;saveCart()}else if(a==='dec'){changeQty(id,-1)}else if(a==='remove'){removeFromCart(id,col,sz)}})});document.getElementById('total-price').textContent=formatMoney(sub);var d=appliedCoupon?Number(appliedCoupon.discountAmount)||0:0;var gt=sub+DELIVERY_FEES-d;document.getElementById('grand-total').textContent=formatMoney(gt)}
 
 let appliedCoupon=null;
 
@@ -984,7 +1422,7 @@ function applyCoupon(){
       appliedCoupon={code:code,discountAmount:Number(d.discountAmount)||0};
       document.getElementById('couponInputRow').style.display='none';
       document.getElementById('discountRow').style.display='flex';
-      document.getElementById('discount-amount').textContent='-'+CURRENCY_SYMBOL+appliedCoupon.discountAmount.toFixed(2);
+      document.getElementById('discount-amount').textContent='-'+formatMoney(appliedCoupon.discountAmount);
       document.getElementById('orderCouponCode').value=code;
       updateCartUI();
     }else{
@@ -1032,20 +1470,21 @@ function submitOrder(e){
     .then(r=>r.json())
     .then(d=>{
       if(d.success){
-        document.getElementById('customUserFullName').textContent=d.customerName||order.fullName;
-        document.getElementById('customUserBillingAddress').textContent=d.address||order.billingAddress;
-        document.getElementById('customUserCity').textContent=d.city||order.city;
-        document.getElementById('customUserPhoneNumber').textContent=d.phone||order.phone;
-        document.getElementById('customUserPaymentMethod').textContent=d.paymentMethod||order.paymentMethod;
-        if(d.discount&&Number(d.discount)>0){
-          document.getElementById('customDiscountRow').style.display='flex';
-          document.getElementById('customDiscountValue').textContent='-'+CURRENCY_SYMBOL+Number(d.discount).toFixed(2);
+        // If Stripe checkout URL is returned, redirect to Stripe
+        if(d.checkoutUrl){
+          window.location.href=d.checkoutUrl;
+          return;
         }
-        document.getElementById('customOrderConfirmationModal').classList.add('open');
-        cart=[];
-        appliedCoupon=null;
-        saveCart();
-        toggleCartSidebar();
+        finalizeConfirmedOrder({
+          customerName:d.customerName||order.fullName,
+          address:d.address||order.billingAddress,
+          city:d.city||order.city,
+          phone:d.phone||order.phone,
+          paymentMethod:d.paymentMethod||order.paymentMethod,
+          orderNumber:d.orderNumber||'',
+          total:d.total,
+          discount:d.discount
+        });
       }else{
         alert(t('error_prefix')+' '+(d.message||t('order_not_accepted')));
       }
@@ -1074,11 +1513,17 @@ function hasGuestConversation(){var d=getGuestData();return d.conversationId&&d.
 
 function openContactModal(){
   var modal=document.getElementById('contactModal');
-  document.getElementById('contactFormContainer').style.display='block';
-  document.getElementById('chatConversationContainer').style.display='none';
-  document.getElementById('chatStatusMsg').style.display='none';
-  document.getElementById('chatModalTitle').textContent=t('contact_store');
-  document.getElementById('contactForm').reset();
+  if(!modal)return;
+  var formContainer=document.getElementById('contactFormContainer');
+  var conversationContainer=document.getElementById('chatConversationContainer');
+  var statusMsg=document.getElementById('chatStatusMsg');
+  var title=document.getElementById('chatModalTitle');
+  var form=document.getElementById('contactForm');
+  if(formContainer)formContainer.style.display='block';
+  if(conversationContainer)conversationContainer.style.display='none';
+  if(statusMsg)statusMsg.style.display='none';
+  if(title)title.textContent=t('contact_store');
+  if(form)form.reset();
 
   // If existing conversation, switch to chat view
   if(hasGuestConversation()){
@@ -1086,7 +1531,7 @@ function openContactModal(){
   }
   modal.classList.add('open');
 }
-function closeContactModal(){document.getElementById('contactModal').classList.remove('open')}
+function closeContactModal(){var modal=document.getElementById('contactModal');if(modal)modal.classList.remove('open')}
 
 function submitContactForm(e){
   e.preventDefault();
@@ -1264,10 +1709,71 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 
 // --- Add-to-cart from grid (delegated) ---
-document.addEventListener('click',function(e){var btn=e.target.closest('.product-card .add-cart');if(!btn||btn.disabled)return;e.preventDefault();var card=btn.closest('.product-card');if(card)addToCart(card.dataset.productId,card.dataset.productName,card.dataset.productPrice,card.dataset.productImg)});
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('.product-card .add-cart');
+  if(!btn)return;
+  e.preventDefault();
+  var card=btn.closest('.product-card');
+  if(!card)return;
+
+  var productId=card.dataset.productId;
+  var name=card.dataset.productName;
+  var price=card.dataset.productPrice;
+  var img=card.dataset.productImg;
+  var stock=parseStockValue(card.dataset.productStock);
+  var isOos=(btn.getAttribute('data-oos')==='true')||(stock!==null&&stock<=0);
+
+  if(isOos){
+    showCartToast({type:'error', message:t('out_of_stock_msg'), name:name});
+    return;
+  }
+
+  if(stock!==null){
+    var currentTotal=getCartTotalQtyForProduct(productId);
+    if(currentTotal>=stock){
+      showCartToast({type:'warning', message:t('max_stock_reached')});
+      return;
+    }
+  }
+
+  addToCart(productId,name,price,img);
+  showCartToast({type:'success', name:name, img:img, qty:1});
+});
 
 // --- Slider autoplay ---
 !function(){var t=document.getElementById('sliderTrack');if(!t)return;var s=t.children,n=0;function go(i){n=(i+s.length)%s.length;t.style.transform='translateX(-'+(n*100)+'%)';var d=document.getElementById('sliderDots');if(d)Array.from(d.children).forEach(function(e,j){e.classList.toggle('active',j===n)})}var prev=document.getElementById('prevSlide'),next=document.getElementById('nextSlide');if(prev)prev.onclick=function(){go(n-1)};if(next)next.onclick=function(){go(n+1)};var dots=document.getElementById('sliderDots');if(dots&&s.length>1){for(var i=0;i<s.length;i++){var dot=document.createElement('span');dot.onclick=function(j){return function(){go(j)}}(i);dots.appendChild(dot)}dots.children[0].classList.add('active')}if(s.length>1)setInterval(function(){go(n+1)},5000)}();
+
+// --- Payment return handling ---
+!function(){
+  var params=new URLSearchParams(window.location.search);
+  var payment=params.get('payment');
+  var orderNum=params.get('order');
+  if(payment==='success'&&orderNum){
+    waitForPaidOrderStatus(orderNum)
+      .then(function(data){
+        finalizeConfirmedOrder({
+          customerName:data.customerName,
+          address:data.address,
+          city:data.city,
+          phone:data.phone,
+          paymentMethod:'Stripe',
+          orderNumber:data.orderNumber||orderNum,
+          total:data.total,
+          discount:data.discount
+        });
+        clearPaymentReturnUrl();
+      })
+      .catch(function(error){
+        console.warn('Stripe return confirmation pending for order',orderNum,error);
+        alert('Payment received, but confirmation is still pending. Please wait a moment and refresh this page if needed.');
+      });
+  }else if(payment==='cancel'){
+    setTimeout(function(){
+      alert('Payment cancelled. Your order was not confirmed.');
+      clearPaymentReturnUrl();
+    },200);
+  }
+}();
 
 document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.product-card img').forEach(function(img){if(!img.getAttribute('src'))img.src=DEFAULT_PRODUCT_IMAGE});updateCartUI();trackVisit()});
 </script>

@@ -375,6 +375,13 @@ class ApiClient {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> patch(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    _guardPath(path);
+    _validateRequestData('PATCH', path, data);
+    final response = await _dio.patch(path, data: data, queryParameters: queryParameters);
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> delete(String path,
       {Map<String, dynamic>? queryParameters}) async {
     _guardPath(path);

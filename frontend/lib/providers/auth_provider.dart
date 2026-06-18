@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import 'package:google_sign_in/google_sign_in.dart';
 import '../core/api_client.dart';
 import '../core/storage.dart';
@@ -19,6 +21,8 @@ class AuthProvider extends ChangeNotifier {
   bool _mustChangePassword = false;
   String? _pendingEmail;
   bool _subscriptionActive = false;
+  bool _subscriptionChecking = false;
+  bool _googleInitialized = false;
 
   // Callback for clearing boutique provider state on logout
   VoidCallback? onLogout;
@@ -33,6 +37,18 @@ class AuthProvider extends ChangeNotifier {
   bool get mustChangePassword => _mustChangePassword;
   String? get pendingEmail => _pendingEmail;
   bool get subscriptionActive => _subscriptionActive;
+  bool get isSubscriptionChecking => _subscriptionChecking;
+  bool get isTeamMember {
+    final normalized = _role?.toUpperCase();
+    return normalized == 'TEAM_MEMBER' ||
+        normalized == 'STAFF' ||
+        normalized == 'MANAGER' ||
+        normalized == 'CAISSIER';
+  }
+  bool get canCreateBoutique {
+    final normalized = _role?.toUpperCase();
+    return normalized == 'OWNER' || normalized == 'ADMIN';
+  }
 
   Future<bool> login(String email, String password) async {
     _loading = true;
@@ -55,6 +71,12 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
+      if (_role == 'SUPER_ADMIN' || isTeamMember) {
+        _subscriptionActive = true;
+        await AppStorage.saveSubscriptionActive(true);
+      } else {
+        await hasActiveSubscription();
+      }
       developer.log('[AUTH] Login success: role=$_role userId=${_user!.id} subActive=$_subscriptionActive');
       return true;
     } on DioException catch (e) {
@@ -71,14 +93,54 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> loginWithGoogle() async {
     _loading = true; _error = null; notifyListeners();
+    print('GOOGLE BUTTON CLICKED');
     try {
+      print('START ANDROID GOOGLE LOGIN');
       await AppStorage.clearActiveBoutiqueId();
       final googleSignIn = GoogleSignIn.instance;
-      await googleSignIn.initialize();
+      if (!_googleInitialized) {
+        print('ANDROID GOOGLE INIT');
+        await googleSignIn.initialize(
+          serverClientId:
+              '31472972692-e4b34vte5c446ss2tkott3hnmqphrokk.apps.googleusercontent.com',
+        );
+        _googleInitialized = true;
+      }
+      print('ANDROID AUTHENTICATE');
       final account = await googleSignIn.authenticate();
       final auth = account.authentication;
+      print('ID TOKEN RECEIVED: ${auth.idToken?.substring(0, 20)}...');
       if (auth.idToken == null) throw Exception('Token Google manquant');
-      final res = await _api.post('/auth/google-login', data: {'idToken': auth.idToken});
+      return _exchangeToken(auth.idToken!);
+    } on GoogleSignInException catch (e) {
+      print('GOOGLE SIGN IN EXCEPTION: code=${e.code} description=${e.description} details=${e.details}');
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        developer.log('[AUTH] Google login cancelled by user');
+        _loading = false; notifyListeners();
+        return false;
+      }
+      _error = 'GoogleSignInException: ${e.description ?? e.code.name}';
+      _loading = false; notifyListeners();
+      return false;
+    } catch (e, stack) {
+      print('UNEXPECTED ERROR: $e');
+      print(stack);
+      _error = e.toString();
+      _loading = false; notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> loginWithGoogleWeb({required String idToken}) async {
+    if (_loading) return false;
+    print('WEB GOOGLE LOGIN');
+    return _exchangeToken(idToken);
+  }
+
+  Future<bool> _exchangeToken(String idToken) async {
+    try {
+      print('CALLING BACKEND /api/auth/google');
+      final res = await _api.post('/auth/google', data: {'idToken': idToken});
       final data = res['data'];
       _user = User.fromJson(data['user']);
       _role = data['user']['role'] ?? 'OWNER';
@@ -90,11 +152,19 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = true;
       await _api.storage.saveTokens(data['accessToken'], data['refreshToken']);
       await _api.storage.saveUserId(_user!.id);
+      if (_role == 'SUPER_ADMIN' || isTeamMember) {
+        _subscriptionActive = true;
+        await AppStorage.saveSubscriptionActive(true);
+      } else {
+        await hasActiveSubscription();
+      }
       _loading = false; notifyListeners();
       developer.log('[AUTH] Google login success: role=$_role userId=${_user!.id} subActive=$_subscriptionActive');
       return true;
-    } catch (e) {
-      _error = _extractError(e);
+    } catch (e, stack) {
+      print('GOOGLE TOKEN EXCHANGE ERROR: $e');
+      print(stack);
+      _error = e.toString();
       _loading = false; notifyListeners();
       return false;
     }
@@ -194,19 +264,62 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> hasActiveSubscription() async {
+    if (isTeamMember) {
+      _subscriptionActive = true;
+      await AppStorage.saveSubscriptionActive(true);
+      notifyListeners();
+      return true;
+    }
     try {
       final res = await _api.get('/subscriptions/mine');
-      final status = res['data']?['status'] as String?;
-      _subscriptionActive = status == 'ACTIVE';
+      _subscriptionActive = _isSubscriptionActive(res['data']);
       await AppStorage.saveSubscriptionActive(_subscriptionActive);
       return _subscriptionActive;
     } catch (_) {
-      _subscriptionActive = false;
-      await AppStorage.saveSubscriptionActive(false);
-      return false;
+      // Preserve current value on network error to avoid false redirect to /plans
+      return _subscriptionActive;
     } finally {
       notifyListeners();
     }
+  }
+
+  /// Used during [init] — loads cached subscription from storage first,
+  /// then attempts a live API check. The cached value is preserved on failure
+  /// so that a transient network error does not cause a false redirect to /plans.
+  Future<void> _syncSubscription() async {
+    _subscriptionActive = await AppStorage.getSubscriptionActive();
+    try {
+      final res = await _api.get('/subscriptions/mine');
+      _subscriptionActive = _isSubscriptionActive(res['data']);
+    } catch (e) {
+      developer.log('[Startup] subscription fetch error: $e, using cached _subscriptionActive=$_subscriptionActive');
+    }
+    await AppStorage.saveSubscriptionActive(_subscriptionActive);
+  }
+
+  bool _isSubscriptionActive(dynamic raw) {
+    if (raw is! Map) return false;
+    final status = raw['status']?.toString().toUpperCase();
+    if (status != 'ACTIVE') return false;
+    final expiresAt = _parseDateTime(raw['expiresAt']);
+    return expiresAt != null && expiresAt.isAfter(DateTime.now());
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return DateTime.tryParse(value)?.toLocal();
+    if (value is List && value.length >= 3) {
+      final parts = value.map((v) => v is num ? v.toInt() : int.tryParse(v.toString()) ?? 0).toList();
+      return DateTime(
+        parts[0],
+        parts[1],
+        parts[2],
+        parts.length > 3 ? parts[3] : 0,
+        parts.length > 4 ? parts[4] : 0,
+        parts.length > 5 ? parts[5] : 0,
+      );
+    }
+    return null;
   }
 
   Future<bool> reloadSessionFromStorage({bool notify = true}) async {
@@ -244,6 +357,7 @@ class AuthProvider extends ChangeNotifier {
     _role = await _api.storage.getUserRole();
     _isAuthenticated = true;
     _subscriptionActive = await AppStorage.getSubscriptionActive();
+    developer.log('[AUTH] reloadSessionFromStorage: restored subActive=$_subscriptionActive role=$_role');
 
     if (notify) {
       notifyListeners();
@@ -270,6 +384,7 @@ class AuthProvider extends ChangeNotifier {
     _isAuthenticated = false;
     _role = null;
     _subscriptionActive = false;
+    _subscriptionChecking = false;
     await AppStorage.clearSubscriptionActive();
     _emailVerificationRequired = false;
     _pendingEmail = null;
@@ -297,18 +412,19 @@ class AuthProvider extends ChangeNotifier {
 
       if (tokenLoaded) {
         developer.log('[AUTH INIT] User data restored: id=${_user?.id} email=${_user?.email}');
-        if (_role == 'SUPER_ADMIN') {
+        if (_role == 'SUPER_ADMIN' || isTeamMember) {
           _subscriptionActive = true;
+          _subscriptionChecking = false;
         } else {
-          try {
-            await hasActiveSubscription();
-          } catch (_) {
-            _subscriptionActive = false;
-          }
+          _subscriptionChecking = true;
+          notifyListeners();
+          await _syncSubscription();
+          _subscriptionChecking = false;
         }
         developer.log('[AUTH INIT] State restored: isAuthenticated=true role=$_role userId=${_user?.id} subActive=$_subscriptionActive');
       } else {
         _isAuthenticated = false;
+        _subscriptionChecking = false;
         developer.log('[AUTH INIT] No valid token, user not authenticated');
       }
     } catch (e) {
@@ -316,6 +432,7 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = false;
       _user = null;
       _role = null;
+      _subscriptionChecking = false;
     } finally {
       _initialized = true;
       notifyListeners();

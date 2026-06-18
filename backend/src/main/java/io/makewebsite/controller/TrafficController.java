@@ -2,6 +2,9 @@ package io.makewebsite.controller;
 
 import io.makewebsite.dto.request.TrackVisitRequest;
 import io.makewebsite.dto.response.*;
+import io.makewebsite.security.Permission;
+import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.BoutiquePermissionService;
 import io.makewebsite.service.TrafficService;
 import io.makewebsite.util.NetworkUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -28,10 +32,17 @@ import java.util.UUID;
 public class TrafficController {
 
     private final TrafficService trafficService;
+    private final BoutiquePermissionService boutiquePermissionService;
+
+    private void requireAnalytics(UUID boutiqueId, UserPrincipal principal) {
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), boutiqueId, Permission.ANALYTICS_READ);
+    }
 
     @GetMapping("/{boutiqueId}/stats")
     public ResponseEntity<ApiResponse<TrafficStatsResponse>> getStats(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
         log.info("Traffic stats for {}: total={}, today={}, week={}, month={}",
                 boutiqueId, stats.getTotalVisits(), stats.getTodayVisits(),
@@ -41,7 +52,9 @@ public class TrafficController {
 
     @GetMapping("/{boutiqueId}/overview")
     public ResponseEntity<ApiResponse<TrafficOverviewResponse>> getOverview(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         TrafficOverviewResponse overview = trafficService.getOverview(boutiqueId);
         log.info("Overview for storeId={}: topCountries={}, topCities={}",
                 boutiqueId,
@@ -54,7 +67,9 @@ public class TrafficController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getVisitors(
             @PathVariable UUID boutiqueId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         return ResponseEntity.ok(ApiResponse.ok(trafficService.getVisitorsPage(boutiqueId, page, size)));
     }
 
@@ -63,27 +78,35 @@ public class TrafficController {
             @PathVariable UUID boutiqueId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @RequestParam(defaultValue = "daily") String period) {
+            @RequestParam(defaultValue = "daily") String period,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         return ResponseEntity.ok(ApiResponse.ok(trafficService.getTimeline(boutiqueId, from, to, period)));
     }
 
     @GetMapping("/{boutiqueId}/visitors/active")
     public ResponseEntity<ApiResponse<Long>> getActiveVisitorCount(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         return ResponseEntity.ok(ApiResponse.ok(
                 trafficService.getStats(boutiqueId).getActiveVisitors()));
     }
 
     @GetMapping("/{boutiqueId}/visitors/authenticated")
     public ResponseEntity<ApiResponse<Long>> getAuthenticatedVisitorCount(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
         return ResponseEntity.ok(ApiResponse.ok(stats.getAuthenticatedVisitors()));
     }
 
     @GetMapping("/{boutiqueId}/visitors/anonymous")
     public ResponseEntity<ApiResponse<Long>> getAnonymousVisitorCount(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         TrafficStatsResponse stats = trafficService.getStats(boutiqueId);
         return ResponseEntity.ok(ApiResponse.ok(stats.getAnonymousVisitors()));
     }
@@ -106,7 +129,9 @@ public class TrafficController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getRecentVisits(
             @PathVariable UUID boutiqueId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         Map<String, Object> data = trafficService.getRecentVisits(boutiqueId, page, size);
         List<?> content = (List<?>) data.getOrDefault("content", List.of());
         log.info("Recent visits for {}: {} items on page {} of {}",
@@ -116,14 +141,19 @@ public class TrafficController {
 
     @GetMapping("/{boutiqueId}/map")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getMapData(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         List<Map<String, Object>> data = trafficService.getMapData(boutiqueId);
         log.info("Map data for {}: {} geo points", boutiqueId, data.size());
         return ResponseEntity.ok(ApiResponse.ok(data));
     }
 
     @GetMapping("/{boutiqueId}/export")
-    public ResponseEntity<String> exportCsv(@PathVariable UUID boutiqueId) {
+    public ResponseEntity<String> exportCsv(
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         String csv = trafficService.exportCsv(boutiqueId);
         log.info("CSV export for {}: {} bytes", boutiqueId, csv.length());
         HttpHeaders headers = new HttpHeaders();
@@ -134,7 +164,9 @@ public class TrafficController {
 
     @GetMapping("/{boutiqueId}/live")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getLiveStats(
-            @PathVariable UUID boutiqueId) {
+            @PathVariable UUID boutiqueId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         return ResponseEntity.ok(ApiResponse.ok(trafficService.getLiveStats(boutiqueId)));
     }
 
@@ -142,7 +174,9 @@ public class TrafficController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSessions(
             @PathVariable UUID boutiqueId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireAnalytics(boutiqueId, principal);
         return ResponseEntity.ok(ApiResponse.ok(trafficService.getSessions(boutiqueId, page, size)));
     }
 
@@ -151,7 +185,12 @@ public class TrafficController {
      * country/city = "Inconnu" to "Tunisie"/"Sousse" (development fallback).
      */
     @PostMapping("/fix-inconnu")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> fixInconnuLocations() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> fixInconnuLocations(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        String role = principal.getRole();
+        if (!"ADMIN".equalsIgnoreCase(role) && !"SUPER_ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Acces refuse"));
+        }
         Map<String, Object> result = trafficService.fixInconnuLocations();
         log.info("fixInconnuLocations result: {}", result);
         return ResponseEntity.ok(ApiResponse.ok(result));

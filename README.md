@@ -17,7 +17,7 @@ Built with **Flutter** (web + Android mobile) and **Spring Boot** (REST API + Po
 - **Customer Reviews** — Product ratings (1–5), merchant replies, moderation workflow
 - **AI Assistant** — Local Ollama-powered chatbot that answers questions about your store data
 - **Shopping Cart & Wishlist** — Authenticated and guest cart support
-- **Checkout & Payments** — COD, Stripe, Tunisian D17 (Adeex, Jax, Intigo)
+- **Checkout & Payments** — COD, Stripe
 - **Coupon & Discount System** — Promotional codes with configurable rules
 - **Team Management** — Role-based access (OWNER, ADMIN, MANAGER) with granular permissions
 - **Analytics & Traffic** — Store visits, geolocation, browser/device tracking, session analytics
@@ -37,7 +37,7 @@ Built with **Flutter** (web + Android mobile) and **Spring Boot** (REST API + Po
 | Database | PostgreSQL + Flyway migrations |
 | Auth | JWT (access + refresh tokens), BCrypt |
 | AI | Ollama (`qwen3:8b`, fallback `llama3.1:8b`) |
-| Payments | Stripe, Tunisian D17 |
+| Payments | Stripe, COD |
 | Real-time | WebSocket (STOMP) |
 | Proxy | nginx |
 

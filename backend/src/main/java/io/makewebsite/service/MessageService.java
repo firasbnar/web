@@ -12,8 +12,10 @@ import io.makewebsite.entity.Message;
 import io.makewebsite.repository.BoutiqueRepository;
 import io.makewebsite.repository.ConversationRepository;
 import io.makewebsite.repository.MessageRepository;
+import io.makewebsite.security.Permission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,9 +35,11 @@ public class MessageService {
     private final BoutiqueRepository boutiqueRepository;
     private final WebSocketService webSocketService;
     private final TelegramNotificationService telegramNotificationService;
+    private final BoutiquePermissionService boutiquePermissionService;
 
     @Transactional(readOnly = true)
-    public List<ConversationResponse> getConversations(UUID boutiqueId) {
+    public List<ConversationResponse> getConversations(UUID boutiqueId, UUID userId) {
+        boutiquePermissionService.requireBoutiquePermission(userId, boutiqueId, Permission.MESSAGE_READ);
         List<Conversation> conversations = conversationRepository.findByBoutiqueIdOrderByLastMessageAtDesc(boutiqueId);
         return conversations.stream()
                 .map(this::mapToConversationResponse)
@@ -43,7 +47,18 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<MessageResponse> getMessages(UUID conversationId) {
+    public List<MessageResponse> getMessages(UUID conversationId, UUID userId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation non trouvee"));
+        boutiquePermissionService.requireBoutiquePermission(userId, conversation.getBoutique().getId(), Permission.MESSAGE_READ);
+        List<Message> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+        return messages.stream()
+                .map(this::mapToMessageResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MessageResponse> getGuestMessages(UUID conversationId) {
         List<Message> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
         return messages.stream()
                 .map(this::mapToMessageResponse)
@@ -56,7 +71,7 @@ public class MessageService {
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
 
         if (Boolean.FALSE.equals(boutique.getClientMessagingEnabled())) {
-            throw new RuntimeException("La messagerie client est désactivée pour cette boutique");
+            throw new AccessDeniedException("La messagerie client est desactivee pour cette boutique");
         }
 
         Optional<Conversation> existingConversation = conversationRepository
@@ -77,6 +92,10 @@ public class MessageService {
             if (request.getCustomerPhone() != null) {
                 conversation.setCustomerPhone(request.getCustomerPhone());
             }
+        }
+
+        if (Boolean.FALSE.equals(conversation.getBoutique().getClientMessagingEnabled())) {
+            throw new AccessDeniedException("La messagerie client est desactivee pour cette boutique");
         }
 
         Message message = Message.builder()
@@ -120,7 +139,8 @@ public class MessageService {
 
     @Transactional
     public MessageResponse replyToConversation(UUID boutiqueId, UUID userId, ReplyRequest request) {
-        Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, boutiqueId)
+        boutiquePermissionService.requireBoutiquePermission(userId, boutiqueId, Permission.MESSAGE_WRITE);
+        Boutique boutique = boutiqueRepository.findById(boutiqueId)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
 
         Conversation conversation = conversationRepository.findById(request.getConversationId())
@@ -173,10 +193,11 @@ public class MessageService {
     }
 
     @Transactional
-    public void markAsRead(UUID conversationId) {
-        messageRepository.markAllAsRead(conversationId);
+    public void markAsRead(UUID conversationId, UUID userId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation non trouvée"));
+        boutiquePermissionService.requireBoutiquePermission(userId, conversation.getBoutique().getId(), Permission.MESSAGE_READ);
+        messageRepository.markAllAsRead(conversationId);
         conversation.setUnreadCount(0);
         conversationRepository.save(conversation);
     }
@@ -189,7 +210,7 @@ public class MessageService {
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
 
         if (Boolean.FALSE.equals(boutique.getClientMessagingEnabled())) {
-            throw new RuntimeException("La messagerie client est désactivée pour cette boutique");
+            throw new AccessDeniedException("La messagerie client est desactivee pour cette boutique");
         }
 
         String guestToken = UUID.randomUUID().toString();
@@ -266,6 +287,10 @@ public class MessageService {
     public MessageResponse replyAsGuest(UUID conversationId, String guestToken, String content) {
         Conversation conversation = conversationRepository.findByIdAndGuestToken(conversationId, guestToken)
                 .orElseThrow(() -> new RuntimeException("Conversation non trouvée"));
+
+        if (Boolean.FALSE.equals(conversation.getBoutique().getClientMessagingEnabled())) {
+            throw new AccessDeniedException("La messagerie client est desactivee pour cette boutique");
+        }
 
         Message message = Message.builder()
                 .boutique(conversation.getBoutique())

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -52,10 +53,9 @@ public class BoutiqueResponse {
     private String customCss;
     private String customJs;
     private Boolean enableCod;
-    private Boolean enableD17;
-    private Boolean enableAdeex;
     private Boolean enableJax;
     private Boolean enableIntigo;
+    private Boolean enableAdeex;
     private String bannerUrl;
     private String faviconUrl;
     private String fontFamily;
@@ -65,14 +65,10 @@ public class BoutiqueResponse {
     private Double tva;
     private Boolean simpleCheckout;
     private Boolean cashOnDelivery;
-    private String konnectMerchantId;
-    private String konnectApiKey;
-    private String konnectStatus;
-    private String d17MerchantNumber;
-    private String d17QrCodeUrl;
-    private String d17Status;
     private String facebookPixelId;
     private String googleAnalyticsId;
+    private Boolean stripeEnabled;
+    private String stripeStatus;
     private String stripePublishableKey;
     private Double freeShippingThreshold;
     private Integer estimatedDeliveryDays;
@@ -94,4 +90,7 @@ public class BoutiqueResponse {
     private String publishedAt;
     private String publicUrl;
     private LocalDateTime createdAt;
+    private Boolean ownerAccess;
+    private String currentUserRole;
+    private List<String> currentUserPermissions;
 }

@@ -32,15 +32,17 @@ public class MessageController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations(
-            @RequestParam UUID boutiqueId) {
-        List<ConversationResponse> conversations = messageService.getConversations(boutiqueId);
+            @RequestParam UUID boutiqueId,
+            @AuthenticationPrincipal io.makewebsite.security.UserPrincipal principal) {
+        List<ConversationResponse> conversations = messageService.getConversations(boutiqueId, principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(conversations));
     }
 
     @GetMapping("/{conversationId}")
     public ResponseEntity<ApiResponse<List<MessageResponse>>> getMessages(
-            @PathVariable UUID conversationId) {
-        List<MessageResponse> messages = messageService.getMessages(conversationId);
+            @PathVariable UUID conversationId,
+            @AuthenticationPrincipal io.makewebsite.security.UserPrincipal principal) {
+        List<MessageResponse> messages = messageService.getMessages(conversationId, principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(messages));
     }
 
@@ -54,8 +56,10 @@ public class MessageController {
     }
 
     @PutMapping("/{conversationId}/read")
-    public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable UUID conversationId) {
-        messageService.markAsRead(conversationId);
+    public ResponseEntity<ApiResponse<Void>> markAsRead(
+            @PathVariable UUID conversationId,
+            @AuthenticationPrincipal io.makewebsite.security.UserPrincipal principal) {
+        messageService.markAsRead(conversationId, principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

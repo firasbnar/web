@@ -7,7 +7,9 @@ import io.makewebsite.entity.Boutique;
 import io.makewebsite.entity.User;
 import io.makewebsite.repository.BoutiqueRepository;
 import io.makewebsite.repository.UserRepository;
+import io.makewebsite.security.Permission;
 import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.BoutiquePermissionService;
 import io.makewebsite.service.ReviewService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class ReviewAdminController {
     private final ReviewService reviewService;
     private final BoutiqueRepository boutiqueRepository;
     private final UserRepository userRepository;
+    private final BoutiquePermissionService boutiquePermissionService;
 
     private Boutique getOwnedBoutique(UUID boutiqueId, UUID userId) {
         return boutiqueRepository.findByUserIdAndId(userId, boutiqueId)
@@ -40,7 +43,7 @@ public class ReviewAdminController {
             @RequestParam(required = false) String status,
             Pageable pageable,
             @AuthenticationPrincipal UserPrincipal principal) {
-        getOwnedBoutique(boutiqueId, principal.getUserId());
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), boutiqueId, Permission.REVIEW_READ);
         ReviewStatus filter = status != null ? ReviewStatus.valueOf(status.toUpperCase()) : null;
         Page<Review> page = reviewService.getBoutiqueReviews(boutiqueId, filter, pageable);
         long pendingCount = reviewService.getPendingCount(boutiqueId);
@@ -72,7 +75,7 @@ public class ReviewAdminController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPendingCount(
             @PathVariable UUID boutiqueId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        getOwnedBoutique(boutiqueId, principal.getUserId());
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), boutiqueId, Permission.REVIEW_READ);
         long count = reviewService.getPendingCount(boutiqueId);
         return ResponseEntity.ok(ApiResponse.ok(Map.of("pendingCount", count)));
     }
@@ -86,6 +89,7 @@ public class ReviewAdminController {
         if (user.getActiveBoutiqueId() == null) {
             throw new RuntimeException("Aucune boutique active");
         }
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), user.getActiveBoutiqueId(), Permission.REVIEW_WRITE);
         Review r = reviewService.approveReview(id, user.getActiveBoutiqueId());
         return ResponseEntity.ok(ApiResponse.ok("Avis approuvé", Map.of("status", r.getStatus().name())));
     }
@@ -99,6 +103,7 @@ public class ReviewAdminController {
         if (user.getActiveBoutiqueId() == null) {
             throw new RuntimeException("Aucune boutique active");
         }
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), user.getActiveBoutiqueId(), Permission.REVIEW_WRITE);
         Review r = reviewService.rejectReview(id, user.getActiveBoutiqueId());
         return ResponseEntity.ok(ApiResponse.ok("Avis rejeté", Map.of("status", r.getStatus().name())));
     }
@@ -113,6 +118,7 @@ public class ReviewAdminController {
         if (user.getActiveBoutiqueId() == null) {
             throw new RuntimeException("Aucune boutique active");
         }
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), user.getActiveBoutiqueId(), Permission.REVIEW_WRITE);
         Review r = reviewService.replyToReview(id, user.getActiveBoutiqueId(), req.getOwnerReply());
         return ResponseEntity.ok(ApiResponse.ok("Réponse ajoutée", Map.of("ownerReply", r.getOwnerReply())));
     }
@@ -126,6 +132,7 @@ public class ReviewAdminController {
         if (user.getActiveBoutiqueId() == null) {
             throw new RuntimeException("Aucune boutique active");
         }
+        boutiquePermissionService.requireBoutiquePermission(principal.getUserId(), user.getActiveBoutiqueId(), Permission.REVIEW_WRITE);
         reviewService.deleteReview(id, user.getActiveBoutiqueId());
         return ResponseEntity.ok(ApiResponse.ok("Avis supprimé", null));
     }

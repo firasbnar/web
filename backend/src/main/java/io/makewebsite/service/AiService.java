@@ -8,6 +8,7 @@ import io.makewebsite.dto.response.AiChatResponse;
 import io.makewebsite.dto.response.AiResponse;
 import io.makewebsite.entity.AiConversation;
 import io.makewebsite.entity.Boutique;
+import io.makewebsite.entity.Order;
 import io.makewebsite.entity.Product;
 import io.makewebsite.entity.User;
 import io.makewebsite.repository.AiConversationRepository;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -103,34 +105,85 @@ public class AiService {
         UUID boutiqueId = resolveOwnerBoutiqueId(userId, requestedBoutiqueId);
         Boutique boutique = tenantAccessService.requireBoutiqueAccess(boutiqueId);
         String currency = boutique.getCurrency() != null ? boutique.getCurrency() : "TND";
+        String userMsg = message != null ? message : "Bonjour";
 
         StringBuilder ctx = new StringBuilder();
+
+        // ── Store basics ──
         ctx.append("Store name: ").append(boutique.getName()).append("\n");
-        if (boutique.getDescription() != null)
+        if (boutique.getDescription() != null && !boutique.getDescription().isBlank())
             ctx.append("Store description: ").append(boutique.getDescription()).append("\n");
         ctx.append("Currency: ").append(currency).append("\n");
 
-        ctx.append("Active products: ").append(productRepository.countByBoutiqueIdAndIsActiveTrue(boutiqueId)).append("\n");
+        // ── Products ──
+        long totalProducts = productRepository.countByBoutiqueId(boutiqueId);
+        long activeProducts = productRepository.countByBoutiqueIdAndIsActiveTrue(boutiqueId);
+        ctx.append("Total products: ").append(totalProducts).append("\n");
+        ctx.append("Active products: ").append(activeProducts).append("\n");
+        ctx.append("Inactive products: ").append(totalProducts - activeProducts).append("\n");
 
-        List<Map<String, Object>> lowStock = getLowStockProducts(boutiqueId);
+        long outOfStockCount = productRepository.findByBoutiqueIdAndStockLessThan(boutiqueId, 1).size();
+        ctx.append("Out of stock products: ").append(outOfStockCount).append("\n");
+
+        List<Map<String, Object>> lowStock = getLowStockProducts(boutiqueId).stream()
+                .filter(p -> {
+                    Object stock = p.get("stock");
+                    return stock instanceof Number && ((Number) stock).intValue() > 0;
+                })
+                .toList();
         if (!lowStock.isEmpty()) {
-            ctx.append("Low stock products: ");
+            ctx.append("Low stock products (1-5 remaining): ");
             for (Map<String, Object> p : lowStock)
                 ctx.append(p.get("name")).append(" (stock: ").append(p.get("stock")).append("), ");
             ctx.append("\n");
         }
 
+        List<Product> recentProducts = productRepository.findByBoutiqueIdAndIsActiveTrueOrderByCreatedAtDesc(boutiqueId);
+        if (!recentProducts.isEmpty()) {
+            ctx.append("Recent products: ");
+            for (Product p : recentProducts.stream().limit(5).toList())
+                ctx.append(p.getName()).append(", ");
+            ctx.append("\n");
+        }
+
+        // ── Orders ──
+        long totalOrders = orderRepository.countByBoutiqueId(boutiqueId);
+        long pendingOrders = orderRepository.countByBoutiqueIdAndStatus(boutiqueId, "PENDING");
+        long deliveredOrders = orderRepository.countByBoutiqueIdAndStatus(boutiqueId, "DELIVERED");
+        long cancelledOrders = orderRepository.countByBoutiqueIdAndStatus(boutiqueId, "CANCELLED");
+        ctx.append("Total orders: ").append(totalOrders).append("\n");
+        ctx.append("Pending orders: ").append(pendingOrders).append("\n");
+        ctx.append("Delivered orders: ").append(deliveredOrders).append("\n");
+        ctx.append("Cancelled orders: ").append(cancelledOrders).append("\n");
+
+        // ── Revenue ──
         Map<String, Object> revenue = getRevenueStats(boutiqueId);
         ctx.append("Orders today: ").append(revenue.get("ordersToday")).append("\n");
         ctx.append("Revenue today: ").append(revenue.get("revenueToday")).append(" ").append(currency).append("\n");
         ctx.append("Revenue this month: ").append(revenue.get("revenueThisMonth")).append(" ").append(currency).append("\n");
         ctx.append("Total revenue: ").append(revenue.get("totalRevenue")).append(" ").append(currency).append("\n");
-        ctx.append("Total orders: ").append(revenue.get("totalOrders")).append("\n");
 
+        // ── Recent orders ──
+        List<Order> recentOrders = orderRepository.findByBoutiqueId(boutiqueId,
+                PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+        if (!recentOrders.isEmpty()) {
+            ctx.append("Recent orders: ");
+            for (Order o : recentOrders)
+                ctx.append(o.getOrderNumber()).append(" (").append(o.getStatus()).append(", ")
+                        .append(o.getTotal()).append(" ").append(currency).append("), ");
+            ctx.append("\n");
+        }
+
+        // ── Customers ──
+        long customerCount = customerRepository.countByBoutiqueId(boutiqueId);
+        ctx.append("Customers: ").append(customerCount).append("\n");
+
+        // ── Traffic ──
         Map<String, Object> traffic = getTrafficStats(boutiqueId);
         ctx.append("Visits today: ").append(traffic.get("visitsToday")).append("\n");
         ctx.append("Conversion rate today: ").append(traffic.get("conversionRateToday")).append("%\n");
 
+        // ── Best sellers ──
         List<Map<String, Object>> bestSellers = getBestSellingProducts(boutiqueId);
         if (!bestSellers.isEmpty()) {
             ctx.append("Best-selling products: ");
@@ -139,12 +192,26 @@ public class AiService {
             ctx.append("\n");
         }
 
+        // ── Delivery & Payment config ──
+        ctx.append("Delivery fees: ").append(boutique.getDeliveryFees() != null ? boutique.getDeliveryFees() : 0).append(" ").append(currency).append("\n");
+        ctx.append("Cash on delivery: ").append(Boolean.TRUE.equals(boutique.getCashOnDelivery()) ? "yes" : "no").append("\n");
+        ctx.append("Stripe status: ").append(boutique.getStripeStatus() != null ? boutique.getStripeStatus() : "disabled").append("\n");
+        ctx.append("Simple checkout: ").append(Boolean.TRUE.equals(boutique.getSimpleCheckout()) ? "yes" : "no").append("\n");
+
+        // ── Build prompts ──
         String systemPrompt = "You are Merchant Copilot for MakeWebsite.io.\n"
-                + "You help the merchant understand analytics, products, orders, revenue, traffic, and business performance.\n"
-                + "Use only the provided store data.\n"
-                + "Do not invent numbers.\n"
-                + "Give short, clear, useful business advice.";
-        String answer = callOllamaSimple(systemPrompt, ctx + "\nMerchant question: " + (message != null ? message : "Bonjour"));
+                + "You help merchants understand and manage their online store using real boutique data.\n"
+                + "Use only the provided backend context.\n"
+                + "Never invent numbers, orders, products, customers, revenue, or traffic.\n"
+                + "If data is missing, say that it is not available.\n"
+                + "Give short, clear, actionable business advice.\n"
+                + "Answer in the same language as the merchant.";
+
+        String userContent = "Store context:\n" + ctx
+                + "\nMerchant question:\n" + userMsg
+                + "\nAnswer using only the store context above.";
+
+        String answer = callOllamaSimple(systemPrompt, userContent);
         return AiChatResponse.builder()
                 .answer(answer != null ? answer : "D\u00e9sol\u00e9, je n'ai pas pu traiter votre demande pour le moment.")
                 .build();

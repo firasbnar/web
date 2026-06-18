@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/boutique_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -27,6 +28,16 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
   final _countryCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.read<AuthProvider>().canCreateBoutique && mounted) {
+        context.go('/home');
+      }
+    });
+  }
 
   @override
   void dispose() {

@@ -4,6 +4,9 @@ import io.makewebsite.dto.request.*;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.entity.*;
 import io.makewebsite.repository.*;
+import io.makewebsite.security.Permission;
+import io.makewebsite.security.RolePermissions;
+import io.makewebsite.util.StripeConfigUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,6 +19,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,32 +49,60 @@ public class BoutiqueService {
     private final TenantRepository tenantRepository;
     private final TrafficService trafficService;
     private final SubscriptionRepository subscriptionRepository;
+    private final TeamMemberRepository teamMemberRepository;
 
     @Transactional
     public List<BoutiqueResponse> getMyBoutiques(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvÃ©"));
+        List<TeamMember> memberships = teamMemberRepository.findByUserIdAndStatus(userId, "ACTIVE");
+        Map<UUID, TeamMember> membershipByBoutiqueId = memberships.stream()
+                .filter(m -> m.getBoutique() != null)
+                .collect(Collectors.toMap(m -> m.getBoutique().getId(), m -> m, (a, b) -> a));
+
         List<Boutique> boutiques = boutiqueRepository.findByUserId(userId);
+        memberships.stream()
+                .map(TeamMember::getBoutique)
+                .filter(Objects::nonNull)
+                .filter(teamBoutique -> boutiques.stream().noneMatch(b -> b.getId().equals(teamBoutique.getId())))
+                .forEach(boutiques::add);
+
         if (!boutiques.isEmpty()) {
-            User user = boutiques.get(0).getUser();
-            if (user.getActiveBoutiqueId() == null) {
-                user.setActiveBoutiqueId(boutiques.get(0).getId());
+            boolean activeBoutiqueAccessible = user.getActiveBoutiqueId() != null
+                    && boutiques.stream().anyMatch(b -> b.getId().equals(user.getActiveBoutiqueId()));
+            if (!activeBoutiqueAccessible) {
+                UUID preferredBoutiqueId = memberships.stream()
+                        .map(TeamMember::getBoutique)
+                        .filter(Objects::nonNull)
+                        .map(Boutique::getId)
+                        .findFirst()
+                        .orElse(boutiques.get(0).getId());
+                user.setActiveBoutiqueId(preferredBoutiqueId);
                 userRepository.save(user);
             }
         }
         return boutiques.stream()
-                .map(this::mapToResponse)
+                .map(b -> mapToResponse(b, userId, membershipByBoutiqueId.get(b.getId())))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public BoutiqueResponse getBoutique(UUID id, UUID userId) {
-        Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
+        Boutique boutique = findAccessibleBoutique(id, userId)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
-        return mapToResponse(boutique);
+        TeamMember membership = teamMemberRepository.findByBoutiqueIdAndUserIdAndStatus(id, userId, "ACTIVE")
+                .orElse(null);
+        return mapToResponse(boutique, userId, membership);
     }
 
     @Transactional
     public BoutiqueResponse createBoutique(CreateBoutiqueRequest request, UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        if ("TEAM_MEMBER".equalsIgnoreCase(user.getRole())) {
+            throw new RuntimeException("Les membres invites ne peuvent pas creer de boutique");
+        }
 
         // Only SUPER_ADMIN can create boutiques without an active subscription
         boolean hasActiveSub = subscriptionRepository.findByUserIdAndStatus(userId, "ACTIVE").isPresent();
@@ -118,7 +152,7 @@ public class BoutiqueService {
                 .enableCod(true)
                 .build();
         boutique = boutiqueRepository.save(boutique);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     private String generateSlug(String name) {
@@ -152,7 +186,7 @@ public class BoutiqueService {
             boutique.setSlug(newSlug);
         }
         boutique = boutiqueRepository.save(boutique);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     @Transactional
@@ -164,7 +198,7 @@ public class BoutiqueService {
         boutique.setPublishedAt(LocalDateTime.now());
         boutique = boutiqueRepository.save(boutique);
         log.info("Boutique publish: boutiqueId={}, userId={}, previous={}, new=true", id, userId, previous);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     @Transactional
@@ -176,7 +210,7 @@ public class BoutiqueService {
         boutique.setPublishedAt(null);
         boutique = boutiqueRepository.save(boutique);
         log.info("Boutique unpublish: boutiqueId={}, userId={}, previous={}, new=false", id, userId, previous);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     @Transactional
@@ -190,7 +224,7 @@ public class BoutiqueService {
         if (request.getFontFamily() != null) boutique.setFontFamily(request.getFontFamily());
         if (request.getDarkMode() != null) boutique.setDarkMode(request.getDarkMode());
         boutique = boutiqueRepository.save(boutique);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     @Transactional
@@ -204,7 +238,7 @@ public class BoutiqueService {
         if (request.getFacebookPixelId() != null) boutique.setFacebookPixelId(request.getFacebookPixelId());
         if (request.getGoogleAnalyticsId() != null) boutique.setGoogleAnalyticsId(request.getGoogleAnalyticsId());
         boutique = boutiqueRepository.save(boutique);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     @Transactional
@@ -216,7 +250,7 @@ public class BoutiqueService {
         if (request.getTiktokUrl() != null) boutique.setTiktokUrl(request.getTiktokUrl());
         if (request.getWhatsappNumber() != null) boutique.setWhatsappNumber(request.getWhatsappNumber());
         boutique = boutiqueRepository.save(boutique);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     @Transactional
@@ -224,24 +258,16 @@ public class BoutiqueService {
         Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, id)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
         if (request.getEnableCod() != null) boutique.setEnableCod(request.getEnableCod());
-        if (request.getEnableD17() != null) boutique.setEnableD17(request.getEnableD17());
-        if (request.getEnableAdeex() != null) boutique.setEnableAdeex(request.getEnableAdeex());
-        if (request.getEnableJax() != null) boutique.setEnableJax(request.getEnableJax());
-        if (request.getEnableIntigo() != null) boutique.setEnableIntigo(request.getEnableIntigo());
         if (request.getStripePublishableKey() != null) boutique.setStripePublishableKey(request.getStripePublishableKey());
         if (request.getStripeSecretKey() != null) boutique.setStripeSecretKey(request.getStripeSecretKey());
         if (request.getStripeWebhookSecret() != null) boutique.setStripeWebhookSecret(request.getStripeWebhookSecret());
-        if (request.getKonnectMerchantId() != null) boutique.setKonnectMerchantId(request.getKonnectMerchantId());
-        if (request.getKonnectApiKey() != null) boutique.setKonnectApiKey(request.getKonnectApiKey());
-        if (request.getKonnectStatus() != null) boutique.setKonnectStatus(request.getKonnectStatus());
-        if (request.getD17MerchantNumber() != null) boutique.setD17MerchantNumber(request.getD17MerchantNumber());
-        if (request.getD17QrCodeUrl() != null) boutique.setD17QrCodeUrl(request.getD17QrCodeUrl());
-        if (request.getD17Status() != null) boutique.setD17Status(request.getD17Status());
+        if (request.getStripeEnabled() != null || request.getStripeStatus() != null) {
+            StripeConfigUtils.applyStripeState(boutique, request.getStripeEnabled(), request.getStripeStatus());
+        }
         boutique = boutiqueRepository.save(boutique);
-        log.info("updatePayments: boutiqueId={} enableJax={} enableIntigo={} enableAdeex={} enableCod={} enableD17={}",
-                id, boutique.getEnableJax(), boutique.getEnableIntigo(), boutique.getEnableAdeex(),
-                boutique.getEnableCod(), boutique.getEnableD17());
-        return mapToResponse(boutique);
+        log.info("updatePayments: boutiqueId={} enableCod={} stripeEnabled={} stripeStatus={}",
+                id, boutique.getEnableCod(), StripeConfigUtils.isStripeEnabled(boutique), boutique.getStripeStatus());
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     public List<BoutiqueResponse> getPublicBoutiques() {
@@ -251,7 +277,7 @@ public class BoutiqueService {
     }
 
     public BoutiqueStatsResponse getStats(UUID id, UUID userId) {
-        boutiqueRepository.findByUserIdAndId(userId, id)
+        findAccessibleBoutique(id, userId)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();
@@ -276,7 +302,7 @@ public class BoutiqueService {
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard(UUID boutiqueId, UUID userId) {
-        Boutique boutique = boutiqueRepository.findByUserIdAndId(userId, boutiqueId)
+        Boutique boutique = findAccessibleBoutique(boutiqueId, userId)
                 .orElseThrow(() -> new RuntimeException("Boutique non trouvée"));
 
         LocalDate today = LocalDate.now();
@@ -314,8 +340,7 @@ public class BoutiqueService {
                 .isActive(p.getIsActive()).isFeatured(p.getIsFeatured()).build()
         ).collect(Collectors.toList());
 
-        List<BoutiqueResponse> allBoutiques = boutiqueRepository.findByUserId(userId).stream()
-                .map(this::mapToResponse).collect(Collectors.toList());
+        List<BoutiqueResponse> allBoutiques = getMyBoutiques(userId);
 
         // --- Real views from TrafficService ---
         long views = 0;
@@ -410,16 +435,33 @@ public class BoutiqueService {
         }
 
         userRepository.save(owner);
-        return mapToResponse(boutique);
+        return toResponseForCurrentUser(boutique, userId);
     }
 
     private BoutiqueResponse mapToResponse(Boutique b) {
+        return mapToResponse(b, null, null);
+    }
+
+    private BoutiqueResponse toResponseForCurrentUser(Boutique b, UUID currentUserId) {
+        TeamMember membership = currentUserId == null ? null
+                : teamMemberRepository.findByBoutiqueIdAndUserIdAndStatus(b.getId(), currentUserId, "ACTIVE")
+                .orElse(null);
+        return mapToResponse(b, currentUserId, membership);
+    }
+
+    private BoutiqueResponse mapToResponse(Boutique b, UUID currentUserId, TeamMember membership) {
         String publicUrl = "/store/" + b.getSlug();
         String publicationStatus;
         if ("FROZEN".equals(b.getStoreStatus())) publicationStatus = "FROZEN";
         else if ("SUSPENDED".equals(b.getStoreStatus())) publicationStatus = "SUSPENDED";
         else if (Boolean.FALSE.equals(b.getIsPublished())) publicationStatus = "DRAFT";
         else publicationStatus = "PUBLISHED";
+        boolean ownerAccess = currentUserId != null && b.getUser() != null && currentUserId.equals(b.getUser().getId());
+        String responseRole = ownerAccess ? "OWNER" : (membership != null ? "TEAM_MEMBER" : null);
+        String permissionRole = ownerAccess ? "OWNER" : (membership != null ? membership.getRole() : null);
+        List<String> permissions = RolePermissions.getPermissions(permissionRole).stream()
+                .map(Permission::name)
+                .collect(Collectors.toList());
         return BoutiqueResponse.builder()
                 .id(b.getId()).name(b.getName()).slug(b.getSlug())
                 .logoUrl(b.getLogoUrl()).description(b.getDescription())
@@ -441,16 +483,17 @@ public class BoutiqueService {
                 .linkedinUrl(b.getLinkedinUrl()).whatsappNumber(b.getWhatsappNumber())
                 .customCss(b.getCustomCss()).customJs(b.getCustomJs())
                 .enableCod(b.getEnableCod())
-                .enableD17(b.getEnableD17()).enableAdeex(b.getEnableAdeex())
-                .enableJax(b.getEnableJax()).enableIntigo(b.getEnableIntigo())
+                .enableJax(Boolean.TRUE.equals(b.getEnableJax()))
+                .enableIntigo(Boolean.TRUE.equals(b.getEnableIntigo()))
+                .enableAdeex(Boolean.TRUE.equals(b.getEnableAdeex()))
                 .bannerUrl(b.getBannerUrl()).faviconUrl(b.getFaviconUrl())
                 .fontFamily(b.getFontFamily()).darkMode(b.getDarkMode())
                 .announcementText(b.getAnnouncementText())
                 .deliveryFees(b.getDeliveryFees()).tva(b.getTva())
                 .simpleCheckout(b.getSimpleCheckout()).cashOnDelivery(b.getCashOnDelivery())
-                .konnectMerchantId(b.getKonnectMerchantId()).konnectApiKey(b.getKonnectApiKey()).konnectStatus(b.getKonnectStatus())
-                .d17MerchantNumber(b.getD17MerchantNumber()).d17QrCodeUrl(b.getD17QrCodeUrl()).d17Status(b.getD17Status())
                 .facebookPixelId(b.getFacebookPixelId()).googleAnalyticsId(b.getGoogleAnalyticsId())
+                .stripeEnabled(StripeConfigUtils.isStripeEnabled(b))
+                .stripeStatus(StripeConfigUtils.normalizeStripeStatus(b.getStripeEnabled(), b.getStripeStatus()))
                 .stripePublishableKey(b.getStripePublishableKey())
                 .freeShippingThreshold(b.getFreeShippingThreshold()).estimatedDeliveryDays(b.getEstimatedDeliveryDays())
                 .enableLocalPickup(b.getEnableLocalPickup())
@@ -468,6 +511,18 @@ public class BoutiqueService {
                 .publishedAt(b.getPublishedAt() != null ? b.getPublishedAt().toString() : null)
                 .publicUrl(publicUrl)
                 .createdAt(b.getCreatedAt())
+                .ownerAccess(ownerAccess)
+                .currentUserRole(responseRole)
+                .currentUserPermissions(permissions)
                 .build();
+    }
+
+    private Optional<Boutique> findAccessibleBoutique(UUID boutiqueId, UUID userId) {
+        Optional<Boutique> owned = boutiqueRepository.findByUserIdAndIdWithUser(userId, boutiqueId);
+        if (owned.isPresent()) {
+            return owned;
+        }
+        return teamMemberRepository.findByBoutiqueIdAndUserIdAndStatus(boutiqueId, userId, "ACTIVE")
+                .map(TeamMember::getBoutique);
     }
 }

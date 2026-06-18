@@ -59,6 +59,7 @@ import '../screens/boutique/telegram_settings_screen.dart';
 
 import '../models/conversation.dart';
 import '../widgets/main_scaffold.dart';
+import '../widgets/permission_guard.dart';
 
 GoRouter createRouter(AuthProvider auth) {
   // Saved intended URL before splash redirect, restored after auth init completes
@@ -73,11 +74,6 @@ GoRouter createRouter(AuthProvider auth) {
       final role = auth.role;
 
       developer.log('[ROUTER] redirect: path="$path" isLoggedIn=$isLoggedIn role=$role initialized=${auth.isInitialized}');
-
-      // Public store routes — no auth required, never redirect to splash/landing/login
-      // This check must come BEFORE the auth init check so the route resolves immediately
-      // even while auth state is still being restored from storage.
-      if (path.startsWith('/store/')) return null;
 
       // --- AUTH INIT CHECK — show splash until auth state is restored from storage ---
       if (!auth.isInitialized) {
@@ -113,7 +109,7 @@ GoRouter createRouter(AuthProvider auth) {
       // Public store browsings
       if (path.startsWith('/explore')) return null;
 
-      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/public-store', '/plans', '/create-store', '/store-selector', '/stores', '/subscription/checkout-return'];
+      final publicRoutes = ['/landing', '/login', '/register', '/signup', '/verify-email', '/forgot-password', '/reset-password', '/plans', '/create-store', '/store-selector', '/stores', '/subscription/checkout-return'];
       final isPublic = publicRoutes.any((r) => location == r || location.startsWith('$r/') || location.startsWith('$r?'));
 
       // --- SUPER_ADMIN is platform-level only, no access to owner/merchant routes ---
@@ -142,6 +138,17 @@ GoRouter createRouter(AuthProvider auth) {
         return target;
       }
 
+      final teamMemberBlockedPath = path.startsWith('/create-store') ||
+          path.startsWith('/create-boutique') ||
+          path.startsWith('/plans') ||
+          path.startsWith('/subscription-checkout') ||
+          path.startsWith('/subscription/checkout') ||
+          path == '/subscription';
+      if (auth.isTeamMember && teamMemberBlockedPath) {
+        developer.log('[ROUTER] Team member blocked from owner onboarding/subscription path, redirecting to /home');
+        return '/home';
+      }
+
       if (isPublic) return null;
 
       if (path == '/change-password') return null;
@@ -149,6 +156,19 @@ GoRouter createRouter(AuthProvider auth) {
       if (auth.mustChangePassword && path != '/change-password') {
         developer.log('[ROUTER] Must change password, redirecting');
         return '/change-password';
+      }
+
+      // Deep link handling: Stripe checkout return
+      // (covers both old backend URL with session_id and new URL with sessionId)
+      final query = state.uri.queryParameters;
+      if ((path == '/subscription' || path == '/subscription/checkout-return') && query.containsKey('status')) {
+        final sessionId = query['sessionId'] ?? query['session_id'] ?? '';
+        final status = query['status'] ?? 'pending';
+        developer.log('[ROUTER] Stripe return deep link: status=$status sessionId=$sessionId');
+        if (path != '/subscription/checkout-return') {
+          return '/subscription/checkout-return?status=$status&sessionId=$sessionId';
+        }
+        return null;
       }
 
       // Subscription guard: non-SUPER_ADMIN needs active subscription for protected routes
@@ -159,7 +179,11 @@ GoRouter createRouter(AuthProvider auth) {
           '/coupons', '/reviews', '/team', '/messages', '/notifications', '/boutique-settings',
           '/payment-settings', '/ai-assistant', '/stores'];
       final needsSub = subRequiredPaths.any((p) => path == p || path.startsWith('$p/'));
-      if (needsSub && role != 'SUPER_ADMIN' && !auth.subscriptionActive) {
+      if (needsSub && role != 'SUPER_ADMIN' && !auth.isTeamMember && !auth.subscriptionActive) {
+        if (auth.isSubscriptionChecking) {
+          developer.log('[ROUTER] Subscription status still loading, allowing navigation');
+          return null;
+        }
         developer.log('[ROUTER] No active subscription, redirecting to /plans');
         return '/plans';
       }
@@ -214,7 +238,7 @@ GoRouter createRouter(AuthProvider auth) {
         path: '/subscription/checkout-return',
         builder: (_, state) => SubscriptionCheckoutReturnScreen(
           status: state.uri.queryParameters['status'] ?? 'pending',
-          sessionId: state.uri.queryParameters['sessionId'],
+          sessionId: state.uri.queryParameters['sessionId'] ?? state.uri.queryParameters['session_id'],
         ),
       ),
       GoRoute(path: '/super-admin', builder: (_, __) => const SuperAdminDashboardScreen()),
@@ -223,25 +247,23 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, __, child) => MainScaffold(child: child),
         routes: [
           GoRoute(path: '/home', builder: (_, __) => const StoreDashboardScreen()),
-          GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
-          GoRoute(path: '/messages/:id', builder: (_, state) => ConversationScreen(conversation: state.extra as Conversation)),
-          GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
-          GoRoute(path: '/reviews', builder: (_, __) => const ReviewsScreen()),
-          GoRoute(path: '/boutique/theme', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Theme')))),
-          GoRoute(path: '/boutique/template', builder: (_, __) => Scaffold(appBar: AppBar(title: const Text('Template')))),
-          GoRoute(path: '/pos/admin', builder: (_, __) => const PosAdminScreen()),
-          GoRoute(path: '/telegram', builder: (_, __) => const TelegramSettingsScreen()),
-          GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
-          GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
-          GoRoute(path: '/orders/:id', builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['id']!)),
-          GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
-          GoRoute(path: '/customers/:id', builder: (_, state) => CustomerDetailScreen(customerId: state.pathParameters['id']!)),
-          GoRoute(path: '/pos', builder: (_, __) => const PosScreen()),
-          GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
-          GoRoute(path: '/delivery', builder: (_, __) => const DeliveryCompanyScreen()),
-          GoRoute(path: '/analytics', builder: (_, __) => const AnalyticsScreen()),
-          GoRoute(path: '/traffic', builder: (_, __) => const TrafficScreen()),
-          GoRoute(path: '/traffic/analytics', builder: (_, __) => const TrafficAnalyticsScreen()),
+          GoRoute(path: '/messages', builder: (_, __) => const PermissionGuard(anyPermissions: ['MESSAGE_READ'], child: MessagesScreen())),
+          GoRoute(path: '/messages/:id', builder: (_, state) => PermissionGuard(anyPermissions: const ['MESSAGE_READ'], child: ConversationScreen(conversation: state.extra as Conversation))),
+          GoRoute(path: '/team', builder: (_, __) => const PermissionGuard(anyPermissions: ['TEAM_READ', 'TEAM_WRITE'], child: TeamScreen())),
+          GoRoute(path: '/reviews', builder: (_, __) => const PermissionGuard(anyPermissions: ['REVIEW_READ', 'REVIEW_WRITE'], child: ReviewsScreen())),
+          GoRoute(path: '/pos/admin', builder: (_, __) => const PermissionGuard(anyPermissions: ['POS_ACCESS'], child: PosAdminScreen())),
+          GoRoute(path: '/telegram', builder: (_, __) => const PermissionGuard(anyPermissions: ['SETTINGS_READ', 'SETTINGS_WRITE'], child: TelegramSettingsScreen())),
+          GoRoute(path: '/products', builder: (_, __) => const PermissionGuard(anyPermissions: ['PRODUCT_READ'], child: ProductsScreen())),
+          GoRoute(path: '/orders', builder: (_, __) => const PermissionGuard(anyPermissions: ['ORDER_READ'], child: OrdersScreen())),
+          GoRoute(path: '/orders/:id', builder: (_, state) => PermissionGuard(anyPermissions: const ['ORDER_READ'], child: OrderDetailScreen(orderId: state.pathParameters['id']!))),
+          GoRoute(path: '/customers', builder: (_, __) => const PermissionGuard(anyPermissions: ['CUSTOMER_READ'], child: CustomersScreen())),
+          GoRoute(path: '/customers/:id', builder: (_, state) => PermissionGuard(anyPermissions: const ['CUSTOMER_READ'], child: CustomerDetailScreen(customerId: state.pathParameters['id']!))),
+          GoRoute(path: '/pos', builder: (_, __) => const PermissionGuard(anyPermissions: ['POS_ACCESS'], child: PosScreen())),
+          GoRoute(path: '/inventory', builder: (_, __) => const PermissionGuard(anyPermissions: ['STOCK_UPDATE', 'INVENTORY_WRITE'], child: InventoryScreen())),
+          GoRoute(path: '/delivery', builder: (_, __) => const PermissionGuard(anyPermissions: ['SETTINGS_READ', 'SETTINGS_WRITE'], child: DeliveryCompanyScreen())),
+          GoRoute(path: '/analytics', builder: (_, __) => const PermissionGuard(anyPermissions: ['ANALYTICS_READ'], child: AnalyticsScreen())),
+          GoRoute(path: '/traffic', builder: (_, __) => const PermissionGuard(anyPermissions: ['ANALYTICS_READ'], child: TrafficScreen())),
+          GoRoute(path: '/traffic/analytics', builder: (_, __) => const PermissionGuard(anyPermissions: ['ANALYTICS_READ'], child: TrafficAnalyticsScreen())),
           // Multi-store scoped routes
           GoRoute(
             path: '/stores/:boutiqueId/dashboard',
@@ -251,23 +273,23 @@ GoRouter createRouter(AuthProvider auth) {
           ),
           GoRoute(
             path: '/stores/:boutiqueId/products',
-            builder: (_, __) => const ProductsScreen(),
+            builder: (_, __) => const PermissionGuard(anyPermissions: ['PRODUCT_READ'], child: ProductsScreen()),
           ),
           GoRoute(
             path: '/stores/:boutiqueId/orders',
-            builder: (_, __) => const OrdersScreen(),
+            builder: (_, __) => const PermissionGuard(anyPermissions: ['ORDER_READ'], child: OrdersScreen()),
           ),
           GoRoute(
             path: '/stores/:boutiqueId/customers',
-            builder: (_, __) => const CustomersScreen(),
+            builder: (_, __) => const PermissionGuard(anyPermissions: ['CUSTOMER_READ'], child: CustomersScreen()),
           ),
           GoRoute(
             path: '/stores/:boutiqueId/traffic',
-            builder: (_, __) => const TrafficScreen(),
+            builder: (_, __) => const PermissionGuard(anyPermissions: ['ANALYTICS_READ'], child: TrafficScreen()),
           ),
           GoRoute(
             path: '/stores/:boutiqueId/settings',
-            builder: (_, __) => const BoutiqueSettingsScreen(),
+            builder: (_, __) => const PermissionGuard(anyPermissions: ['SETTINGS_READ', 'SETTINGS_WRITE'], child: BoutiqueSettingsScreen()),
           ),
           GoRoute(
             path: '/stores/:boutiqueId',
@@ -276,19 +298,19 @@ GoRouter createRouter(AuthProvider auth) {
           GoRoute(path: '/admin', builder: (_, __) => const AdminDashboardScreen()),
           GoRoute(path: '/admin/activities', builder: (_, __) => const JournalActiviteScreen()),
           GoRoute(path: '/payment-settings', redirect: (_, __) => '/boutique-settings'),
-          GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),
-          GoRoute(path: '/boutique-settings', builder: (_, __) => const BoutiqueSettingsScreen()),
+          GoRoute(path: '/ai-assistant', builder: (_, __) => const PermissionGuard(anyPermissions: ['AI_ASSISTANT'], child: AiAssistantScreen())),
+          GoRoute(path: '/boutique-settings', builder: (_, __) => const PermissionGuard(anyPermissions: ['SETTINGS_READ', 'SETTINGS_WRITE'], child: BoutiqueSettingsScreen())),
           GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
           GoRoute(path: '/subscription', builder: (_, __) => const SubscriptionDashboardScreen()),
-          GoRoute(path: '/coupons', builder: (_, __) => const CouponsScreen()),
+          GoRoute(path: '/coupons', builder: (_, __) => const PermissionGuard(anyPermissions: ['DISCOUNT_WRITE'], child: CouponsScreen())),
           GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
           GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
         ],
       ),
-      GoRoute(path: '/products/add', builder: (_, __) => const AddEditProductScreen()),
-      GoRoute(path: '/products/edit/:id', builder: (_, state) => AddEditProductScreen(productId: state.pathParameters['id'])),
-      GoRoute(path: '/products/bulk-add', builder: (_, __) => const BulkAddProductsScreen()),
-      GoRoute(path: '/products/variants/:id', builder: (_, state) => ProductManagerScreen(productId: state.pathParameters['id'])),
+      GoRoute(path: '/products/add', builder: (_, __) => const PermissionGuard(anyPermissions: ['PRODUCT_WRITE'], child: AddEditProductScreen())),
+      GoRoute(path: '/products/edit/:id', builder: (_, state) => PermissionGuard(anyPermissions: const ['PRODUCT_WRITE'], child: AddEditProductScreen(productId: state.pathParameters['id']))),
+      GoRoute(path: '/products/bulk-add', builder: (_, __) => const PermissionGuard(anyPermissions: ['PRODUCT_WRITE'], child: BulkAddProductsScreen())),
+      GoRoute(path: '/products/variants/:id', builder: (_, state) => PermissionGuard(anyPermissions: const ['PRODUCT_WRITE'], child: ProductManagerScreen(productId: state.pathParameters['id']))),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),
       GoRoute(path: '/catalog/:boutiqueId', builder: (_, state) {
         final extra = state.extra;

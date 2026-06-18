@@ -32,7 +32,8 @@ public class TeamService {
     private static final String DEFAULT_ROLE = "STAFF";
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_DEACTIVATED = "DEACTIVATED";
-    private static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "MANAGER", "STAFF", "CAISSIER");
+    private static final Set<String> ALLOWED_ROLES = Set.of(
+            "ADMIN", "MANAGER", "STAFF", "CAISSIER", "CASHIER", "PRODUCT_MANAGER", "SUPPORT");
 
     private final TeamMemberRepository teamMemberRepository;
     private final TeamInvitationRepository teamInvitationRepository;
@@ -77,6 +78,16 @@ public class TeamService {
             if (teamMemberRepository.existsByBoutiqueIdAndUserId(boutique.getId(), user.getId())) {
                 throw new IllegalArgumentException("Cet utilisateur est deja membre de cette boutique");
             }
+            if (!Set.of("OWNER", "ADMIN", "SUPER_ADMIN").contains(String.valueOf(user.getRole()).toUpperCase(Locale.ROOT))) {
+                user.setRole("TEAM_MEMBER");
+            }
+            if (user.getActiveBoutiqueId() == null) {
+                user.setActiveBoutiqueId(boutique.getId());
+            }
+            if (user.getTenant() == null) {
+                user.setTenant(boutique.getTenant());
+            }
+            user = userRepository.save(user);
         } else {
             String verificationToken = UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
             String randomHash = passwordEncoder.encode(UUID.randomUUID().toString() + UUID.randomUUID().toString());
@@ -86,7 +97,8 @@ public class TeamService {
                     .fullName(name)
                     .passwordHash(randomHash)
                     .tenant(boutique.getTenant())
-                    .role("USER")
+                    .role("TEAM_MEMBER")
+                    .activeBoutiqueId(boutique.getId())
                     .emailVerified(false)
                     .enabled(false)
                     .mustChangePassword(true)

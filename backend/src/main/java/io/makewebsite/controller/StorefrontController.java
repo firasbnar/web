@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.thymeleaf.context.Context;
+import org.thymeleaf.exceptions.TemplateInputException;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.util.List;
@@ -120,6 +121,7 @@ public class StorefrontController {
         } catch (Exception e) {
             log.error("Public store failed for slug={}", identifier, e);
             return ResponseEntity.internalServerError()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
                     .body("<html><body><h1>Erreur</h1><p>Impossible de charger la boutique.</p></body></html>");
         }
 
@@ -178,9 +180,15 @@ public class StorefrontController {
                     .header(HttpHeaders.PRAGMA, "no-cache")
                     .header(HttpHeaders.EXPIRES, "0")
                     .body(html);
+        } catch (TemplateInputException e) {
+            log.error("Public store template parsing failed for slug={}: {}", identifier, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
+                    .body("<html><body><h1>Erreur</h1><p>Impossible de charger la boutique.</p></body></html>");
         } catch (Exception e) {
             log.error("Public store failed for slug={}", identifier, e);
             return ResponseEntity.internalServerError()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
                     .body("<html><body><h1>Erreur</h1><p>Impossible de charger la boutique.</p></body></html>");
         }
     }

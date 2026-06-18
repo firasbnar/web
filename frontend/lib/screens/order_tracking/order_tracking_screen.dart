@@ -7,6 +7,7 @@ import '../../theme/app_typography.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/app_back_arrow.dart';
+import '../../utils/format_utils.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
   final String orderId;
@@ -81,7 +82,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text('${o.total.toStringAsFixed(3)} TND', style: AppTypography.heading2.copyWith(color: Colors.white)),
+                      Text(FormatUtils.money(context, o.total, currencyCode: 'TND'), style: AppTypography.heading2.copyWith(color: Colors.white)),
                     ],
                   ),
                 ),

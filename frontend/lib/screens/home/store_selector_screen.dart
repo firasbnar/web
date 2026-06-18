@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/boutique_provider.dart';
 import '../../widgets/app_back_arrow.dart';
 
@@ -21,9 +22,12 @@ class _StoreSelectorScreenState extends State<StoreSelectorScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bp = context.read<BoutiqueProvider>();
       if (bp.boutiques.isEmpty) {
-        await bp.loadBoutiques();
+        final auth = context.read<AuthProvider>();
+        await bp.loadBoutiques(teamMember: auth.isTeamMember);
         if (mounted && bp.boutiques.isEmpty) {
-          context.go('/create-store');
+          if (auth.canCreateBoutique) {
+            context.go('/create-store');
+          }
         }
       }
     });
@@ -37,11 +41,16 @@ class _StoreSelectorScreenState extends State<StoreSelectorScreen> {
         leading: const AppBackArrow(),
         title: Text('store_selector.my_stores'.tr()),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/create-store'),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('store_selector.create_store'.tr(), style: const TextStyle(color: Colors.white)),
+      floatingActionButton: Consumer<AuthProvider>(
+        builder: (_, auth, __) {
+          if (!auth.canCreateBoutique) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            onPressed: () => context.go('/create-store'),
+            backgroundColor: AppColors.primary,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: Text('store_selector.create_store'.tr(), style: const TextStyle(color: Colors.white)),
+          );
+        },
       ),
       body: Consumer<BoutiqueProvider>(
         builder: (_, bp, __) {

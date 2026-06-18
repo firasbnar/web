@@ -3,13 +3,18 @@ package io.makewebsite.controller;
 import io.makewebsite.dto.response.ApiResponse;
 import io.makewebsite.entity.Product;
 import io.makewebsite.entity.ProductVariant;
+import io.makewebsite.repository.ProductRepository;
 import io.makewebsite.repository.ProductVariantRepository;
+import io.makewebsite.security.Permission;
+import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.BoutiquePermissionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -20,6 +25,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ProductVariantController {
     private final ProductVariantRepository variantRepository;
+    private final ProductRepository productRepository;
+    private final BoutiquePermissionService boutiquePermissionService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getVariants(@PathVariable UUID productId) {
@@ -39,9 +46,16 @@ public class ProductVariantController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Map<String, Object>>> createVariant(@PathVariable UUID productId, @Valid @RequestBody VariantRequest req) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createVariant(
+            @PathVariable UUID productId,
+            @Valid @RequestBody VariantRequest req,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Product product = productRepository.findByIdWithBoutique(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        boutiquePermissionService.requireBoutiquePermission(
+                principal.getUserId(), product.getBoutique().getId(), Permission.PRODUCT_WRITE);
         ProductVariant v = ProductVariant.builder()
-                .product(new Product())
+                .product(product)
                 .name(req.getName())
                 .price(req.getPrice())
                 .stock(req.getStock())
@@ -49,14 +63,24 @@ public class ProductVariantController {
                 .sortOrder(req.getSortOrder())
                 .imageUrl(req.getImageUrl())
                 .build();
-        v.getProduct().setId(productId);
         v = variantRepository.save(v);
         return ResponseEntity.ok(ApiResponse.ok("Variante créée", variantToMap(v)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateVariant(@PathVariable UUID productId, @PathVariable UUID id, @Valid @RequestBody VariantRequest req) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateVariant(
+            @PathVariable UUID productId,
+            @PathVariable UUID id,
+            @Valid @RequestBody VariantRequest req,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Product product = productRepository.findByIdWithBoutique(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        boutiquePermissionService.requireBoutiquePermission(
+                principal.getUserId(), product.getBoutique().getId(), Permission.PRODUCT_WRITE);
         ProductVariant v = variantRepository.findById(id).orElseThrow(() -> new RuntimeException("Variante non trouvée"));
+        if (!productId.equals(v.getProduct().getId())) {
+            throw new RuntimeException("Variante non trouvée");
+        }
         v.setName(req.getName());
         if (req.getPrice() != null) v.setPrice(req.getPrice());
         if (req.getStock() != null) v.setStock(req.getStock());
@@ -68,8 +92,20 @@ public class ProductVariantController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteVariant(@PathVariable UUID productId, @PathVariable UUID id) {
-        variantRepository.deleteById(id);
+    public ResponseEntity<ApiResponse<Void>> deleteVariant(
+            @PathVariable UUID productId,
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Product product = productRepository.findByIdWithBoutique(productId)
+                .orElseThrow(() -> new RuntimeException("Produit non trouvé"));
+        boutiquePermissionService.requireBoutiquePermission(
+                principal.getUserId(), product.getBoutique().getId(), Permission.PRODUCT_DELETE);
+        ProductVariant variant = variantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Variante non trouvée"));
+        if (!productId.equals(variant.getProduct().getId())) {
+            throw new RuntimeException("Variante non trouvée");
+        }
+        variantRepository.delete(variant);
         return ResponseEntity.ok(ApiResponse.ok("Variante supprimée", null));
     }
 

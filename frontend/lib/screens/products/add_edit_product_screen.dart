@@ -54,6 +54,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       await bp.loadBoutiques();
     }
     if (!mounted) return;
+    if (bp.activeBoutique?.hasPermission('PRODUCT_WRITE') != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('errors.access_denied'.tr()), backgroundColor: AppColors.danger),
+      );
+      context.go('/home');
+      return;
+    }
     final boutiqueId = bp.activeBoutique?.id;
     if (boutiqueId != null) {
       context.read<ProductsProvider>().loadCategories(boutiqueId);

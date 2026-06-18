@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../core/api_client.dart';
+import '../../core/env_config.dart';
 import '../../providers/boutique_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
+import '../../utils/format_utils.dart';
 
 class TelegramSettingsScreen extends StatefulWidget {
   const TelegramSettingsScreen({super.key});
@@ -32,7 +34,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
       final data = res['data'] as Map?;
       if (data != null) {
         setState(() {
-          _botUsername = data['botUsername'] as String? ?? 'MakeWebsiteBot';
+          _botUsername = data['botUsername'] as String? ?? EnvConfig.telegramBotUsername;
           _connectionCode = data['connectionCode'] as String?;
           _expiresAt = data['expiresAt'] as String?;
         });
@@ -212,9 +214,8 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
   }
 
   Widget _buildVerificationUi() {
-    final expiresAtFormatted = _expiresAt != null
-        ? _expiresAt!.substring(0, 19).replaceFirst('T', ' à ')
-        : '';
+    final expiresAt = FormatUtils.tryParseDateTime(_expiresAt);
+    final expiresAtFormatted = FormatUtils.dateTime(context, expiresAt);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -251,13 +252,16 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                     const SizedBox(height: 6),
                     GestureDetector(
                       onTap: _copyCode,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_connectionCode ?? '', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 3)),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.copy, size: 18, color: AppColors.textHint),
-                        ],
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_connectionCode ?? '', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 3)),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.copy, size: 18, color: AppColors.textHint),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -267,12 +271,13 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
               Text('telegram.instructions'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               const SizedBox(height: 8),
               _instructionStep(1, 'telegram.step1'.tr()),
-              _instructionStep(2, 'telegram.step2'.tr(args: [_botUsername ?? ''])),
+              _instructionStep(2, 'telegram.step2'.tr(args: [_botUsername ?? EnvConfig.telegramBotUsername])),
               _instructionStep(3, 'telegram.step3'.tr()),
               _instructionStep(4, 'telegram.step4'.tr(args: [_connectionCode ?? ''])),
               _instructionStep(5, 'telegram.step5'.tr()),
               const SizedBox(height: 8),
-              Text('telegram.expires'.tr(args: [expiresAtFormatted]), style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
+              if (expiresAtFormatted.isNotEmpty)
+                Text('telegram.expires'.tr(args: [expiresAtFormatted]), style: const TextStyle(fontSize: 12, color: AppColors.textHint)),
             ],
           ),
         ),
@@ -312,6 +317,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
     final bout = bp.activeBoutique;
     final chatId = bout?.telegramChatId ?? '';
     final masked = chatId.length > 4 ? '${chatId.substring(0, 2)}****${chatId.substring(chatId.length - 2)}' : chatId;
+    final displayUsername = _botUsername ?? EnvConfig.telegramBotUsername;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +347,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                   children: [
                     Text('telegram.connected_title'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 4),
-                    Text('@$_botUsername', style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                    Text('@$displayUsername', style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                     if (masked.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text('ID: $masked', style: const TextStyle(color: AppColors.textHint, fontSize: 12)),

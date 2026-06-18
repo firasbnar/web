@@ -137,8 +137,12 @@ public class PlanService {
         Plan plan = planRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Plan non trouvé"));
 
+        log.info("Checkout session request: planId={} planPrice={} paymentMethod={}",
+                plan.getId(), plan.getPriceDt(), request.getPaymentMethod());
+
         if (plan.getPriceDt() == null || plan.getPriceDt().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Le plan sélectionné doit avoir un prix Stripe positif");
+            log.info("Free plan selected — activating directly without Stripe");
+            return activateFreePlan(user, plan);
         }
 
         String secretKey = resolveSecretKey();
@@ -231,6 +235,39 @@ public class PlanService {
         }
     }
 
+    private SubscriptionCheckoutResponse activateFreePlan(User user, Plan plan) {
+        subscriptionRepository.findByUserIdAndStatus(user.getId(), "ACTIVE")
+                .ifPresent(s -> { s.setStatus("CANCELLED"); subscriptionRepository.save(s); });
+
+        Subscription sub = Subscription.builder()
+                .user(user)
+                .plan(plan)
+                .status("ACTIVE")
+                .startedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusDays(plan.getDurationDays()))
+                .paymentMethod("FREE")
+                .build();
+        sub = subscriptionRepository.save(sub);
+
+        Invoice invoice = Invoice.builder()
+                .user(user)
+                .subscription(sub)
+                .amount(plan.getPriceDt())
+                .currency("TND")
+                .status("PAID")
+                .paymentMethod("FREE")
+                .build();
+        invoice = invoiceRepository.save(invoice);
+
+        log.info("Free plan activated: userId={} planId={} subscriptionId={} invoiceId={}",
+                user.getId(), plan.getId(), sub.getId(), invoice.getId());
+
+        return SubscriptionCheckoutResponse.builder()
+                .invoiceId(invoice.getId())
+                .status("FREE_ACTIVATED")
+                .build();
+    }
+
     @Transactional(readOnly = true)
     public SubscriptionCheckoutStatusResponse getCheckoutStatus(UUID userId, String sessionId) {
         Invoice invoice = invoiceRepository.findByPaymentRefAndUserId(sessionId, userId)
@@ -308,11 +345,7 @@ public class PlanService {
 
     @Transactional
     public void handleStripeCheckoutCompleted(Session session) {
-        if (!isSubscriptionCheckout(session.getMetadata())) {
-            return;
-        }
-
-        Invoice invoice = loadSubscriptionInvoice(session.getMetadata());
+        Invoice invoice = loadSubscriptionInvoice(session.getMetadata(), session.getId());
         Map<String, Object> invoiceData = mutableInvoiceData(invoice);
         invoiceData.put("stripeSessionId", session.getId());
         invoiceData.put("checkoutStatus", "COMPLETED");
@@ -455,11 +488,11 @@ public class PlanService {
     }
 
     private String buildCheckoutSuccessUrl() {
-        return mobileDeepLinkScheme + "://" + mobileDeepLinkHost + "/subscription?status=success&session_id={CHECKOUT_SESSION_ID}";
+        return mobileDeepLinkScheme + "://" + mobileDeepLinkHost + "/subscription/checkout-return?status=success&sessionId={CHECKOUT_SESSION_ID}";
     }
 
     private String buildCheckoutCancelUrl() {
-        return mobileDeepLinkScheme + "://" + mobileDeepLinkHost + "/subscription?status=cancelled";
+        return mobileDeepLinkScheme + "://" + mobileDeepLinkHost + "/subscription/checkout-return?status=cancelled";
     }
 
     private boolean isSubscriptionCheckout(Map<String, String> metadata) {
@@ -473,6 +506,19 @@ public class PlanService {
         }
         return invoiceRepository.findById(UUID.fromString(invoiceId))
                 .orElseThrow(() -> new RuntimeException("Facture abonnement introuvable"));
+    }
+
+    private Invoice loadSubscriptionInvoice(Map<String, String> metadata, String sessionId) {
+        String invoiceId = metadata != null ? metadata.get("invoiceId") : null;
+        if (invoiceId != null && !invoiceId.isBlank()) {
+            return invoiceRepository.findById(UUID.fromString(invoiceId))
+                    .orElseThrow(() -> new RuntimeException("Facture abonnement introuvable"));
+        }
+        if (sessionId != null && !sessionId.isBlank()) {
+            return invoiceRepository.findByPaymentRef(sessionId)
+                    .orElseThrow(() -> new RuntimeException("Facture abonnement introuvable pour session Stripe"));
+        }
+        throw new RuntimeException("Invoice Stripe abonnement introuvable");
     }
 
     private void activateSubscriptionFromInvoice(Invoice invoice,

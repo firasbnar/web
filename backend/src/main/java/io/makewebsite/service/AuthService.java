@@ -1,5 +1,9 @@
 package io.makewebsite.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import io.makewebsite.dto.request.*;
 import io.makewebsite.dto.response.*;
 import io.makewebsite.entity.*;
@@ -7,14 +11,15 @@ import io.makewebsite.repository.*;
 import io.makewebsite.security.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +31,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -33,6 +39,21 @@ public class AuthService {
     private final EmailService emailService;
     private final CaisseService caisseService;
     private final UserSessionRepository userSessionRepository;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
+
+    private GoogleIdTokenVerifier googleIdTokenVerifier;
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        if (googleClientId != null && !googleClientId.isBlank()) {
+            googleIdTokenVerifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+        }
+    }
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
@@ -54,6 +75,7 @@ public class AuthService {
                     .tenant(tenant)
                     .language(request.getLanguage() != null ? request.getLanguage() : "fr")
                     .role("OWNER")
+                    .authProvider(AuthProvider.LOCAL)
                     .emailVerified(false)
                     .enabled(false)
                     .verificationToken(verificationToken)
@@ -299,20 +321,56 @@ public class AuthService {
 
     @Transactional
     public AuthResponse loginWithGoogle(String idToken) {
-        RestTemplate rt = new RestTemplate();
-        String verifyUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
-        java.util.Map response;
-        try {
-            response = rt.getForObject(verifyUrl, java.util.Map.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Token Google invalide");
+        if (googleIdTokenVerifier == null) {
+            log.error("Google login disabled: no google.client-id configured");
+            throw new RuntimeException("Connexion Google non configurée");
         }
-        String email = (String) response.get("email");
-        String name = (String) response.get("name");
-        String avatar = (String) response.get("picture");
 
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null) {
+        GoogleIdToken googleIdToken;
+        try {
+            googleIdToken = googleIdTokenVerifier.verify(idToken);
+        } catch (Exception e) {
+            log.warn("Google token verification failed: {}", e.getMessage());
+            throw new RuntimeException("Token Google invalide ou expiré");
+        }
+        if (googleIdToken == null) {
+            throw new RuntimeException("Token Google invalide ou expiré");
+        }
+
+        GoogleIdToken.Payload payload = googleIdToken.getPayload();
+        String email = payload.getEmail();
+        String googleSub = payload.getSubject();
+        String name = (String) payload.get("name");
+        String avatar = (String) payload.get("picture");
+
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email requis pour la connexion Google");
+        }
+
+        User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (user != null) {
+            if (Boolean.TRUE.equals(user.getIsSuspended())) {
+                log.warn("Google login blocked: suspended user {} tried Google login", user.getId());
+                throw new RuntimeException("Compte suspendu. Contactez le support.");
+            }
+            log.info("Existing user found: id={} email={} authProvider={}", user.getId(), email, user.getAuthProvider());
+            if (user.getAuthProvider() == AuthProvider.LOCAL) {
+                log.info("Google account linked: updating user {} from LOCAL to GOOGLE", user.getId());
+                user.setAuthProvider(AuthProvider.GOOGLE);
+            }
+            ensureTenant(user);
+            if (!Boolean.TRUE.equals(user.getEmailVerified())) {
+                log.info("Email verified for user {} via Google", user.getId());
+                user.setEmailVerified(true);
+                user.setEnabled(true);
+                user.setVerificationToken(null);
+                user.setVerificationTokenExpiry(null);
+            }
+            user.setProviderId(googleSub);
+            user.setAvatarUrl(avatar);
+            userRepository.save(user);
+            log.info("JWT generated for linked user {}", user.getId());
+        } else {
             String randomSlug = "-" + UUID.randomUUID().toString().substring(0, 6);
             Tenant tenant = tenantRepository.save(Tenant.builder()
                     .name((name != null ? name : email.split("@")[0]) + "'s Tenant")
@@ -324,6 +382,8 @@ public class AuthService {
                     .tenant(tenant)
                     .role("OWNER")
                     .language("fr")
+                    .authProvider(AuthProvider.GOOGLE)
+                    .providerId(googleSub)
                     .avatarUrl(avatar)
                     .emailVerified(true)
                     .enabled(true)
@@ -341,15 +401,6 @@ public class AuthService {
                     .enableCod(true)
                     .build();
             boutiqueRepository.save(boutique);
-        } else {
-            ensureTenant(user);
-            if (!Boolean.TRUE.equals(user.getEmailVerified())) {
-                user.setEmailVerified(true);
-                user.setEnabled(true);
-                user.setVerificationToken(null);
-                user.setVerificationTokenExpiry(null);
-                userRepository.save(user);
-            }
         }
         UserPrincipal userPrincipal = new UserPrincipal(
                 user.getId(), user.getEmail(), user.getPasswordHash(),
@@ -363,6 +414,9 @@ public class AuthService {
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .build();
         refreshTokenRepository.save(rt2);
+
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
 
         return buildAuthResponse(user, accessToken, refreshToken);
     }
@@ -386,28 +440,41 @@ public class AuthService {
 
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
         boolean subActive = subscriptionRepository.findByUserIdAndStatus(user.getId(), "ACTIVE").isPresent();
+        boolean activeTeamMember = teamMemberRepository.findByUserIdAndStatus(user.getId(), "ACTIVE").stream().findAny().isPresent();
+        String responseRole = activeTeamMember
+                && !"OWNER".equalsIgnoreCase(user.getRole())
+                && !"ADMIN".equalsIgnoreCase(user.getRole())
+                && !"SUPER_ADMIN".equalsIgnoreCase(user.getRole())
+                ? "TEAM_MEMBER"
+                : user.getRole();
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .user(buildUserResponse(user))
-                .role(user.getRole())
+                .user(buildUserResponse(user, responseRole))
+                .role(responseRole)
                 .tenant(buildTenantResponse(user.getTenant()))
                 .emailVerificationRequired(false)
-                .subscriptionActive(subActive || "SUPER_ADMIN".equals(user.getRole()))
+                .subscriptionActive(subActive || activeTeamMember || "SUPER_ADMIN".equals(user.getRole()))
                 .build();
     }
 
     private UserResponse buildUserResponse(User user) {
+        return buildUserResponse(user, user.getRole());
+    }
+
+    private UserResponse buildUserResponse(User user, String role) {
         return UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .role(user.getRole())
+                .role(role)
                 .tenantId(user.getTenant() != null ? user.getTenant().getId() : null)
                 .language(user.getLanguage())
                 .avatarUrl(user.getAvatarUrl())
                 .emailVerified(Boolean.TRUE.equals(user.getEmailVerified()))
+                .authProvider(user.getAuthProvider() != null ? user.getAuthProvider().name() : null)
+                .providerId(user.getProviderId())
                 .build();
     }
 

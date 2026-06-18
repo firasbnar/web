@@ -22,8 +22,10 @@ public final class RolePermissions {
             Permission.POS_ACCESS,
             Permission.PAYMENT_VALIDATE,
             Permission.MESSAGE_READ, Permission.MESSAGE_WRITE,
+            Permission.REVIEW_READ, Permission.REVIEW_WRITE,
             Permission.DISCOUNT_WRITE,
-            Permission.INVENTORY_READ, Permission.INVENTORY_WRITE
+            Permission.INVENTORY_READ, Permission.INVENTORY_WRITE,
+            Permission.AI_ASSISTANT
         ),
 
         "MANAGER", EnumSet.of(
@@ -36,13 +38,14 @@ public final class RolePermissions {
             Permission.POS_ACCESS,
             Permission.PAYMENT_VALIDATE,
             Permission.MESSAGE_READ, Permission.MESSAGE_WRITE,
+            Permission.REVIEW_READ, Permission.REVIEW_WRITE,
             Permission.DISCOUNT_WRITE,
-            Permission.INVENTORY_READ, Permission.INVENTORY_WRITE
+            Permission.INVENTORY_READ, Permission.INVENTORY_WRITE,
+            Permission.AI_ASSISTANT
         ),
 
         "STAFF", EnumSet.of(
-            Permission.PRODUCT_READ, Permission.PRODUCT_WRITE,
-            Permission.STOCK_UPDATE,
+            Permission.PRODUCT_READ,
             Permission.CATEGORY_READ,
             Permission.ORDER_READ,
             Permission.CUSTOMER_READ,
@@ -56,6 +59,28 @@ public final class RolePermissions {
             Permission.POS_ACCESS,
             Permission.CUSTOMER_READ,
             Permission.ORDER_READ
+        ),
+
+        "CASHIER", EnumSet.of(
+            Permission.ORDER_WRITE,
+            Permission.PAYMENT_VALIDATE,
+            Permission.POS_ACCESS,
+            Permission.CUSTOMER_READ,
+            Permission.ORDER_READ
+        ),
+
+        "PRODUCT_MANAGER", EnumSet.of(
+            Permission.PRODUCT_READ, Permission.PRODUCT_WRITE, Permission.PRODUCT_DELETE,
+            Permission.STOCK_UPDATE,
+            Permission.CATEGORY_READ, Permission.CATEGORY_WRITE,
+            Permission.INVENTORY_READ, Permission.INVENTORY_WRITE
+        ),
+
+        "SUPPORT", EnumSet.of(
+            Permission.CUSTOMER_READ,
+            Permission.ORDER_READ,
+            Permission.MESSAGE_READ, Permission.MESSAGE_WRITE,
+            Permission.REVIEW_READ, Permission.REVIEW_WRITE
         )
     );
 

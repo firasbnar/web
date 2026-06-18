@@ -14,8 +14,10 @@ import java.util.stream.Collectors;
 
 public interface TeamMemberRepository extends JpaRepository<TeamMember, UUID> {
     List<TeamMember> findByBoutiqueId(UUID boutiqueId);
+    List<TeamMember> findByUserIdAndStatus(UUID userId, String status);
     Optional<TeamMember> findByIdAndBoutiqueId(UUID id, UUID boutiqueId);
     Optional<TeamMember> findByBoutiqueIdAndUserId(UUID boutiqueId, UUID userId);
+    Optional<TeamMember> findByBoutiqueIdAndUserIdAndStatus(UUID boutiqueId, UUID userId, String status);
     Optional<TeamMember> findByBoutiqueIdAndInvitedEmail(UUID boutiqueId, String email);
     boolean existsByBoutiqueIdAndUserId(UUID boutiqueId, UUID userId);
     boolean existsByBoutiqueIdAndInvitedEmailIgnoreCase(UUID boutiqueId, String email);

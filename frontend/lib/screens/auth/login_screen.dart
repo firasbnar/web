@@ -6,6 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/google_sign_in_button.dart';
 import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -126,33 +127,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Consumer<AuthProvider>(
-                  builder: (_, auth, __) => SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.login),
-                      label: Text(auth.loading ? 'auth.login_loading'.tr() : 'auth.continue_with_google'.tr()),
-                      onPressed: auth.loading ? null : () async {
-                        final ok = await auth.loginWithGoogle();
-                        if (ok && mounted) {
-                          final provider = context.read<AuthProvider>();
-                          if (provider.mustChangePassword) {
-                            context.go('/change-password');
-                          } else if (provider.role == 'ADMIN') {
-                            context.go('/admin');
-                          } else {
-                            context.go('/home');
-                          }
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                    ),
-                  ),
+                GoogleSignInButton(
+                  onSuccess: () {
+                    if (!mounted) return;
+                    final provider = context.read<AuthProvider>();
+                    if (provider.mustChangePassword) {
+                      context.go('/change-password');
+                    } else if (provider.role == 'ADMIN') {
+                      context.go('/admin');
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                  onError: (error) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(error),
+                      backgroundColor: AppColors.danger,
+                    ));
+                  },
                 ),
                 const SizedBox(height: 24),
                 TextButton(

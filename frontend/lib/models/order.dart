@@ -19,6 +19,7 @@ class Order {
   final String? shippingAddress;
   final String? deliveryCompany;
   final String? trackingNumber;
+  final String? deliveryStatus;
   final String? notes;
   final String? invoiceNumber;
   final String? invoiceCreatedAt;
@@ -31,7 +32,7 @@ class Order {
     required this.orderNumber, required this.status,
     required this.subtotal, this.shippingFee = 0, this.discount = 0, required this.total,
     this.paymentMethod, this.paymentStatus, this.paymentRef,
-    this.shippingAddress, this.deliveryCompany, this.trackingNumber,
+    this.shippingAddress, this.deliveryCompany, this.trackingNumber, this.deliveryStatus,
     this.notes, this.invoiceNumber, this.invoiceCreatedAt, this.createdAt, this.items = const [],
   });
 
@@ -53,6 +54,7 @@ class Order {
     String? shippingAddress,
     String? deliveryCompany,
     String? trackingNumber,
+    String? deliveryStatus,
     String? notes,
     String? invoiceNumber,
     String? invoiceCreatedAt,
@@ -80,6 +82,7 @@ class Order {
       shippingAddress: shippingAddress ?? this.shippingAddress,
       deliveryCompany: deliveryCompany ?? this.deliveryCompany,
       trackingNumber: trackingNumber ?? this.trackingNumber,
+      deliveryStatus: deliveryStatus ?? this.deliveryStatus,
       notes: notes ?? this.notes,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
       invoiceCreatedAt: invoiceCreatedAt ?? this.invoiceCreatedAt,
@@ -114,6 +117,7 @@ class Order {
       shippingAddress: json['shippingAddress'],
       deliveryCompany: json['deliveryCompany'],
       trackingNumber: json['trackingNumber'],
+      deliveryStatus: json['deliveryStatus'],
       notes: json['notes'],
       invoiceNumber: json['invoiceNumber'],
       invoiceCreatedAt: json['invoiceCreatedAt'],

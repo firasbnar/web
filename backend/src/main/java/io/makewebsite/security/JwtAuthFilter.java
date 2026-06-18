@@ -33,7 +33,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final java.util.Set<String> PUBLIC_PATH_PREFIXES = java.util.Set.of(
         "/api/auth/", "/api/team/public/", "/api/public/", "/api/plans",
-        "/api/boutiques/public", "/api/traffic/",
+        "/api/boutiques/public",
         "/ws/", "/uploads/", "/images/", "/store/",
         "/favicon",
         "/flutter/", "/assets/"
@@ -51,6 +51,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
+        if ("POST".equalsIgnoreCase(request.getMethod()) && "/api/traffic/track".equals(path)) return true;
         // Root path — must be public (SPA entry)
         if (path.isEmpty() || "/".equals(path) || "/index.html".equals(path)) return true;
         // Static file extensions — served by SPA or resource handlers, no auth

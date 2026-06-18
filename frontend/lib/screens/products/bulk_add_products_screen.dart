@@ -49,9 +49,20 @@ class _BulkAddProductsScreenState extends State<BulkAddProductsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductsProvider>().loadCategories(
-          context.read<BoutiqueProvider>().activeBoutique?.id ?? '');
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final bp = context.read<BoutiqueProvider>();
+      if (bp.activeBoutique == null) {
+        await bp.ensureActiveBoutique();
+      }
+      if (!mounted) return;
+      if (bp.activeBoutique?.hasPermission('PRODUCT_WRITE') != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('errors.access_denied'.tr()), backgroundColor: AppColors.danger),
+        );
+        context.go('/home');
+        return;
+      }
+      context.read<ProductsProvider>().loadCategories(bp.activeBoutique?.id ?? '');
     });
   }
 

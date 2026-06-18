@@ -3,9 +3,11 @@ package io.makewebsite.controller;
 import io.makewebsite.dto.request.InviteTeamMemberRequest;
 import io.makewebsite.dto.request.UpdateRoleRequest;
 import io.makewebsite.dto.response.ApiResponse;
+import io.makewebsite.dto.response.BoutiqueResponse;
 import io.makewebsite.dto.response.TeamMemberResponse;
 import io.makewebsite.dto.response.TeamStatsResponse;
 import io.makewebsite.security.UserPrincipal;
+import io.makewebsite.service.BoutiqueService;
 import io.makewebsite.service.TeamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamController {
     private final TeamService teamService;
+    private final BoutiqueService boutiqueService;
+
+    @GetMapping("/my-boutiques")
+    public ResponseEntity<ApiResponse<List<BoutiqueResponse>>> getMyTeamBoutiques(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(boutiqueService.getMyBoutiques(principal.getUserId())));
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TeamMemberResponse>>> getTeamMembers(

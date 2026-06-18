@@ -10,6 +10,7 @@ import '../../widgets/status_chip.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/app_back_button.dart';
 import '../../providers/orders_provider.dart';
+import '../../utils/format_utils.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -21,6 +22,9 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final _trackingCtrl = TextEditingController();
   String _selectedStatus = '';
+  String? _selectedDeliveryCompany;
+  String? _trackingError;
+  bool _savingDelivery = false;
   static const List<String> _statusOptions = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
   static const List<String> _deliveryOptions = ['Adeex', 'Jax', 'Intigo'];
 
@@ -29,9 +33,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.read<OrdersProvider>().loadOrder(widget.orderId);
+      if (!mounted) return;
       final order = context.read<OrdersProvider>().selectedOrder;
-      if (mounted && order != null) {
-        setState(() => _selectedStatus = order.status);
+      if (order != null) {
+        setState(() {
+          _selectedStatus = order.status;
+          _selectedDeliveryCompany = _deliveryOptions.contains(order.deliveryCompany) ? order.deliveryCompany : null;
+          _trackingCtrl.text = order.trackingNumber ?? '';
+        });
       }
     });
   }
@@ -106,17 +115,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         child: Row(
                           children: [
                             Expanded(child: Text(item.productName, style: AppTypography.body2)),
-                            Text('${item.quantity} × ${item.unitPrice.toStringAsFixed(2)}', style: AppTypography.caption),
+                            Text('${item.quantity} × ${FormatUtils.money(context, item.unitPrice, currencyCode: 'TND')}', style: AppTypography.caption),
                             const SizedBox(width: 8),
-                            Text('${item.subtotal.toStringAsFixed(2)} TND', style: AppTypography.body2),
+                            Text(FormatUtils.money(context, item.subtotal, currencyCode: 'TND'), style: AppTypography.body2),
                           ],
                         ),
                       )),
                       const Divider(),
-                      _summaryRow('orders.subtotal'.tr(), '${order.subtotal.toStringAsFixed(2)} TND'),
-                      _summaryRow('orders.shipping'.tr(), '${order.shippingFee.toStringAsFixed(2)} TND'),
-                      if (order.discount > 0) _summaryRow('orders.discount'.tr(), '-${order.discount.toStringAsFixed(2)} TND'),
-                      _summaryRow('orders.total'.tr(), '${order.total.toStringAsFixed(2)} TND', bold: true),
+                      _summaryRow('orders.subtotal'.tr(), FormatUtils.money(context, order.subtotal, currencyCode: 'TND')),
+                      _summaryRow('orders.shipping'.tr(), FormatUtils.money(context, order.shippingFee, currencyCode: 'TND')),
+                      if (order.discount > 0) _summaryRow('orders.discount'.tr(), '-${FormatUtils.money(context, order.discount, currencyCode: 'TND')}'),
+                      _summaryRow('orders.total'.tr(), FormatUtils.money(context, order.total, currencyCode: 'TND'), bold: true),
                     ],
                   ),
                 ),
@@ -198,23 +207,80 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('delivery.delivery_company'.tr(), style: AppTypography.heading4),
+                      Text('orders.delivery_assignment'.tr(), style: AppTypography.heading4),
+                      const SizedBox(height: 6),
+                      Text(
+                        'orders.delivery_assignment_helper'.tr(),
+                        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                      ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        initialValue: _deliveryOptions.contains(order.deliveryCompany) ? order.deliveryCompany : null,
+                        key: ValueKey('delivery-${_selectedDeliveryCompany ?? 'none'}'),
+                        initialValue: _selectedDeliveryCompany,
                         decoration: InputDecoration(labelText: 'delivery.delivery_company'.tr()),
                         items: _deliveryOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                        onChanged: (v) {},
+                        onChanged: (v) => setState(() => _selectedDeliveryCompany = v),
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
-                        controller: _trackingCtrl..text = order.trackingNumber ?? '',
-                        decoration: InputDecoration(labelText: 'orders.tracking_number'.tr()),
+                        controller: _trackingCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'orders.tracking_number'.tr(),
+                          errorText: _trackingError,
+                        ),
+                        onChanged: (_) {
+                          if (_trackingError != null) setState(() => _trackingError = null);
+                        },
                       ),
                       const SizedBox(height: 8),
-                      AppButton(label: 'common.save'.tr(), onPressed: () {
-                        op.updateTracking(widget.orderId, order.deliveryCompany ?? '', _trackingCtrl.text);
-                      }),
+                      AppButton(
+                        label: 'common.save'.tr(),
+                        loading: _savingDelivery,
+                        onPressed: _savingDelivery
+                            ? null
+                            : () async {
+                                final tracking = _trackingCtrl.text.trim();
+                                if (_selectedDeliveryCompany == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('orders.delivery_company_required'.tr())),
+                                  );
+                                  return;
+                                }
+                                if (tracking.isEmpty) {
+                                  setState(() => _trackingError = 'orders.tracking_number_required'.tr());
+                                  return;
+                                }
+
+                                setState(() => _savingDelivery = true);
+                                final ok = await op.updateDelivery(
+                                  widget.orderId,
+                                  company: _selectedDeliveryCompany!,
+                                  tracking: tracking,
+                                );
+                                if (ok) {
+                                  await op.loadOrder(widget.orderId);
+                                  final updated = op.selectedOrder;
+                                  if (mounted) {
+                                    setState(() {
+                                      _savingDelivery = false;
+                                      _selectedDeliveryCompany = updated?.deliveryCompany ?? _selectedDeliveryCompany;
+                                      _trackingCtrl.text = updated?.trackingNumber ?? tracking;
+                                    });
+                                  }
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('orders.delivery_assignment_saved'.tr())),
+                                    );
+                                  }
+                                } else {
+                                  if (mounted) setState(() => _savingDelivery = false);
+                                  if (context.mounted) {
+                                    final msg = op.error ?? 'orders.delivery_assignment_save_failed'.tr();
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                                  }
+                                }
+                              },
+                      ),
                     ],
                   ),
                 ),
@@ -300,7 +366,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: bold ? AppTypography.body2.copyWith(fontWeight: FontWeight.w600) : AppTypography.caption),
+          Expanded(
+            child: Text(
+              label,
+              style: bold ? AppTypography.body2.copyWith(fontWeight: FontWeight.w600) : AppTypography.caption,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
           Text(value, style: bold ? AppTypography.heading4.copyWith(color: AppColors.primary) : AppTypography.body2),
         ],
       ),

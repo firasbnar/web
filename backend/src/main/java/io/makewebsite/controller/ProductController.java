@@ -39,19 +39,26 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody CreateProductRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Produit créé", productService.createProduct(request)));
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
+            @Valid @RequestBody CreateProductRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok("Produit créé", productService.createProduct(request, principal.getUserId())));
     }
 
     @PostMapping("/bulk-import")
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> bulkImport(@Valid @RequestBody BulkImportRequest request) {
-        List<ProductResponse> created = productService.bulkImportProducts(request.getBoutiqueId(), request.getProducts());
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> bulkImport(
+            @Valid @RequestBody BulkImportRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        List<ProductResponse> created = productService.bulkImportProducts(request.getBoutiqueId(), request.getProducts(), principal.getUserId());
         return ResponseEntity.ok(ApiResponse.ok("Produits importés", created));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable UUID id, @Valid @RequestBody CreateProductRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Produit mis à jour", productService.updateProduct(id, request)));
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateProductRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok("Produit mis à jour", productService.updateProduct(id, request, principal.getUserId())));
     }
 
     @DeleteMapping("/{id}")
@@ -61,18 +68,25 @@ public class ProductController {
     }
 
     @PutMapping("/{id}/toggle-active")
-    public ResponseEntity<ApiResponse<ProductResponse>> toggleActive(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(productService.toggleActive(id)));
+    public ResponseEntity<ApiResponse<ProductResponse>> toggleActive(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(productService.toggleActive(id, principal.getUserId())));
     }
 
     @PutMapping("/{id}/toggle-featured")
-    public ResponseEntity<ApiResponse<ProductResponse>> toggleFeatured(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(productService.toggleFeatured(id)));
+    public ResponseEntity<ApiResponse<ProductResponse>> toggleFeatured(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(productService.toggleFeatured(id, principal.getUserId())));
     }
 
     @PutMapping("/{id}/stock")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateStock(@PathVariable UUID id, @Valid @RequestBody UpdateStockRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok("Stock mis à jour", productService.updateStock(id, request)));
+    public ResponseEntity<ApiResponse<ProductResponse>> updateStock(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateStockRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok("Stock mis à jour", productService.updateStock(id, request, principal.getUserId())));
     }
 
     @GetMapping("/export")

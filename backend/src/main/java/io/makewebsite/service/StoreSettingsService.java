@@ -5,6 +5,7 @@ import io.makewebsite.entity.BoutiqueCountry;
 import io.makewebsite.repository.BoutiqueCountryRepository;
 import io.makewebsite.repository.BoutiqueRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -23,6 +24,7 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoreSettingsService {
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
     private static final Set<String> SUPPORTED_CURRENCIES = Set.of(
@@ -37,6 +39,14 @@ public class StoreSettingsService {
     private final BoutiqueCountryRepository countryRepository;
     private final StoreGeneratorService storeGeneratorService;
     private final UploadService uploadService;
+
+    private void regenerateSafely(UUID storeId) {
+        try {
+            storeGeneratorService.regenerate(storeId);
+        } catch (Exception e) {
+            log.warn("Store regeneration failed after settings save for store {}: {}", storeId, e.getMessage(), e);
+        }
+    }
 
     @Transactional(readOnly = true)
     public List<String> getAcceptedCountries(UUID storeId, UUID userId) {
@@ -62,7 +72,7 @@ public class StoreSettingsService {
                         .build())
                 .toList();
         countryRepository.saveAll(countries);
-        storeGeneratorService.regenerate(storeId);
+        regenerateSafely(storeId);
         return codes;
     }
 
@@ -92,7 +102,7 @@ public class StoreSettingsService {
         }
 
         boutiqueRepository.save(boutique);
-        storeGeneratorService.regenerate(storeId);
+        regenerateSafely(storeId);
         return brandingPayload(boutique);
     }
 
@@ -102,7 +112,7 @@ public class StoreSettingsService {
         String code = normalizeCurrency(currency);
         boutique.setCurrency(code);
         boutiqueRepository.save(boutique);
-        storeGeneratorService.regenerate(storeId);
+        regenerateSafely(storeId);
         return Map.of("currency", code);
     }
 
@@ -114,7 +124,7 @@ public class StoreSettingsService {
         boutique.setLogoUrl(logoUrl);
         boutiqueRepository.save(boutique);
         uploadService.deletePublicUrl(oldLogoUrl);
-        storeGeneratorService.regenerate(storeId);
+        regenerateSafely(storeId);
         return Map.of("logoUrl", logoUrl);
     }
 

@@ -80,11 +80,9 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Mot de passe modifié", null));
     }
 
-    @PostMapping("/google-login")
-    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@RequestBody Map<String, String> body) {
-        String idToken = body.get("idToken");
-        if (idToken == null || idToken.isEmpty()) throw new RuntimeException("Token manquant");
-        return ResponseEntity.ok(ApiResponse.ok(authService.loginWithGoogle(idToken)));
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.loginWithGoogle(request.getIdToken())));
     }
 
     @PostMapping("/logout")

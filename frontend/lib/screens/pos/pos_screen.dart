@@ -338,7 +338,6 @@ class _PosScreenState extends State<PosScreen> {
                 items: [
                   DropdownMenuItem(value: 'Cash', child: Text('pos.cash'.tr())),
                   DropdownMenuItem(value: 'Carte', child: Text('pos.card'.tr())),
-                  const DropdownMenuItem(value: 'D17', child: Text('D17')),
                 ],
                 onChanged: (v) => setState(() => _paymentMethod = v ?? 'Cash'),
                 decoration: InputDecoration(labelText: 'pos.payment_method'.tr()),

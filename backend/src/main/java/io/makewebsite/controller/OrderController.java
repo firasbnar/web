@@ -84,6 +84,17 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.ok("Suivi mis à jour", orderService.updateTracking(id, request)));
     }
 
+    /**
+     * New clearer endpoint for merchant delivery assignment.
+     * Kept alongside /tracking to avoid breaking older clients.
+     */
+    @PutMapping("/{id}/delivery")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateDelivery(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateTrackingRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Livraison mise à jour", orderService.updateTracking(id, request)));
+    }
+
     @PutMapping("/{id}/refund")
     public ResponseEntity<ApiResponse<OrderResponse>> refundOrder(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok("Commande remboursée", orderService.refundOrder(id)));

@@ -36,6 +36,7 @@ public class OrderResponse {
     private String city;
     private String deliveryCompany;
     private String trackingNumber;
+    private String deliveryStatus;
     private String notes;
     private String invoiceNumber;
     private LocalDateTime invoiceCreatedAt;

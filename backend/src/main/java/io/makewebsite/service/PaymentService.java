@@ -11,7 +11,9 @@ import com.stripe.param.checkout.SessionCreateParams;
 import io.makewebsite.dto.request.CreatePaymentRequest;
 import io.makewebsite.entity.Order;
 import io.makewebsite.repository.BoutiqueRepository;
+import io.makewebsite.repository.InvoiceRepository;
 import io.makewebsite.repository.OrderRepository;
+import io.makewebsite.util.StripeConfigUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,7 @@ import java.util.UUID;
 public class PaymentService {
     private final ObjectMapper objectMapper;
     private final OrderRepository orderRepository;
+    private final InvoiceRepository invoiceRepository;
     private final BoutiqueRepository boutiqueRepository;
     private final StoreStatusGuard storeStatusGuard;
 
@@ -46,7 +49,7 @@ public class PaymentService {
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
 
-    @Value("${stripe.webhook-secret}")
+    @Value("${stripe.webhook.secret:${stripe.webhook-secret:}}")
     private String stripeWebhookSecret;
 
     @Value("${app.public-url}")
@@ -162,13 +165,15 @@ public class PaymentService {
             throw new RuntimeException("Montant invalide après conversion: " + orderTotal + " → " + amountCents + " cents");
         }
 
+        String publicBaseUrl = resolvePublicBaseUrl();
+
         log.info("=== CREATING STRIPE CHECKOUT SESSION ===");
         log.info("Order:      {}", orderNumber);
         log.info("DB total:   {} {} (from database, IGNORING frontend amount)", orderTotal, currency);
         log.info("Stripe currency: {}", stripeCurrency);
         log.info("Amount cents: {}", amountCents);
         log.info("Success URL: {}/checkout/success?order={}&boutiqueId={}",
-                publicUrl, orderNumber, request.getBoutiqueId());
+                publicBaseUrl, orderNumber, request.getBoutiqueId());
         log.info("================================");
 
         try {
@@ -192,9 +197,9 @@ public class PaymentService {
                             .setQuantity(1L)
                             .build();
 
-            String successUrl = publicUrl + "/checkout/success?order=" + orderNumber +
+            String successUrl = publicBaseUrl + "/checkout/success?order=" + orderNumber +
                     "&boutiqueId=" + (request.getBoutiqueId() != null ? request.getBoutiqueId().toString() : "");
-            String cancelUrl = publicUrl + "/checkout/cancel";
+            String cancelUrl = publicBaseUrl + "/checkout/cancel";
 
             SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -202,6 +207,15 @@ public class PaymentService {
                     .setCancelUrl(cancelUrl)
                     .addLineItem(lineItem);
 
+            SessionCreateParams.PaymentIntentData.Builder paymentIntentData =
+                    SessionCreateParams.PaymentIntentData.builder()
+                            .putMetadata("billingType", "ORDER")
+                            .putMetadata("orderNumber", orderNumber);
+            if (request.getBoutiqueId() != null) {
+                paymentIntentData.putMetadata("boutiqueId", request.getBoutiqueId().toString());
+            }
+            paramsBuilder.setPaymentIntentData(paymentIntentData.build());
+            paramsBuilder.putMetadata("billingType", "ORDER");
             paramsBuilder.putMetadata("orderNumber", orderNumber);
             if (request.getBoutiqueId() != null) {
                 paramsBuilder.putMetadata("boutiqueId", request.getBoutiqueId().toString());
@@ -210,6 +224,12 @@ public class PaymentService {
             Session session = Session.create(paramsBuilder.build());
 
             log.info("Stripe Checkout Session created: id={}, url={}", session.getId(), session.getUrl());
+
+            order.setPaymentMethod("STRIPE");
+            order.setPaymentRef(session.getId());
+            orderRepository.save(order);
+            orderRepository.flush();
+            syncOrderInvoiceStripeSession(order, session.getId());
 
             return objectMapper.valueToTree(Map.of(
                     "sessionId", session.getId(),
@@ -238,6 +258,9 @@ public class PaymentService {
         if (!order.getBoutique().getId().equals(boutiqueId)) {
             throw new RuntimeException("Commande invalide pour cette boutique");
         }
+        if (!StripeConfigUtils.isStripeEnabled(order.getBoutique())) {
+            throw new RuntimeException("Paiement Stripe non disponible pour cette boutique");
+        }
 
         BigDecimal orderTotal = order.getTotal();
         if (orderTotal == null || orderTotal.compareTo(BigDecimal.ZERO) <= 0) {
@@ -250,6 +273,7 @@ public class PaymentService {
 
         try {
             Stripe.apiKey = stripeSecretKey;
+            String publicBaseUrl = resolvePublicBaseUrl();
 
             SessionCreateParams.LineItem.PriceData.ProductData productData =
                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
@@ -269,18 +293,39 @@ public class PaymentService {
                             .setQuantity(1L)
                             .build();
 
-            String successUrl = publicUrl + "/store/" + order.getBoutique().getSlug() +
-                    "/order-success/" + order.getId().toString();
-            String cancelUrl = publicUrl + "/store/" + order.getBoutique().getSlug() + "/checkout";
+            String successUrl = publicBaseUrl + "/store/" + order.getBoutique().getSlug() +
+                    "?payment=success&order=" + order.getOrderNumber();
+            String cancelUrl = publicBaseUrl + "/store/" + order.getBoutique().getSlug() +
+                    "?payment=cancel&order=" + order.getOrderNumber();
 
-            Session session = Session.create(SessionCreateParams.builder()
+            SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
                     .setSuccessUrl(successUrl)
                     .setCancelUrl(cancelUrl)
-                    .addLineItem(lineItem)
-                    .putMetadata("orderNumber", orderNumber)
-                    .putMetadata("boutiqueId", boutiqueId.toString())
-                    .build());
+                    .addLineItem(lineItem);
+
+            SessionCreateParams.PaymentIntentData paymentIntentData =
+                    SessionCreateParams.PaymentIntentData.builder()
+                            .putMetadata("billingType", "ORDER")
+                            .putMetadata("orderNumber", orderNumber)
+                            .putMetadata("orderId", order.getId().toString())
+                            .putMetadata("boutiqueId", boutiqueId.toString())
+                            .putMetadata("customerEmail", order.getCustomerEmail() != null ? order.getCustomerEmail() : "")
+                            .build();
+            paramsBuilder.setPaymentIntentData(paymentIntentData);
+            paramsBuilder.putMetadata("billingType", "ORDER");
+            paramsBuilder.putMetadata("orderNumber", orderNumber);
+            paramsBuilder.putMetadata("orderId", order.getId().toString());
+            paramsBuilder.putMetadata("boutiqueId", boutiqueId.toString());
+            paramsBuilder.putMetadata("customerEmail", order.getCustomerEmail() != null ? order.getCustomerEmail() : "");
+
+            Session session = Session.create(paramsBuilder.build());
+
+            order.setPaymentMethod("STRIPE");
+            order.setPaymentRef(session.getId());
+            orderRepository.save(order);
+            orderRepository.flush();
+            syncOrderInvoiceStripeSession(order, session.getId());
 
             return objectMapper.valueToTree(Map.of(
                     "sessionId", session.getId(),
@@ -341,5 +386,28 @@ public class PaymentService {
             log.error("Stripe confirm error: {}", e.getMessage());
             throw new RuntimeException("Stripe confirm error: " + e.getMessage());
         }
+    }
+
+    private String resolvePublicBaseUrl() {
+        String baseUrl = publicUrl != null ? publicUrl.trim() : "";
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        if (baseUrl.isBlank()) {
+            throw new RuntimeException("Public application URL is not configured");
+        }
+        String normalized = baseUrl.toLowerCase();
+        if (normalized.contains("localhost") || normalized.contains("127.0.0.1")) {
+            log.warn("Stripe public return URL currently points to a local address: {}. Override APP_PUBLIC_URL outside local testing.", baseUrl);
+        }
+        return baseUrl;
+    }
+
+    private void syncOrderInvoiceStripeSession(Order order, String sessionId) {
+        invoiceRepository.findByOrderId(order.getId()).ifPresent(invoice -> {
+            invoice.setPaymentMethod("STRIPE");
+            invoice.setPaymentRef(sessionId);
+            invoiceRepository.save(invoice);
+        });
     }
 }

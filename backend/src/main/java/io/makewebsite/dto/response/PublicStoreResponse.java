@@ -39,11 +39,9 @@ public class PublicStoreResponse {
     private Double deliveryFees;
     private Boolean cashOnDelivery;
     private Boolean simpleCheckout;
-    private Boolean konnectActive;
-    private Boolean d17Active;
-    private Boolean enableJax;
-    private Boolean enableIntigo;
-    private Boolean enableAdeex;
+    private Boolean stripeEnabled;
+    private String stripeStatus;
+    private Boolean stripeActive;
     private String facebookUrl;
     private String instagramUrl;
     private String tiktokUrl;

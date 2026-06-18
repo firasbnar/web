@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,9 @@ import '../../core/api_client.dart';
 import '../../core/storage.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/boutique_provider.dart';
+import '../../screens/create_store/create_store_screen.dart';
+import '../../screens/home/store_dashboard_screen.dart';
+import '../../screens/home/store_selector_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -33,6 +37,10 @@ class _SubscriptionCheckoutReturnScreenState
   bool _loading = true;
   bool _success = false;
   String? _message;
+  Timer? _pollTimer;
+  bool _pollingRequestInFlight = false;
+  int _pollAttempts = 0;
+  String? _pollSessionId;
 
   @override
   void initState() {
@@ -43,6 +51,10 @@ class _SubscriptionCheckoutReturnScreenState
   }
 
   Future<void> _handleReturn() async {
+    if (_pollTimer != null) {
+      developer.log('[StripeReturn] poll already running, ignoring duplicate start');
+      return;
+    }
     final auth = context.read<AuthProvider>();
 
     developer.log('[StripeReturn] deep link received');
@@ -78,7 +90,11 @@ class _SubscriptionCheckoutReturnScreenState
       return;
     }
 
-    final sessionId = widget.sessionId;
+    var sessionId = widget.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      sessionId = await AppStorage.getPendingStripeSessionId();
+      developer.log('[StripeReturn] Fallback to AppStorage sessionId=$sessionId');
+    }
     if (sessionId == null || sessionId.isEmpty) {
       developer.log('[StripeReturn] Missing sessionId in return');
       await AppStorage.clearPendingStripeSessionId();
@@ -90,72 +106,95 @@ class _SubscriptionCheckoutReturnScreenState
       return;
     }
 
+    _startPolling(sessionId, auth);
+  }
+
+  void _startPolling(String sessionId, AuthProvider auth) {
+    _pollSessionId = sessionId;
+    _pollAttempts = 0;
     developer.log('[StripeReturn] polling checkout-status sessionId=$sessionId');
-    for (var attempt = 0; attempt < 10; attempt++) {
-      String? checkoutStatus;
-      String? subscriptionStatus;
-      String? backendMessage;
+    _pollOnce(auth);
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _pollOnce(auth));
+  }
 
-      try {
-        final response = await _api.get(
-          '/subscriptions/checkout-status',
-          queryParameters: {'sessionId': sessionId},
-        );
-        final data = response['data'] as Map<String, dynamic>? ?? {};
-        checkoutStatus =
-            data['subscriptionStatus']?.toString() ?? 'PENDING_PAYMENT';
-        backendMessage = data['message']?.toString();
-        developer.log('[StripeReturn] checkout status=$checkoutStatus');
+  Future<void> _pollOnce(AuthProvider auth) async {
+    if (_pollingRequestInFlight || !mounted) return;
+    final sessionId = _pollSessionId;
+    if (sessionId == null || sessionId.isEmpty) return;
 
-        if (checkoutStatus == 'PAYMENT_FAILED') {
-          developer.log('[StripeReturn] Payment failed: $backendMessage');
-          await AppStorage.clearPendingStripeSessionId();
-          auth.setSubscriptionActive(false);
-          setState(() {
-            _loading = false;
-            _success = false;
-            _message = backendMessage ?? 'subscription.checkout_failed'.tr();
-          });
-          return;
-        }
-      } catch (e) {
-        developer.log('[StripeReturn] checkout-status poll error: $e');
-      }
-
-      try {
-        final subscription = await _loadSubscriptionWithRetry();
-        subscriptionStatus = subscription?['status']?.toString() ?? 'UNKNOWN';
-      } catch (e) {
-        developer.log('[StripeReturn] subscription poll error: $e');
-      }
-
-      developer.log('[StripeReturn] subscription status=${subscriptionStatus ?? 'UNKNOWN'}');
-
-      if (checkoutStatus == 'ACTIVE' || subscriptionStatus == 'ACTIVE') {
-        developer.log('[StripeReturn] subscription ACTIVE');
-        await AppStorage.clearPendingStripeSessionId();
-        await _refreshAuthenticatedState(auth);
-        await _unlockDashboard();
-        return;
-      }
-
-      if (mounted) {
-        setState(() {
-          _message = backendMessage ?? 'subscription.waiting_for_webhook'.tr();
-        });
-      }
-
-      await Future<void>.delayed(const Duration(seconds: 2));
+    if (_pollAttempts >= 20) {
+      _stopPolling();
+      developer.log('[StripeReturn] Polling exhausted, webhook still pending');
+      setState(() {
+        _loading = false;
+        _success = false;
+        _message = 'Payment received, please reopen the app';
+      });
+      return;
     }
 
-    developer.log('[StripeReturn] Polling exhausted, webhook still pending');
-    if (!mounted) return;
+    _pollingRequestInFlight = true;
+    _pollAttempts++;
+    String? checkoutStatus;
+    String? subscriptionStatus;
+    bool dashboardUnlocked = false;
+    String? backendMessage;
 
-    setState(() {
-      _loading = false;
-      _success = false;
-      _message = 'subscription.webhook_still_pending'.tr();
-    });
+    try {
+      final response = await _api.get(
+        '/subscriptions/checkout-status',
+        queryParameters: {'sessionId': sessionId},
+      );
+      final data = response['data'] as Map<String, dynamic>? ?? {};
+      checkoutStatus = data['subscriptionStatus']?.toString() ?? 'PENDING_PAYMENT';
+      dashboardUnlocked = data['dashboardUnlocked'] == true;
+      backendMessage = data['message']?.toString();
+      developer.log('[StripeReturn] checkout status=$checkoutStatus dashboardUnlocked=$dashboardUnlocked attempt=$_pollAttempts');
+
+      if (checkoutStatus == 'PAYMENT_FAILED') {
+        _stopPolling();
+        await AppStorage.clearPendingStripeSessionId();
+        auth.setSubscriptionActive(false);
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _success = false;
+          _message = backendMessage ?? 'subscription.checkout_failed'.tr();
+        });
+        return;
+      }
+    } catch (e) {
+      developer.log('[StripeReturn] checkout-status poll error: $e');
+    }
+
+    try {
+      final subscription = await _loadSubscriptionWithRetry();
+      subscriptionStatus = subscription?['status']?.toString() ?? 'UNKNOWN';
+    } catch (e) {
+      developer.log('[StripeReturn] subscription poll error: $e');
+    }
+
+    if (dashboardUnlocked || checkoutStatus == 'ACTIVE' || subscriptionStatus == 'ACTIVE') {
+      developer.log('[StripeReturn] subscription ACTIVE');
+      _stopPolling();
+      await AppStorage.clearPendingStripeSessionId();
+      await _refreshAuthenticatedState(auth);
+      await _unlockDashboard();
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _message = backendMessage ?? 'subscription.waiting_for_webhook'.tr();
+      });
+    }
+    _pollingRequestInFlight = false;
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    _pollingRequestInFlight = false;
   }
 
   Future<Map<String, dynamic>?> _loadSubscriptionWithRetry() async {
@@ -173,10 +212,6 @@ class _SubscriptionCheckoutReturnScreenState
   Future<void> _refreshAuthenticatedState(AuthProvider auth) async {
     await auth.reloadSessionFromStorage(notify: false);
     auth.setSubscriptionActive(true);
-    final stillActive = await auth.hasActiveSubscription();
-    if (!stillActive) {
-      auth.setSubscriptionActive(true);
-    }
   }
 
   Future<void> _unlockDashboard() async {
@@ -204,7 +239,24 @@ class _SubscriptionCheckoutReturnScreenState
     }
     developer.log('[StripeReturn] boutiques loaded=${boutiques.boutiques.length}');
     developer.log('[StripeReturn] navigation target=$destination');
-    context.go(destination);
+    Widget screen;
+    if (destination == '/create-store') {
+      screen = const CreateStoreScreen();
+    } else if (destination == '/store-selector') {
+      screen = const StoreSelectorScreen();
+    } else {
+      screen = const StoreDashboardScreen();
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => screen),
+      (route) => false,
+    );
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
   }
 
   @override

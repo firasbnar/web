@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
+import '../../providers/boutique_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/app_back_arrow.dart';
@@ -21,7 +24,21 @@ class _ProductManagerScreenState extends State<ProductManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _loadVariants();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final bp = context.read<BoutiqueProvider>();
+      if (bp.activeBoutique == null) {
+        await bp.ensureActiveBoutique();
+      }
+      if (!mounted) return;
+      if (bp.activeBoutique?.hasPermission('PRODUCT_WRITE') != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('errors.access_denied'.tr()), backgroundColor: AppColors.danger),
+        );
+        context.go('/home');
+        return;
+      }
+      _loadVariants();
+    });
   }
 
   Future<void> _loadVariants() async {

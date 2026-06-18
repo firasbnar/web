@@ -67,6 +67,8 @@ CREATE TABLE boutiques (
   whatsapp_number VARCHAR(20),
   custom_css TEXT,
   enable_cod BOOLEAN DEFAULT TRUE,
+  stripe_enabled BOOLEAN DEFAULT FALSE,
+  stripe_status VARCHAR(50) DEFAULT 'DISABLED',
   enable_d17 BOOLEAN DEFAULT FALSE,
   enable_adeex BOOLEAN DEFAULT FALSE,
   enable_jax BOOLEAN DEFAULT FALSE,

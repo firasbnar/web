@@ -21,6 +21,9 @@ public interface BoutiqueRepository extends JpaRepository<Boutique, UUID> {
 
     Optional<Boutique> findByUserIdAndId(UUID userId, UUID id);
 
+    @Query("SELECT b FROM Boutique b JOIN FETCH b.user WHERE b.user.id = :userId AND b.id = :id")
+    Optional<Boutique> findByUserIdAndIdWithUser(@Param("userId") UUID userId, @Param("id") UUID id);
+
     Optional<Boutique> findByIdAndTenantId(UUID id, UUID tenantId);
 
     List<Boutique> findByTenantId(UUID tenantId);

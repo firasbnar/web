@@ -32,12 +32,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bp = context.read<BoutiqueProvider>();
-      developer.log('[PRODUCTS] init route=${GoRouterState.of(context).uri} active=${bp.activeBoutiqueId}');
+      developer.log(
+          '[PRODUCTS] init route=${GoRouterState.of(context).uri} active=${bp.activeBoutiqueId}');
       await bp.ensureActiveBoutique();
       if (!mounted) return;
+      if (bp.activeBoutique?.hasPermission('PRODUCT_READ') != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('errors.access_denied'.tr()), backgroundColor: AppColors.danger),
+        );
+        context.go('/home');
+        return;
+      }
       if (bp.activeBoutique != null) {
-        developer.log('[PRODUCTS] loading data active=${bp.activeBoutique!.id}');
-        context.read<ProductsProvider>().loadProducts(bp.activeBoutique!.id, refresh: true);
+        developer
+            .log('[PRODUCTS] loading data active=${bp.activeBoutique!.id}');
+        context
+            .read<ProductsProvider>()
+            .loadProducts(bp.activeBoutique!.id, refresh: true);
         context.read<ProductsProvider>().loadCategories(bp.activeBoutique!.id);
       }
     });
@@ -45,7 +56,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       final bp = context.read<BoutiqueProvider>();
       if (bp.activeBoutique != null) {
         context.read<ProductsProvider>().loadProducts(bp.activeBoutique!.id);
@@ -62,24 +74,43 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    developer.log('[PRODUCTS] build width=${MediaQuery.of(context).size.width}');
+    developer
+        .log('[PRODUCTS] build width=${MediaQuery.of(context).size.width}');
+    final boutique = context.watch<BoutiqueProvider>().activeBoutique;
+    if (boutique == null) {
+      return Scaffold(
+        appBar: AppBar(leading: const AppBackArrow()),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final canRead = boutique?.hasPermission('PRODUCT_READ') == true;
+    final canWrite = boutique?.hasPermission('PRODUCT_WRITE') == true;
+    final canDelete = boutique?.hasPermission('PRODUCT_DELETE') == true;
+    if (!canRead) {
+      return Scaffold(
+        appBar: AppBar(leading: const AppBackArrow()),
+        body: Center(child: Text('errors.access_denied'.tr())),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: const AppBackArrow(),
         title: Consumer<ProductsProvider>(
-          builder: (_, pp, __) => Text('products.title'.tr(args: [pp.products.length.toString()])),
+          builder: (_, pp, __) =>
+              Text('products.title'.tr(args: [pp.products.length.toString()])),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.playlist_add, size: 20),
-            tooltip: 'products.bulk_add'.tr(),
-            onPressed: () => context.push('/products/bulk-add'),
-          ),
+          if (canWrite)
+            IconButton(
+              icon: const Icon(Icons.playlist_add, size: 20),
+              tooltip: 'products.bulk_add'.tr(),
+              onPressed: () => context.push('/products/bulk-add'),
+            ),
           IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
-            tooltip: 'Exporter CSV',
+            tooltip: 'common.export'.tr(),
             onPressed: () async {
               final bp = context.read<BoutiqueProvider>();
               if (bp.activeBoutique == null) return;
@@ -91,13 +122,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 CsvExportService.download(csv, 'produits.csv');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('common.operation_success'.tr()), backgroundColor: AppColors.success),
+                    SnackBar(
+                        content: Text('common.operation_success'.tr()),
+                        backgroundColor: AppColors.success),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'), backgroundColor: AppColors.danger),
+                    SnackBar(
+                        content: Text(
+                            '${'common.error'.tr()}: ${ApiClient.extractErrorMessage(e)}'),
+                        backgroundColor: AppColors.danger),
                   );
                 }
               }
@@ -110,7 +146,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
@@ -118,7 +155,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.clear),
-                      onPressed: () { _searchController.clear(); _search(); },
+                      onPressed: () {
+                        _searchController.clear();
+                        _search();
+                      },
                     ),
                   ),
                   onChanged: (_) => _search(),
@@ -134,7 +174,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       children: [
                         _categoryChip('products.all_products'.tr(), null),
-                        ...pp.categories.map((c) => _categoryChip(c.name, c.id)),
+                        ...pp.categories
+                            .map((c) => _categoryChip(c.name, c.id)),
                       ],
                     ),
                   );
@@ -145,34 +186,45 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 fit: FlexFit.tight,
                 child: Consumer<ProductsProvider>(
                   builder: (_, pp, __) {
-                    if (pp.loading && pp.products.isEmpty) return const LoadingSkeleton(isGrid: true);
-                      if (pp.error != null) {
-                        return ErrorState(message: pp.error!, onRetry: () {
-                      final bp = context.read<BoutiqueProvider>();
-                      if (bp.activeBoutique != null) pp.loadProducts(bp.activeBoutique!.id, refresh: true);
-                    });
-                      }
+                    if (pp.loading && pp.products.isEmpty)
+                      return const LoadingSkeleton(isGrid: true);
+                    if (pp.error != null) {
+                      return ErrorState(
+                          message: pp.error!,
+                          onRetry: () {
+                            final bp = context.read<BoutiqueProvider>();
+                            if (bp.activeBoutique != null)
+                              pp.loadProducts(bp.activeBoutique!.id,
+                                  refresh: true);
+                          });
+                    }
                     if (pp.products.isEmpty) {
                       return EmptyState(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'products.no_products'.tr(),
-                      subtitle: 'products.add_product'.tr(),
-                    );
+                        icon: Icons.inventory_2_outlined,
+                        title: 'products.no_products'.tr(),
+                        subtitle: 'products.add_product'.tr(),
+                      );
                     }
                     return GridView.builder(
                       controller: _scrollController,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.7,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.7,
                       ),
                       itemCount: pp.products.length,
                       itemBuilder: (_, i) {
                         final product = pp.products[i];
                         return ProductCard(
                           product: product,
-                            onTap: () => context.push('/products/edit/${product.id}'),
-                          onToggleActive: () => pp.toggleActive(product.id),
-                          onDelete: () => _confirmDelete(product.id, product.name),
+                          onTap: canWrite ? () =>
+                              context.push('/products/edit/${product.id}') : null,
+                          onToggleActive: canWrite ? () => pp.toggleActive(product.id) : null,
+                          onDelete: canDelete ? () =>
+                              _confirmDelete(product.id, product.name) : null,
                         );
                       },
                     );
@@ -183,11 +235,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/products/add'),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: canWrite
+          ? FloatingActionButton(
+              onPressed: () => context.push('/products/add'),
+              backgroundColor: AppColors.primary,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 
@@ -200,7 +254,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
           setState(() => _selectedCategoryId = id);
           final bp = context.read<BoutiqueProvider>();
           if (bp.activeBoutique != null) {
-            context.read<ProductsProvider>().setCategoryFilter(id, bp.activeBoutique!.id);
+            context
+                .read<ProductsProvider>()
+                .setCategoryFilter(id, bp.activeBoutique!.id);
           }
         },
         child: Container(
@@ -208,12 +264,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : AppColors.surface,
             borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+            border: Border.all(
+                color: selected ? AppColors.primary : AppColors.border),
           ),
-          child: Text(label, style: TextStyle(
-            color: selected ? Colors.white : AppColors.textPrimary,
-            fontSize: 13,
-          )),
+          child: Text(label,
+              style: TextStyle(
+                color: selected ? Colors.white : AppColors.textPrimary,
+                fontSize: 13,
+              )),
         ),
       ),
     );
@@ -226,7 +284,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
         title: Text('products.delete_product'.tr()),
         content: Text('products.delete_confirm'.tr(args: [name])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('common.cancel'.tr())),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('common.cancel'.tr())),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
@@ -240,7 +300,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final ok = await pp.deleteProduct(id);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok ? 'products.product_deleted'.tr() : '${'common.error'.tr()}: ${pp.error ?? 'common.error'.tr()}'),
+      content: Text(ok
+          ? 'products.product_deleted'.tr()
+          : '${'common.error'.tr()}: ${pp.error ?? 'common.error'.tr()}'),
       backgroundColor: ok ? AppColors.success : AppColors.danger,
     ));
   }
@@ -248,7 +310,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void _search() {
     final bp = context.read<BoutiqueProvider>();
     if (bp.activeBoutique != null) {
-      context.read<ProductsProvider>().setSearch(_searchController.text.trim(), bp.activeBoutique!.id);
+      context
+          .read<ProductsProvider>()
+          .setSearch(_searchController.text.trim(), bp.activeBoutique!.id);
     }
   }
 }

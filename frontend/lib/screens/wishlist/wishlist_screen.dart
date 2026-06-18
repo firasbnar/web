@@ -9,6 +9,7 @@ import '../../widgets/error_state.dart';
 import '../../widgets/loading_skeleton.dart';
 import '../../widgets/app_back_arrow.dart';
 import '../../models/wishlist_item.dart';
+import '../../utils/format_utils.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -82,7 +83,10 @@ class _WishlistCard extends StatelessWidget {
               children: [
                 Text(item.productName ?? '', style: AppTypography.body2, maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
-                Text('${item.price.toStringAsFixed(3)} TND', style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                Text(
+                  FormatUtils.money(context, item.price, currencyCode: 'TND'),
+                  style: AppTypography.body2.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
+                ),
                 if (item.boutiqueName != null)
                   Text(item.boutiqueName!, style: AppTypography.caption.copyWith(color: AppColors.textSecondary), overflow: TextOverflow.ellipsis),
               ],

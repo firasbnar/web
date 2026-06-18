@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/env_config.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/boutique_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../providers/notifications_provider.dart';
@@ -21,6 +22,7 @@ import '../../widgets/loading_skeleton.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/ai_chat_widget.dart';
+import '../../utils/format_utils.dart';
 
 
 class StoreDashboardScreen extends StatefulWidget {
@@ -35,6 +37,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   Map<String, dynamic>? _boutiqueSummary;
   bool _loadingDashboard = true;
   bool _togglingMessaging = false;
+  bool _isAiChatOpen = false;
 
   @override
   void initState() {
@@ -47,7 +50,8 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   Future<void> _loadData() async {
     final bp = context.read<BoutiqueProvider>();
     developer.log('[DASHBOARD] loadData start route=${GoRouterState.of(context).uri} active=${bp.activeBoutiqueId}');
-    await bp.ensureActiveBoutique();
+    final auth = context.read<AuthProvider>();
+    await bp.ensureActiveBoutique(teamMember: auth.isTeamMember);
     // If boutiqueId passed via route, switch to that boutique
     if (widget.boutiqueId != null && widget.boutiqueId != bp.activeBoutiqueId) {
       final match = bp.boutiques.where((b) => b.id == widget.boutiqueId);
@@ -63,7 +67,9 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     }
     // Guard: if still no boutique after load, redirect user to create one
     if (bp.boutiques.isEmpty) {
-      if (mounted) context.go('/create-store');
+      if (mounted) {
+        context.go(auth.canCreateBoutique ? '/create-store' : '/store-selector');
+      }
       return;
     }
     if (bp.activeBoutique != null) {
@@ -114,6 +120,24 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
               builder: (_, bp, __) => Text(bp.activeBoutique?.name ?? 'app_name'.tr(), style: AppTypography.heading4),
             ),
             actions: [
+              Consumer<BoutiqueProvider>(
+                builder: (_, bp, __) {
+                  if (bp.activeBoutique == null) return const SizedBox.shrink();
+                  return IconButton(
+                    icon: Icon(
+                      _isAiChatOpen ? Icons.smart_toy : Icons.smart_toy_outlined,
+                      color: _isAiChatOpen ? AppColors.primary : null,
+                    ),
+                    tooltip: 'Merchant Copilot',
+                    onPressed: () {
+                      setState(() => _isAiChatOpen = !_isAiChatOpen);
+                      if (_isAiChatOpen && width <= 600) {
+                        _showChatBottomSheet(bp);
+                      }
+                    },
+                  );
+                },
+              ),
               Consumer<NotificationsProvider>(
                 builder: (_, np, __) => Stack(
                   children: [
@@ -199,21 +223,135 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   ),
           ),
         ),
-        // Floating AI chatbot
-        Positioned(
-          bottom: (MediaQuery.of(context).size.width <= 480 ? 88 : 20) + MediaQuery.of(context).padding.bottom,
-          right: MediaQuery.of(context).size.width <= 480 ? 32 : 20,
-          child: Consumer<BoutiqueProvider>(
+        // Merchant AI chat overlay (desktop)
+        if (_isAiChatOpen && width > 600)
+          Consumer<BoutiqueProvider>(
             builder: (_, bp, __) {
               if (bp.activeBoutique == null) return const SizedBox.shrink();
-              return AiChatWidget(
-                boutiqueId: bp.activeBoutique!.id.toString(),
-                boutiqueName: bp.activeBoutique!.name ?? '',
+              final uid = context.watch<AuthProvider>().user?.id ?? '';
+              return Positioned(
+                top: 8,
+                right: 16,
+                bottom: 16,
+                width: 400,
+                child: Material(
+                  elevation: 24,
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.transparent,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x28000000),
+                          blurRadius: 48,
+                          offset: Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Column(
+                        children: [
+                          _buildChatCloseButton(),
+                          Expanded(
+                            child: AiChatWidget(
+                              boutiqueId: bp.activeBoutique!.id.toString(),
+                              boutiqueName: bp.activeBoutique!.name ?? '',
+                              ownerId: uid,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               );
             },
           ),
-        ),
       ],
+    );
+  }
+
+  void _showChatBottomSheet(BoutiqueProvider bp) {
+    final id = bp.activeBoutique?.id.toString() ?? '';
+    final name = bp.activeBoutique?.name ?? '';
+    if (id.isEmpty) return;
+    final uid = context.read<AuthProvider>().user?.id ?? '';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: AiChatWidget(
+                  boutiqueId: id,
+                  boutiqueName: name,
+                  ownerId: uid,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) {
+      if (mounted) setState(() => _isAiChatOpen = false);
+    });
+  }
+
+  Widget _buildChatCloseButton() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: () => setState(() => _isAiChatOpen = false),
+            style: IconButton.styleFrom(
+              backgroundColor: const Color(0xFFF5F0FF),
+              foregroundColor: const Color(0xFF7C3AED),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -534,53 +672,85 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
 
   Widget _buildQuickActionsRow1() {
     final bp = context.watch<BoutiqueProvider>();
+    final canReadProducts = bp.activeBoutique?.hasPermission('PRODUCT_READ') == true;
+    final canWriteProducts = bp.activeBoutique?.hasPermission('PRODUCT_WRITE') == true;
+    final canReadOrders = bp.activeBoutique?.hasPermission('ORDER_READ') == true;
+    final canReadCustomers = bp.activeBoutique?.hasPermission('CUSTOMER_READ') == true;
+    final canEditSettings = bp.activeBoutique?.hasAnyPermission(['SETTINGS_READ', 'SETTINGS_WRITE']) == true;
     return SizedBox(
       height: 40,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _actionChip(Icons.open_in_new, 'dashboard.view_store'.tr(), true, () {
+          _actionChip(Icons.open_in_new, 'dashboard.view_store'.tr(), true, () async {
             final b = bp.activeBoutique;
-            if (b != null) context.push('/catalog/${b.id}', extra: {'name': b.name, 'slug': b.slug});
+            if (b != null) {
+              final url = '${EnvConfig.frontendPublicUrl}/store/${b.slug}';
+              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+            }
           }),
           const SizedBox(width: 8),
-          _actionChip(Icons.settings, 'menu.store_settings'.tr(), false, () => context.go('/boutique-settings')),
-          const SizedBox(width: 8),
-          _actionChip(Icons.add, 'products.add_product'.tr(), false, () => context.push('/products/add'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.upload_file, 'products.bulk_add'.tr(), false, () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('dashboard.bulk_import_coming'.tr()), behavior: SnackBarBehavior.floating));
-          }, grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.inventory_2_outlined, 'nav.products'.tr(), false, () => context.go('/products'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.shopping_cart_outlined, 'nav.orders'.tr(), false, () => context.go('/orders'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.people_outline, 'menu.customers'.tr(), false, () => context.go('/customers'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.local_shipping_outlined, 'menu.delivery'.tr(), false, () => context.go('/delivery'), grey: true),
+          if (canEditSettings) ...[
+            _actionChip(Icons.settings, 'menu.store_settings'.tr(), false, () => context.go('/boutique-settings')),
+            const SizedBox(width: 8),
+          ],
+          if (canWriteProducts) ...[
+            _actionChip(Icons.add, 'products.add_product'.tr(), false, () => context.push('/products/add'), grey: true),
+            const SizedBox(width: 8),
+            _actionChip(Icons.upload_file, 'products.bulk_add'.tr(), false, () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('dashboard.bulk_import_coming'.tr()), behavior: SnackBarBehavior.floating));
+            }, grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canReadProducts) ...[
+            _actionChip(Icons.inventory_2_outlined, 'nav.products'.tr(), false, () => context.go('/products'), grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canReadOrders) ...[
+            _actionChip(Icons.shopping_cart_outlined, 'nav.orders'.tr(), false, () => context.go('/orders'), grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canReadCustomers) ...[
+            _actionChip(Icons.people_outline, 'menu.customers'.tr(), false, () => context.go('/customers'), grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canEditSettings)
+            _actionChip(Icons.local_shipping_outlined, 'menu.delivery'.tr(), false, () => context.go('/delivery'), grey: true),
         ],
       ),
     );
   }
 
   Widget _buildQuickActionsRow2() {
+    final bp = context.watch<BoutiqueProvider>();
+    final canReadAnalytics = bp.activeBoutique?.hasPermission('ANALYTICS_READ') == true;
+    final canReadMessages = bp.activeBoutique?.hasPermission('MESSAGE_READ') == true;
+    final canReadTeam = bp.activeBoutique?.hasAnyPermission(['TEAM_READ', 'TEAM_WRITE']) == true;
+    final canReadReviews = bp.activeBoutique?.hasAnyPermission(['REVIEW_READ', 'REVIEW_WRITE']) == true;
+    final canEditSettings = bp.activeBoutique?.hasAnyPermission(['SETTINGS_READ', 'SETTINGS_WRITE']) == true;
     return SizedBox(
       height: 40,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _actionChip(Icons.bar_chart, 'menu.traffic'.tr(), false, () => context.go('/analytics'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.message_outlined, 'menu.messages'.tr(), false, () => context.go('/messages'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.group_outlined, 'menu.team'.tr(), false, () => context.go('/team'), grey: true),
-          const SizedBox(width: 8),
-          Consumer<ReviewsProvider>(
-            builder: (_, rp, __) => GestureDetector(
+          if (canReadAnalytics) ...[
+            _actionChip(Icons.bar_chart, 'menu.traffic'.tr(), false, () => context.go('/analytics'), grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canReadMessages) ...[
+            _actionChip(Icons.message_outlined, 'menu.messages'.tr(), false, () => context.go('/messages'), grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canReadTeam) ...[
+            _actionChip(Icons.group_outlined, 'menu.team'.tr(), false, () => context.go('/team'), grey: true),
+            const SizedBox(width: 8),
+          ],
+          if (canReadReviews)
+            Consumer<ReviewsProvider>(
+              builder: (_, rp, __) => GestureDetector(
               onTap: () => context.go('/reviews'),
               child: Container(
                 height: 40,
@@ -610,14 +780,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                   ],
                 ),
               ),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _actionChip(Icons.palette_outlined, 'menu.theme'.tr(), false, () => context.go('/boutique/theme'), grey: true),
-          const SizedBox(width: 8),
-          _actionChip(Icons.layers_outlined, 'menu.template'.tr(), false, () => context.go('/boutique/template'), grey: true),
-          const SizedBox(width: 12),
-          Consumer<BoutiqueProvider>(
+          if (canReadReviews) const SizedBox(width: 12),
+          if (canEditSettings)
+            Consumer<BoutiqueProvider>(
             builder: (_, bp, __) {
               final enabled = bp.activeBoutique?.clientMessagingEnabled ?? true;
               return Row(
@@ -635,13 +802,17 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                             activeThumbColor: Colors.green,
                             onChanged: (v) async {
                               setState(() => _togglingMessaging = true);
-                              try {
-                                await bp.saveConfig({'clientMessagingEnabled': v ? 'yes' : 'no'});
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(v ? 'dashboard.messaging_enabled'.tr() : 'dashboard.messaging_disabled'.tr()), behavior: SnackBarBehavior.floating));
-                                }
-                              } catch (_) {}
+                              final ok = await bp.updateClientMessaging(v);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(ok
+                                        ? (v ? 'dashboard.messaging_enabled'.tr() : 'dashboard.messaging_disabled'.tr())
+                                        : (bp.error ?? 'errors.communication_error'.tr())),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
                               if (mounted) setState(() => _togglingMessaging = false);
                             },
                           ),
@@ -776,7 +947,10 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
                             ],
                           ),
                         ),
-                        Text('${order.total.toStringAsFixed(2)} TND', style: AppTypography.body2.copyWith(color: AppColors.primary)),
+                        Text(
+                          FormatUtils.money(context, order.total, currencyCode: 'TND'),
+                          style: AppTypography.body2.copyWith(color: AppColors.primary),
+                        ),
                         const SizedBox(width: 8),
                         StatusChip(status: order.status),
                       ],

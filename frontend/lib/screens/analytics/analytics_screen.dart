@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:developer' as developer;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +11,7 @@ import '../../widgets/loading_skeleton.dart';
 import '../../providers/analytics_provider.dart';
 import '../../providers/boutique_provider.dart';
 import '../../widgets/app_back_arrow.dart';
+import '../../utils/format_utils.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -193,9 +194,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final trafficTotal = (ap.trafficSources?.values.fold<num>(0, (s, v) => s + (v as num)) ?? 0).toInt();
 
     final kpis = [
-      _KpiData(label: 'analytics.revenue'.tr(), value: '${totalRevenue.toStringAsFixed(2)} TND', icon: Icons.trending_up, color: AppColors.success, trend: '+12.5%'),
+      _KpiData(label: 'analytics.revenue'.tr(), value: FormatUtils.money(context, totalRevenue, currencyCode: 'TND'), icon: Icons.trending_up, color: AppColors.success, trend: '+12.5%'),
       _KpiData(label: 'analytics.orders'.tr(), value: '$totalOrders', icon: Icons.shopping_cart_outlined, color: AppColors.primary, trend: null),
-      _KpiData(label: 'analytics.average_order'.tr(), value: '${avgOrder.toStringAsFixed(2)} TND', icon: Icons.receipt, color: AppColors.warning, trend: null),
+      _KpiData(label: 'analytics.average_order'.tr(), value: FormatUtils.money(context, avgOrder, currencyCode: 'TND'), icon: Icons.receipt, color: AppColors.warning, trend: null),
       _KpiData(label: 'traffic.traffic_sources'.tr(), value: '$trafficTotal', icon: Icons.travel_explore, color: Colors.blue, trend: null),
     ];
 
@@ -348,7 +349,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             getTooltipItems: (touchedSpots) => touchedSpots.map((s) {
               final idx = s.spotIndex;
               return LineTooltipItem(
-                '${idx < labels.length ? '${labels[idx]}\n' : ''}${s.y.toStringAsFixed(2)} TND',
+                '${idx < labels.length ? '${labels[idx]}\n' : ''}${FormatUtils.money(context, s.y, currencyCode: 'TND')}',
                 const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
               );
             }).toList(),
@@ -381,11 +382,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _insightRow('analytics.revenue'.tr(), '${totalRevenue.toStringAsFixed(2)} TND', Icons.trending_up, AppColors.success),
+          _insightRow('analytics.revenue'.tr(), FormatUtils.money(context, totalRevenue, currencyCode: 'TND'), Icons.trending_up, AppColors.success),
           const Divider(height: 24),
           _insightRow('analytics.orders'.tr(), '$totalOrders', Icons.shopping_cart_outlined, AppColors.primary),
           const Divider(height: 24),
-          _insightRow('analytics.average_order'.tr(), '${avgOrder.toStringAsFixed(2)} TND', Icons.receipt, AppColors.warning),
+          _insightRow('analytics.average_order'.tr(), FormatUtils.money(context, avgOrder, currencyCode: 'TND'), Icons.receipt, AppColors.warning),
           const Divider(height: 24),
           _insightBullet('Revenue growth +12.5% vs last period', AppColors.success),
           const SizedBox(height: 8),

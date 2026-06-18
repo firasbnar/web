@@ -13,6 +13,7 @@ import io.makewebsite.exception.StoreFrozenException;
 import io.makewebsite.repository.*;
 import io.makewebsite.security.UserPrincipal;
 import io.makewebsite.service.*;
+import io.makewebsite.util.StripeConfigUtils;
 import io.makewebsite.util.NetworkUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -118,6 +119,8 @@ public class PublicStoreController {
         else if (Boolean.FALSE.equals(b.getIsPublished())) publicationStatus = "DRAFT";
         else publicationStatus = "PUBLISHED";
 
+        boolean stripeEnabled = StripeConfigUtils.isStripeEnabled(b);
+
         PublicStoreResponse response = PublicStoreResponse.builder()
                 .id(b.getId()).name(b.getName()).slug(b.getSlug())
                 .logoUrl(b.getLogoUrl()).bannerUrl(b.getBannerUrl())
@@ -133,11 +136,9 @@ public class PublicStoreController {
                 .deliveryFees(b.getDeliveryFees())
                 .cashOnDelivery(b.getCashOnDelivery())
                 .simpleCheckout(b.getSimpleCheckout())
-                .konnectActive("active".equals(b.getKonnectStatus()))
-                .d17Active("active".equals(b.getD17Status()))
-                .enableJax(Boolean.TRUE.equals(b.getEnableJax()))
-                .enableIntigo(Boolean.TRUE.equals(b.getEnableIntigo()))
-                .enableAdeex(Boolean.TRUE.equals(b.getEnableAdeex()))
+                .stripeEnabled(stripeEnabled)
+                .stripeStatus(StripeConfigUtils.normalizeStripeStatus(b.getStripeEnabled(), b.getStripeStatus()))
+                .stripeActive(stripeEnabled)
                 .facebookUrl(b.getFacebookUrl()).instagramUrl(b.getInstagramUrl())
                 .tiktokUrl(b.getTiktokUrl()).whatsappNumber(b.getWhatsappNumber())
                 .publicationStatus(publicationStatus)
@@ -338,6 +339,41 @@ public class PublicStoreController {
         return ResponseEntity.ok(list);
     }
 
+    @Transactional(readOnly = true)
+    @GetMapping("/orders/{orderNumber}/status")
+    public ResponseEntity<Map<String, Object>> getPublicOrderStatus(@PathVariable String orderNumber) {
+        Order order = orderRepository.findByOrderNumberWithBoutique(orderNumber).orElse(null);
+        if (order == null) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "Commande introuvable"
+            ));
+        }
+
+        String city = order.getCity();
+        String address = order.getShippingAddress();
+        if (address != null && city != null) {
+            String suffix = ", " + city;
+            if (address.endsWith(suffix)) {
+                address = address.substring(0, address.length() - suffix.length());
+            }
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("success", true);
+        response.put("orderNumber", order.getOrderNumber());
+        response.put("paymentStatus", order.getPaymentStatus());
+        response.put("paymentMethod", order.getPaymentMethod());
+        response.put("customerName", order.getCustomerName());
+        response.put("address", address);
+        response.put("city", city);
+        response.put("phone", order.getCustomerPhone());
+        response.put("total", order.getTotal());
+        response.put("discount", order.getDiscount());
+        response.put("boutiqueSlug", order.getBoutique().getSlug());
+        return ResponseEntity.ok(response);
+    }
+
     // Create order (public - no auth)
     @Transactional
     @PostMapping("/store/{slug}/orders")
@@ -370,6 +406,9 @@ public class PublicStoreController {
 
         if ("paypal".equalsIgnoreCase(paymentMethod)) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "PayPal n'est plus disponible", "code", "PAYPAL_DISABLED"));
+        }
+        if ("stripe".equalsIgnoreCase(paymentMethod) && !StripeConfigUtils.isStripeEnabled(b)) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Paiement Stripe non disponible pour cette boutique", "code", "STRIPE_DISABLED"));
         }
 
         log.info("Public checkout: slug={}, boutiqueId={}, customer phone={}, email={}",
@@ -550,6 +589,23 @@ public class PublicStoreController {
             log.warn("Failed to send order notifications: {}", e.getMessage());
         }
 
+        // If payment method is Stripe, create a Stripe Checkout session
+        String checkoutUrl = null;
+        if ("stripe".equalsIgnoreCase(paymentMethod)) {
+            try {
+                if (StripeConfigUtils.isStripeEnabled(b)) {
+                    JsonNode session = paymentService.createPublicStripeSession(orderNum, b.getId());
+                    checkoutUrl = session.get("sessionUrl").asText();
+                    log.info("Stripe checkout session created for order {}: {}", orderNum, checkoutUrl);
+                } else {
+                    log.warn("Stripe payment requested but Stripe is not active for boutique {}", b.getId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to create Stripe session for order {}: {}", orderNum, e.getMessage());
+                // Order is already created as UNPAID; frontend can fall back
+            }
+        }
+
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("success", true);
         response.put("orderId", order.getId().toString());
@@ -563,6 +619,7 @@ public class PublicStoreController {
         response.put("city", city);
         response.put("phone", phone);
         response.put("paymentMethod", paymentMethod);
+        response.put("checkoutUrl", checkoutUrl);
 
         return ResponseEntity.ok(response);
     }
@@ -585,6 +642,9 @@ public class PublicStoreController {
         Order order = orderRepository.findByOrderNumber(orderNumber).orElse(null);
         if (order == null) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Commande introuvable"));
+        }
+        if (!StripeConfigUtils.isStripeEnabled(b)) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Paiement Stripe non disponible pour cette boutique", "code", "STRIPE_DISABLED"));
         }
         try {
             JsonNode session = paymentService.createPublicStripeSession(orderNumber, b.getId());

@@ -91,6 +91,14 @@ public class User {
     private Boolean emailVerified = false;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", length = 20, nullable = false)
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_id", length = 255)
+    private String providerId;
+
+    @Builder.Default
     @Column(name = "enabled", nullable = false)
     private Boolean enabled = false;
 

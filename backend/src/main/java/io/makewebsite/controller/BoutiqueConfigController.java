@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/boutiques/{boutiqueId}/config")
+@RequestMapping("/api/boutiques/{boutiqueId}/boutique-config")
 @RequiredArgsConstructor
 public class BoutiqueConfigController {
     private final BoutiqueConfigRepository configRepository;

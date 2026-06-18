@@ -1,6 +1,7 @@
 package io.makewebsite.dto.response;
 
 import io.makewebsite.entity.*;
+import io.makewebsite.util.StripeConfigUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,18 @@ public class StoreData {
     public String getDetailProductImg() {
         if (detailProduct == null) return DEFAULT_PRODUCT_IMAGE;
         return resolveImageUrl(detailProduct.getFirstImage());
+    }
+
+    public List<String> getDetailProductImages() {
+        if (detailProduct == null) return List.of(DEFAULT_PRODUCT_IMAGE);
+        List<String> images = parseImageList(detailProduct.getImages());
+        if (images.isEmpty()) return List.of(DEFAULT_PRODUCT_IMAGE);
+        return images.stream().map(this::resolveImageUrl).collect(Collectors.toList());
+    }
+
+    public boolean isDetailHasMultipleImages() {
+        if (detailProduct == null) return false;
+        return parseImageList(detailProduct.getImages()).size() > 1;
     }
 
     public boolean isDetailHasColors() {
@@ -62,6 +75,10 @@ public class StoreData {
     public String getInstagramUrl() { return boutique != null ? boutique.getInstagramUrl() : ""; }
     public String getTiktokUrl() { return boutique != null ? boutique.getTiktokUrl() : ""; }
     public String getFaviconUrl() { return boutique != null ? boutique.getFaviconUrl() : ""; }
+    public String getEmail() { return boutique != null ? boutique.getEmail() : ""; }
+    public String getPhone() { return boutique != null ? boutique.getPhone() : ""; }
+    public String getAddress() { return boutique != null ? boutique.getAddress() : ""; }
+    public double getTva() { return boutique != null && boutique.getTva() != null ? boutique.getTva() : 0.0; }
 
     public String getCurrencySymbol() {
         if (boutique == null || boutique.getCurrency() == null) return "DT";
@@ -87,9 +104,15 @@ public class StoreData {
 
     public double getDeliveryFees() { return boutique != null && boutique.getDeliveryFees() != null ? boutique.getDeliveryFees() : 7.0; }
     public boolean isCashOnDelivery() { return boutique != null && boutique.getCashOnDelivery() != null && boutique.getCashOnDelivery(); }
-    public boolean isKonnectActive() { return boutique != null && "active".equals(boutique.getKonnectStatus()); }
-    public boolean isD17Active() { return boutique != null && "active".equals(boutique.getD17Status()); }
+    public boolean isStripeEnabled() { return boutique != null && StripeConfigUtils.isStripeEnabled(boutique); }
+    public boolean isStripeActive() { return isStripeEnabled(); }
+    public String getStripeStatus() {
+        return boutique != null
+                ? StripeConfigUtils.normalizeStripeStatus(boutique.getStripeEnabled(), boutique.getStripeStatus())
+                : "DISABLED";
+    }
     public boolean isSimpleCheckout() { return boutique != null && boutique.getSimpleCheckout() != null && boutique.getSimpleCheckout(); }
+    public boolean isClientMessagingEnabled() { return boutique == null || !Boolean.FALSE.equals(boutique.getClientMessagingEnabled()); }
     public String getCustomCss() { return boutique != null ? boutique.getCustomCss() : ""; }
     public String getCustomJs() { return boutique != null ? boutique.getCustomJs() : ""; }
 
@@ -192,5 +215,21 @@ public class StoreData {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
+    }
+
+    private List<String> parseImageList(String jsonArr) {
+        if (jsonArr == null || jsonArr.isBlank() || jsonArr.equals("[]")) return List.of();
+        try {
+            String trimmed = jsonArr.trim();
+            if (trimmed.startsWith("[")) {
+                String content = trimmed.substring(1, trimmed.length() - 1).trim();
+                if (content.isEmpty()) return List.of();
+                return Arrays.stream(content.split(","))
+                        .map(s -> s.trim().replaceAll("^\"|\"$", ""))
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toList());
+            }
+            return List.of(trimmed);
+        } catch (Exception e) { return List.of(); }
     }
 }
